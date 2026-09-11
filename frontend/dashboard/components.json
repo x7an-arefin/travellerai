@@ -1,0 +1,14 @@
+{
+  "$schema": "https://spartan.ng/schema.json",
+  "style": "default",
+  "tailwind": {
+    "config": "",
+    "css": "src/styles.css",
+    "baseColor": "neutral"
+  },
+  "aliases": {
+    "components": "src/app/ui",
+    "utils": "src/app/core/utils/cn",
+    "ui": "src/app/ui"
+  }
+}

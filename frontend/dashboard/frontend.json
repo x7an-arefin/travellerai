@@ -1,0 +1,431 @@
+{
+  "specVersion": "1.0",
+  "app": {
+    "name": "traveller-dashboard",
+    "title": "Traveller AI · Marketplace Dashboard",
+    "baseHref": "/",
+    "defaultRoute": "/dashboard"
+  },
+  "api": {
+    "baseUrl": "http://localhost:8000/api/v1",
+    "openApiSpec": "../../backend/api/openapi.json"
+  },
+  "auth": {
+    "provider": "jwt",
+    "baseUrl": "http://localhost:8000/auth",
+    "sessionRefetchOnFocus": true,
+    "sessionRefetchInterval": 300000,
+    "loginRedirect": "/dashboard",
+    "logoutRedirect": "/login"
+  },
+  "theme": {
+    "mode": "dark",
+    "primaryColor": "#0ea5e9",
+    "accentColor": "#10b981",
+    "radius": "0.5rem",
+    "fontFamily": "Inter, sans-serif"
+  },
+  "sidebar": {
+    "collapsible": true,
+    "defaultOpen": true,
+    "items": [
+      {
+        "label": "Dashboard",
+        "icon": "layout-dashboard",
+        "module": "dashboard"
+      },
+      {
+        "label": "Packages & Tours",
+        "icon": "package",
+        "module": "packages"
+      },
+      {
+        "label": "Bookings Pipeline",
+        "icon": "calendar-check",
+        "module": "bookings"
+      },
+      {
+        "label": "Departures & Schedules",
+        "icon": "clock",
+        "module": "departures"
+      },
+      {
+        "label": "Destinations",
+        "icon": "map-pin",
+        "module": "destinations"
+      },
+      {
+        "label": "Travel Providers",
+        "icon": "building-2",
+        "module": "providers"
+      },
+      {
+        "label": "Payouts & Withdrawals",
+        "icon": "wallet",
+        "module": "withdrawals"
+      },
+      {
+        "label": "Customer Reviews",
+        "icon": "star",
+        "module": "reviews"
+      },
+      {
+        "label": "Support Tickets",
+        "icon": "headphones",
+        "module": "tickets"
+      },
+      {
+        "label": "Users & Access",
+        "icon": "users",
+        "module": "users"
+      }
+    ]
+  },
+  "modules": {
+    "packages": {
+      "label": "Packages & Tours",
+      "labelSingular": "Package",
+      "route": "packages",
+      "icon": "package",
+      "api": {
+        "list": "listPackage",
+        "create": "createPackage",
+        "get": "getPackage",
+        "update": "updatePackage",
+        "delete": "deletePackage"
+      },
+      "list": {
+        "title": "Tour & Activity Packages",
+        "columns": ["title", "productType", "durationDays", "basePrice", "currency", "rating", "status"],
+        "searchable": true,
+        "searchField": "title",
+        "actions": {
+          "rowActions": ["view", "edit", "delete"],
+          "headerActions": ["add"]
+        },
+        "pagination": { "type": "cursor", "defaultLimit": 20 }
+      },
+      "form": {
+        "addTitle": "Create Travel Package",
+        "editTitle": "Edit Travel Package",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "520px",
+        "fields": [
+          { "name": "title", "label": "Package Title", "control": "input", "inputType": "text", "required": true },
+          { "name": "productType", "label": "Product Type", "control": "select", "options": ["fixed_tour", "flexible_tour", "day_trip", "multi_day_package", "activity"], "required": true },
+          { "name": "destinationId", "label": "Destination", "control": "input", "inputType": "text", "required": true },
+          { "name": "basePrice", "label": "Base Price", "control": "input", "inputType": "number", "required": true },
+          { "name": "currency", "label": "Currency", "control": "input", "inputType": "text", "required": true },
+          { "name": "durationDays", "label": "Duration (Days)", "control": "input", "inputType": "number", "required": true },
+          { "name": "maxParticipants", "label": "Max Participants", "control": "input", "inputType": "number", "required": true },
+          { "name": "shortDescription", "label": "Short Summary", "control": "textarea", "required": false }
+        ]
+      },
+      "detail": {
+        "title": "Tour Package Details",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "520px",
+        "fields": ["title", "productType", "basePrice", "currency", "durationDays", "rating", "totalBookings", "status", "shortDescription"]
+      },
+      "delete": {
+        "confirmDialog": true,
+        "confirmMessage": "Are you sure you want to delete this travel package? This will cancel future availability."
+      }
+    },
+    "bookings": {
+      "label": "Bookings Pipeline",
+      "labelSingular": "Booking",
+      "route": "bookings",
+      "icon": "calendar-check",
+      "api": {
+        "list": "listBooking",
+        "create": "createBooking",
+        "get": "getBooking",
+        "update": "updateBooking",
+        "delete": "deleteBooking"
+      },
+      "list": {
+        "title": "Marketplace Bookings",
+        "columns": ["bookingReference", "guestName", "participantCount", "totalAmount", "currency", "bookingStatus", "checkinStatus"],
+        "searchable": true,
+        "searchField": "bookingReference",
+        "actions": {
+          "rowActions": ["view", "edit", "delete"],
+          "headerActions": ["add"]
+        },
+        "pagination": { "type": "cursor", "defaultLimit": 20 }
+      },
+      "form": {
+        "addTitle": "New Booking Reservation",
+        "editTitle": "Modify Booking",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "480px"
+      },
+      "detail": {
+        "title": "Booking Details",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "480px"
+      },
+      "delete": {
+        "confirmDialog": true,
+        "confirmMessage": "Cancel and remove this booking reservation?"
+      }
+    },
+    "departures": {
+      "label": "Departures & Schedules",
+      "labelSingular": "Departure",
+      "route": "departures",
+      "icon": "clock",
+      "api": {
+        "list": "listDeparture",
+        "create": "createDeparture",
+        "get": "getDeparture",
+        "update": "updateDeparture",
+        "delete": "deleteDeparture"
+      },
+      "list": {
+        "title": "Tour Departures Calendar",
+        "columns": ["packageId", "startDate", "endDate", "capacity", "status"],
+        "searchable": true,
+        "searchField": "packageId",
+        "actions": {
+          "rowActions": ["view", "edit", "delete"],
+          "headerActions": ["add"]
+        },
+        "pagination": { "type": "cursor", "defaultLimit": 20 }
+      },
+      "form": {
+        "addTitle": "Add Tour Departure",
+        "editTitle": "Edit Departure",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "460px"
+      },
+      "detail": {
+        "title": "Departure Details",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "460px"
+      }
+    },
+    "destinations": {
+      "label": "Destinations",
+      "labelSingular": "Destination",
+      "route": "destinations",
+      "icon": "map-pin",
+      "api": {
+        "list": "listDestination",
+        "create": "createDestination",
+        "get": "getDestination",
+        "update": "updateDestination",
+        "delete": "deleteDestination"
+      },
+      "list": {
+        "title": "Destination Hubs",
+        "columns": ["name", "country", "region", "activePackagesCount", "isFeatured"],
+        "searchable": true,
+        "searchField": "name",
+        "actions": {
+          "rowActions": ["view", "edit", "delete"],
+          "headerActions": ["add"]
+        },
+        "pagination": { "type": "cursor", "defaultLimit": 20 }
+      },
+      "form": {
+        "addTitle": "Register Destination",
+        "editTitle": "Edit Destination",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "460px"
+      },
+      "detail": {
+        "title": "Destination Profile",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "460px"
+      }
+    },
+    "providers": {
+      "label": "Travel Providers",
+      "labelSingular": "Provider",
+      "route": "providers",
+      "icon": "building-2",
+      "api": {
+        "list": "listProvider",
+        "create": "createProvider",
+        "get": "getProvider",
+        "update": "updateProvider",
+        "delete": "deleteProvider"
+      },
+      "list": {
+        "title": "Agencies & Tour Operators",
+        "columns": ["displayName", "legalName", "providerType", "country", "kycStatus", "approvalStatus", "rating"],
+        "searchable": true,
+        "searchField": "displayName",
+        "actions": {
+          "rowActions": ["view", "edit"],
+          "headerActions": ["add"]
+        },
+        "pagination": { "type": "cursor", "defaultLimit": 20 }
+      },
+      "form": {
+        "addTitle": "Onboard New Travel Provider",
+        "editTitle": "Edit Provider Profile",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "520px"
+      },
+      "detail": {
+        "title": "Provider Dossier & Verification",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "520px"
+      }
+    },
+    "withdrawals": {
+      "label": "Payouts & Withdrawals",
+      "labelSingular": "Withdrawal",
+      "route": "withdrawals",
+      "icon": "wallet",
+      "api": {
+        "list": "listWithdrawalRequest",
+        "create": "createWithdrawalRequest",
+        "get": "getWithdrawalRequest",
+        "update": "updateWithdrawalRequest",
+        "delete": "deleteWithdrawalRequest"
+      },
+      "list": {
+        "title": "Provider Withdrawal Requests",
+        "columns": ["providerId", "amount", "currency", "status", "createdAt"],
+        "searchable": true,
+        "searchField": "providerId",
+        "actions": {
+          "rowActions": ["view", "edit"],
+          "headerActions": ["add"]
+        },
+        "pagination": { "type": "cursor", "defaultLimit": 20 }
+      },
+      "form": {
+        "addTitle": "Request Provider Withdrawal",
+        "editTitle": "Process Withdrawal Request",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "460px"
+      },
+      "detail": {
+        "title": "Withdrawal Transaction Details",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "460px"
+      }
+    },
+    "reviews": {
+      "label": "Customer Reviews",
+      "labelSingular": "Review",
+      "route": "reviews",
+      "icon": "star",
+      "api": {
+        "list": "listReview",
+        "create": "createReview",
+        "get": "getReview",
+        "update": "updateReview",
+        "delete": "deleteReview"
+      },
+      "list": {
+        "title": "Verified Traveler Reviews",
+        "columns": ["packageId", "rating", "title", "status", "createdAt"],
+        "searchable": true,
+        "searchField": "title",
+        "actions": {
+          "rowActions": ["view", "delete"],
+          "headerActions": []
+        },
+        "pagination": { "type": "cursor", "defaultLimit": 20 }
+      },
+      "detail": {
+        "title": "Review Details & Moderation",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "460px"
+      }
+    },
+    "tickets": {
+      "label": "Support Tickets",
+      "labelSingular": "Ticket",
+      "route": "tickets",
+      "icon": "headphones",
+      "api": {
+        "list": "listSupportTicket",
+        "create": "createSupportTicket",
+        "get": "getSupportTicket",
+        "update": "updateSupportTicket",
+        "delete": "deleteSupportTicket"
+      },
+      "list": {
+        "title": "Support & Disputes Desk",
+        "columns": ["ticketNumber", "subject", "priority", "status", "createdAt"],
+        "searchable": true,
+        "searchField": "subject",
+        "actions": {
+          "rowActions": ["view", "edit"],
+          "headerActions": ["add"]
+        },
+        "pagination": { "type": "cursor", "defaultLimit": 20 }
+      },
+      "form": {
+        "addTitle": "Open Support Ticket",
+        "editTitle": "Update Ticket Status",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "480px"
+      },
+      "detail": {
+        "title": "Support Ticket Details",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "480px"
+      }
+    },
+    "users": {
+      "label": "Users & Access",
+      "labelSingular": "User",
+      "route": "users",
+      "icon": "users",
+      "api": {
+        "list": "listUser",
+        "create": "createUser",
+        "get": "getUser",
+        "update": "updateUser",
+        "delete": "deleteUser"
+      },
+      "list": {
+        "title": "Marketplace Accounts",
+        "columns": ["name", "email", "role", "isActive", "createdAt"],
+        "searchable": true,
+        "searchField": "email",
+        "actions": {
+          "rowActions": ["view", "edit", "delete"],
+          "headerActions": ["add"]
+        },
+        "pagination": { "type": "cursor", "defaultLimit": 20 }
+      },
+      "form": {
+        "addTitle": "Create User Account",
+        "editTitle": "Edit User",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "460px"
+      },
+      "detail": {
+        "title": "User Profile",
+        "openIn": "drawer",
+        "drawerPosition": "right",
+        "drawerWidth": "460px"
+      }
+    }
+  }
+}

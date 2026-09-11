@@ -1,0 +1,31 @@
+import { hono } from './app.js';
+import { validateBindings } from '@core/startup/validate-bindings.js';
+import type { Env } from '@generated/bindings.js';
+
+/**
+ * @author arefin
+ * @description Cloudflare Worker entry point — validates bindings and delegates to the HonestJS application
+ */
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    validateBindings(env);
+    return hono.fetch(request, env, ctx);
+  },
+
+  scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): void {
+    // Scheduled handlers are dispatched per-cron in the app router
+    void ctx;
+    void env;
+  },
+
+
+  async queue(batch: MessageBatch<unknown>, env: Env, ctx: ExecutionContext): Promise<void> {
+    const { domainEventConsumer } = await import('./consumers/domain-event.consumer.js');
+    const { deadLetterConsumer } = await import('./consumers/dead-letter.consumer.js');
+    if (batch.queue.endsWith('-dlq')) {
+      return deadLetterConsumer(batch as MessageBatch<import('@core/events/event-envelope.js').EventEnvelope>, env, ctx);
+    }
+    return domainEventConsumer(batch as MessageBatch<import('@core/events/event-envelope.js').EventEnvelope>, env, ctx);
+  },
+
+};

@@ -1,0 +1,25 @@
+import type { LifecycleContext } from '@core/lifecycle/lifecycle-context.js';
+import type { LifecycleResult } from '@core/lifecycle/lifecycle-result.js';
+import { verifySession, checkPermissions } from '@core/auth/session-cache.js';
+import { AppError } from '@core/errors/application-error.js';
+
+/**
+ * @author arefin
+ * @description PRE lifecycle handler for GET PaymentTransaction — performs authentication, authorization, and pre-operation validation before the core logic runs
+ */
+export async function pre(ctx: LifecycleContext): Promise<LifecycleResult | void> {
+
+  const session = await verifySession(ctx.env, ctx.request);
+  if (!session) {
+    throw new AppError('UNAUTHORIZED', 'Authentication required', 401);
+  }
+  ctx.meta['actor'] = { type: 'user', id: session.userId };
+
+
+  const hasPermission = await checkPermissions(session, ['payment_transaction:read']);
+  if (!hasPermission) {
+    throw new AppError('FORBIDDEN', 'Insufficient permissions', 403);
+  }
+
+
+}

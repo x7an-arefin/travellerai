@@ -1,0 +1,10 @@
+{
+  "mode": "mock",
+  "baseUrl": "",
+  "loginEndpoint": "/api/auth/sign-in/email",
+  "signupEndpoint": "/api/auth/sign-up/email",
+  "sessionEndpoint": "/api/auth/get-session",
+  "refreshEndpoint": "/api/auth/get-session",
+  "logoutEndpoint": "/api/auth/sign-out",
+  "credentials": "include"
+}

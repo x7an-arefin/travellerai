@@ -1,0 +1,275 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import './styles/theme.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  html {
+    @apply overflow-x-hidden scroll-smooth;
+  }
+  body {
+    @apply min-h-svh w-full bg-background text-foreground has-[div[data-variant='inset']]:bg-sidebar antialiased;
+    transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Override scroll locking */
+  body[data-scroll-locked] {
+    overflow: unset !important;
+  }
+
+  /* Cursor pointer for interactive elements */
+  button:not(:disabled),
+  [role='button']:not(:disabled),
+  [role='menuitem']:not(:disabled),
+  [role='option']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* Prevent mobile zoom */
+  @media screen and (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+}
+
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@utility faded-bottom {
+  @apply after:pointer-events-none after:absolute after:inset-s-0 after:bottom-0 after:hidden after:h-32 after:w-full after:rounded-b-2xl after:bg-[linear-gradient(180deg,transparent_10%,var(--background)_70%)] md:after:block;
+}
+
+/* ==========================================================================
+   Enterprise-Grade Smooth Easing & Slower Transitions (300ms - 400ms)
+   ========================================================================== */
+
+/* 1. Backdrop Fade Animations */
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes backdropFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.animate-backdrop-in {
+  animation: backdropFadeIn 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-backdrop-out {
+  animation: backdropFadeOut 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 2. Sheet Drawer Slide In & Slide Out */
+@keyframes sheetSlideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes sheetSlideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0.8;
+  }
+}
+
+@keyframes sheetSlideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes sheetSlideOutLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0.8;
+  }
+}
+
+.animate-sheet-in-right {
+  animation: sheetSlideInRight 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-sheet-out-right {
+  animation: sheetSlideOutRight 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-sheet-in-left {
+  animation: sheetSlideInLeft 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-sheet-out-left {
+  animation: sheetSlideOutLeft 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 3. Dialog Modal Zoom In & Zoom Out */
+@keyframes dialogZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes dialogZoomOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+}
+
+.animate-dialog-in {
+  animation: dialogZoomIn 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-dialog-out {
+  animation: dialogZoomOut 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 4. Dropdown Menus & Select Popovers */
+@keyframes dropdownReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes dropdownRevealTop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-dropdown-in {
+  animation: dropdownReveal 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-dropdown-in-top {
+  animation: dropdownRevealTop 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 5. Sidebar Collapsible Submenu Accordion */
+@keyframes submenuSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-submenu-open {
+  animation: submenuSlideDown 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 6. Page Fade In Transition */
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+main {
+  animation: pageFadeIn 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 7. Chart Entry Micro-Animations */
+@keyframes chartBarGrow {
+  from {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+  to {
+    transform: scaleY(1);
+    transform-origin: bottom;
+  }
+}
+
+@keyframes chartPathDraw {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-chart-grow {
+  animation: chartBarGrow 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-chart-path {
+  stroke-dasharray: 1000;
+  animation: chartPathDraw 1200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

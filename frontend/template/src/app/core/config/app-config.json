@@ -1,0 +1,16 @@
+{
+  "name": "Angular Shadcn Admin",
+  "version": "1.0.0",
+  "theme": {
+    "preset": "zinc",
+    "radius": "0.625rem",
+    "mode": "system"
+  },
+  "layout": {
+    "variant": "inset",
+    "collapsible": "icon",
+    "sidebarOpen": true,
+    "showWorkflowTabs": true
+  },
+  "allowUserCustomization": true
+}
