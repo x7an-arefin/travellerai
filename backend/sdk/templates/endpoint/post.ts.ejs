@@ -1,0 +1,29 @@
+import type { LifecycleContext } from '@core/lifecycle/lifecycle-context.js';
+import type { LifecycleResult } from '@core/lifecycle/lifecycle-result.js';
+<%if (operation.operation !== 'get' && operation.operation !== 'list') {%>
+import { publishEvent } from '@core/events/event-publisher.js';
+import { <%= naming.toScreamingSnakeCase(entity.name) %>_EVENTS } from '@modules/<%= entity.nameKebab %>/<%= entity.nameKebab %>.events.js';
+<%}%>
+
+/**
+ * @author arefin
+ * @description POST lifecycle handler for <%= operation.operation.toUpperCase() %> <%= entity.namePascal %> — publishes domain events and performs post-operation side effects after the core logic succeeds
+ */
+export async function post(ctx: LifecycleContext): Promise<void> {
+<%if (operation.operation === 'get' || operation.operation === 'list') {%>
+<%} else {%>
+  const entityId = ctx.result?.entityId ?? 'unknown';
+  const actor = ctx.meta['actor'] as { type: string; id: string } | undefined;
+
+  await publishEvent(ctx.env.<%= events.queueBinding %>, {
+    eventName: <%= naming.toScreamingSnakeCase(entity.name) %>_EVENTS.<%= naming.toScreamingSnakeCase(operation.operation) %>D,
+    correlationId: ctx.correlationId,
+    actor: actor ?? null,
+    subject: { type: '<%= entity.name %>', id: entityId },
+    data: {
+      entityId,
+    },
+  });
+
+<%}%>
+}

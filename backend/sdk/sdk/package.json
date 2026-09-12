@@ -1,0 +1,14 @@
+{
+  "name": "traveller-api-client",
+  "version": "1.0.0",
+  "description": "Type-safe TypeScript Client SDK for traveller-api",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --project tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

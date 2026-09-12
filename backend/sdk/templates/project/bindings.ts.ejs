@@ -1,0 +1,18 @@
+export interface Env {
+  <%= db.binding %>: Hyperdrive;
+<%if (auth && auth.session.cache === 'workers-kv') {%>
+  <%= auth.session.kvBinding %>: KVNamespace;
+<%}%>
+<%if (events.queueBinding) {%>
+  <%= events.queueBinding %>: Queue;
+  <%= events.deadLetterQueueBinding %>: Queue;
+<%}%>
+<%ir.webhooks.forEach(function(wh) {%>
+  <%= wh.secretBinding %>: string;
+<%});%>
+<%if (security && security.rateLimit.enabled && security.rateLimit.store === 'kv') {%>
+  <%= security.rateLimit.kvBinding %>: KVNamespace;
+<%}%>
+
+  ENVIRONMENT: string;
+}

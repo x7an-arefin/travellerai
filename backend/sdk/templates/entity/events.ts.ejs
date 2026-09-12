@@ -1,0 +1,10 @@
+export const <%= naming.toScreamingSnakeCase(entity.name) %>_EVENTS = {
+<%entity.operations.forEach(function(op) {%>
+  <%= naming.toScreamingSnakeCase(op.operation) %>_PRE: '<%= op.lifecycleEventNames.pre %>',
+  <%= naming.toScreamingSnakeCase(op.operation) %>_PROCESS: '<%= op.lifecycleEventNames.process %>',
+  <%= naming.toScreamingSnakeCase(op.operation) %>_POST: '<%= op.lifecycleEventNames.post %>',
+  <%= naming.toScreamingSnakeCase(op.operation) %>D: '<%= op.domainEventName %>',
+
+<%});%>} as const;
+
+export type <%= entity.namePascal %>EventName = (typeof <%= naming.toScreamingSnakeCase(entity.name) %>_EVENTS)[keyof typeof <%= naming.toScreamingSnakeCase(entity.name) %>_EVENTS];

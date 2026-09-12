@@ -1,0 +1,35 @@
+import type { <%= entity.namePascal %>Select, <%= entity.namePascal %>Insert } from './<%= entity.nameKebab %>.schema.js';
+
+export type <%= entity.namePascal %>Entity = <%= entity.namePascal %>Select;
+
+export type New<%= entity.namePascal %> = <%= entity.namePascal %>Insert;
+
+export type Update<%= entity.namePascal %> = Partial<Omit<<%= entity.namePascal %>Entity, '<%= entity.primaryKey.nameCamel %>'>> & {
+  <%= entity.primaryKey.nameCamel %>: string;
+};
+
+export interface I<%= entity.namePascal %>Repository {
+  findById(id: string): Promise<<%= entity.namePascal %>Entity | null>;
+  findAll(params: List<%= entity.namePascal %>Params): Promise<List<%= entity.namePascal %>Result>;
+  create(data: New<%= entity.namePascal %>): Promise<<%= entity.namePascal %>Entity>;
+  update(data: Update<%= entity.namePascal %>): Promise<<%= entity.namePascal %>Entity | null>;
+  delete(id: string): Promise<boolean>;
+}
+
+export interface List<%= entity.namePascal %>Params {
+  cursor?: string;
+  limit?: number;
+<%entity.operations.filter(op => op.operation === 'list').forEach(function(op) {
+  const listConfig = op.config;
+  if (listConfig.filterFields) {
+    listConfig.filterFields.forEach(function(f) {%>  <%= naming.toCamelCase(f) %>?: string;
+<%  });
+  }
+});%>
+}
+
+export interface List<%= entity.namePascal %>Result {
+  items: <%= entity.namePascal %>Entity[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}

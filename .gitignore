@@ -5,7 +5,7 @@ dist
 tmp
 out-tsc
 bazel-out
-sdk
+
 # Node
 node_modules
 npm-debug.log

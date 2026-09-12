@@ -1,0 +1,38 @@
+import type { Env } from '@generated/bindings.js';
+import type { EventEnvelope } from '@core/events/event-envelope.js';
+import { logger } from '@core/observability/logger.js';
+
+/**
+ * @author arefin
+ * @description Process dead-letter queue messages — emit critical alerts and structured error payloads for monitoring
+ */
+export async function deadLetterConsumer(
+  batch: MessageBatch<EventEnvelope>,
+  env: Env,
+  _ctx: ExecutionContext
+): Promise<void> {
+  for (const message of batch.messages) {
+    const envelope = message.body;
+
+    const alertPayload = {
+      severity: 'critical',
+      action: 'dead_letter_received',
+      eventId: envelope.eventId,
+      eventName: envelope.eventName,
+      correlationId: envelope.correlationId,
+      occurredAt: envelope.occurredAt,
+      app: '<%= app.name %>',
+      environment: (env as Record<string, unknown>)['ENVIRONMENT'] ?? 'unknown',
+      retryExhausted: true,
+    };
+
+    logger.error(alertPayload);
+
+<% if (email) { %>
+    // Queue an alert email when DLQ messages are received
+    // TODO: implement email alert via EmailConsumer
+<% } %>
+
+    message.ack();
+  }
+}

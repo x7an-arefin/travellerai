@@ -1,0 +1,7652 @@
+{
+  "$schema": "./schemas/application.schema.json",
+  "specVersion": "1.0",
+  "application": {
+    "name": "traveller-api",
+    "domain": "traveller",
+    "apiPrefix": "/api/v1",
+    "runtime": "cloudflare-workers",
+    "framework": "hono",
+    "language": "typescript"
+  },
+  "database": {
+    "provider": "postgresql",
+    "connection": "hyperdrive",
+    "orm": "drizzle",
+    "binding": "HYPERDRIVE",
+    "migrations": true
+  },
+  "authentication": {
+    "provider": "better-auth",
+    "session": {
+      "primaryStore": "cockroachdb",
+      "cache": "workers-kv",
+      "kvBinding": "AUTH_SESSION_KV",
+      "writePolicy": "auth-events-only"
+    }
+  },
+  "security": {
+    "defaultAuth": false,
+    "cors": {
+      "origins": [
+        "https://travellerai.com",
+        "https://app.travellerai.com",
+        "https://staging.travellerai.com"
+      ],
+      "methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "credentials": true,
+      "maxAge": 86400
+    },
+    "rateLimit": {
+      "enabled": true,
+      "windowMs": 60000,
+      "maxRequests": 120,
+      "store": "kv",
+      "kvBinding": "RATE_LIMIT_KV"
+    }
+  },
+  "events": {
+    "version": 1,
+    "defaultPostMode": "queue",
+    "queueBinding": "DOMAIN_EVENTS",
+    "deadLetterQueueBinding": "DOMAIN_EVENTS_DLQ",
+    "includeCorrelationId": true,
+    "includeActor": true
+  },
+  "storage": {
+    "provider": "backblaze-b2",
+    "uploadMode": "presigned-url",
+    "publicBaseUrl": "https://media.travellerai.com",
+    "maximumUploadBytes": 20971520,
+    "allowedMimeTypes": [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "application/pdf",
+      "video/mp4"
+    ]
+  },
+  "email": {
+    "provider": "resend",
+    "execution": "queue-only"
+  },
+  "webhooks": {
+    "stripe": {
+      "path": "/webhooks/stripe",
+      "signature": {
+        "type": "stripe",
+        "secretBinding": "STRIPE_WEBHOOK_SECRET"
+      },
+      "queue": "DOMAIN_EVENTS",
+      "responseStatus": 200
+    },
+    "paymentGateway": {
+      "path": "/webhooks/payment",
+      "signature": {
+        "type": "hmac",
+        "secretBinding": "PAYMENT_WEBHOOK_SECRET"
+      },
+      "queue": "DOMAIN_EVENTS",
+      "responseStatus": 200
+    }
+  },
+  "scheduled": {
+    "releaseExpiredInventoryLocks": {
+      "cron": "*/5 * * * *",
+      "description": "Release departure inventory locks for expired checkout sessions"
+    },
+    "processSettlementMaturation": {
+      "cron": "0 * * * *",
+      "description": "Move provider earnings from pending to available balance after holding period"
+    },
+    "expireWaitlistEntries": {
+      "cron": "0 */6 * * *",
+      "description": "Expire waitlist entries that have not been actioned within the offer window"
+    },
+    "cleanupExpiredSessions": {
+      "cron": "0 2 * * *",
+      "description": "Purge expired auth session records from the database"
+    },
+    "sendBalanceReminders": {
+      "cron": "0 9 * * *",
+      "description": "Send outstanding balance reminder notifications for partially-paid bookings"
+    },
+    "expireStaleBookings": {
+      "cron": "*/15 * * * *",
+      "description": "Expire draft bookings that have exceeded the payment window and release inventory"
+    }
+  },
+  "observability": {
+    "correlationHeader": "x-correlation-id",
+    "structuredLogs": true,
+    "provider": "new-relic",
+    "transport": "cloudflare-logpush",
+    "profile": "free"
+  },
+  "budgets": {
+    "request": {
+      "maximumDatabaseQueries": 6,
+      "maximumKvReads": 3,
+      "maximumKvWrites": 1,
+      "maximumQueueWrites": 3,
+      "maximumB2Operations": 2
+    }
+  },
+  "entities": {
+    "User": {
+      "table": "users",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "email": {
+          "type": "string",
+          "required": true,
+          "unique": true,
+          "maxLength": 255
+        },
+        "phone": {
+          "type": "string",
+          "required": false,
+          "maxLength": 30
+        },
+        "passwordHash": {
+          "type": "string",
+          "required": false,
+          "maxLength": 255
+        },
+        "firstName": {
+          "type": "string",
+          "required": true,
+          "maxLength": 100
+        },
+        "lastName": {
+          "type": "string",
+          "required": true,
+          "maxLength": 100
+        },
+        "role": {
+          "type": "enum",
+          "values": [
+            "super_admin",
+            "admin",
+            "finance_admin",
+            "content_admin",
+            "support_agent",
+            "provider_owner",
+            "provider_manager",
+            "provider_finance",
+            "provider_content",
+            "guide",
+            "traveler",
+            "guest",
+            "affiliate"
+          ],
+          "default": "traveler"
+        },
+        "avatarUrl": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "isEmailVerified": {
+          "type": "boolean",
+          "default": false
+        },
+        "isPhoneVerified": {
+          "type": "boolean",
+          "default": false
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "active",
+            "suspended",
+            "banned",
+            "pending_verification"
+          ],
+          "default": "pending_verification"
+        },
+        "lastLoginAt": {
+          "type": "timestamp"
+        },
+        "timezone": {
+          "type": "string",
+          "required": false,
+          "maxLength": 50
+        },
+        "preferredCurrency": {
+          "type": "string",
+          "required": false,
+          "maxLength": 3
+        },
+        "preferredLanguage": {
+          "type": "string",
+          "required": false,
+          "maxLength": 10
+        }
+      },
+      "indexes": [
+        {
+          "name": "users_email_idx",
+          "fields": [
+            "email"
+          ],
+          "unique": true
+        },
+        {
+          "name": "users_role_status_idx",
+          "fields": [
+            "role",
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": false,
+          "permissions": [],
+          "idempotency": true,
+          "select": [
+            "id",
+            "email",
+            "phone",
+            "firstName",
+            "lastName",
+            "role",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "user:read"
+          ],
+          "select": [
+            "id",
+            "email",
+            "phone",
+            "firstName",
+            "lastName",
+            "role",
+            "avatarUrl",
+            "status",
+            "timezone",
+            "preferredCurrency",
+            "preferredLanguage"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "user:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "role",
+            "status"
+          ],
+          "sort": [
+            "firstName"
+          ],
+          "select": [
+            "id",
+            "email",
+            "firstName",
+            "lastName",
+            "role",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "user:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "email",
+            "firstName",
+            "lastName",
+            "role",
+            "avatarUrl",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "user:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "Destination": {
+      "table": "destinations",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "name": {
+          "type": "string",
+          "required": true,
+          "maxLength": 200
+        },
+        "slug": {
+          "type": "string",
+          "required": true,
+          "unique": true,
+          "maxLength": 250
+        },
+        "country": {
+          "type": "string",
+          "required": true,
+          "maxLength": 100
+        },
+        "countryCode": {
+          "type": "string",
+          "required": false,
+          "maxLength": 5
+        },
+        "stateRegion": {
+          "type": "string",
+          "required": false,
+          "maxLength": 150
+        },
+        "description": {
+          "type": "text",
+          "required": false
+        },
+        "travelGuide": {
+          "type": "text",
+          "required": false
+        },
+        "coverImage": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "gallery": {
+          "type": "json"
+        },
+        "latitude": {
+          "type": "decimal",
+          "precision": 10,
+          "scale": 7
+        },
+        "longitude": {
+          "type": "decimal",
+          "precision": 10,
+          "scale": 7
+        },
+        "weatherInfo": {
+          "type": "json"
+        },
+        "visaInfo": {
+          "type": "text",
+          "required": false
+        },
+        "safetyInfo": {
+          "type": "text",
+          "required": false
+        },
+        "isFeatured": {
+          "type": "boolean",
+          "default": false
+        },
+        "sortOrder": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "active",
+            "inactive",
+            "draft"
+          ],
+          "default": "draft"
+        },
+        "metaTitle": {
+          "type": "string",
+          "required": false,
+          "maxLength": 200
+        },
+        "metaDescription": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        }
+      },
+      "indexes": [
+        {
+          "name": "destinations_slug_unique_idx",
+          "fields": [
+            "slug"
+          ],
+          "unique": true
+        },
+        {
+          "name": "destinations_country_status_idx",
+          "fields": [
+            "country",
+            "status"
+          ]
+        },
+        {
+          "name": "destinations_featured_idx",
+          "fields": [
+            "isFeatured",
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "destination:create"
+          ],
+          "select": [
+            "id",
+            "name",
+            "slug",
+            "country",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "cache": {
+            "mode": "http",
+            "maxAge": 300
+          },
+          "select": [
+            "id",
+            "name",
+            "slug",
+            "country",
+            "countryCode",
+            "stateRegion",
+            "description",
+            "travelGuide",
+            "coverImage",
+            "gallery",
+            "latitude",
+            "longitude",
+            "isFeatured",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 24,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "country",
+            "status",
+            "isFeatured"
+          ],
+          "sort": [
+            "sortOrder",
+            "name"
+          ],
+          "select": [
+            "id",
+            "name",
+            "slug",
+            "country",
+            "coverImage",
+            "isFeatured",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "destination:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "name",
+            "slug",
+            "country",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "destination:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "Category": {
+      "table": "categories",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "name": {
+          "type": "string",
+          "required": true,
+          "maxLength": 150
+        },
+        "slug": {
+          "type": "string",
+          "required": true,
+          "unique": true,
+          "maxLength": 200
+        },
+        "parentId": {
+          "type": "uuid",
+          "required": false
+        },
+        "icon": {
+          "type": "string",
+          "required": false,
+          "maxLength": 100
+        },
+        "coverImage": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "description": {
+          "type": "text",
+          "required": false
+        },
+        "sortOrder": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "active",
+            "inactive"
+          ],
+          "default": "active"
+        }
+      },
+      "indexes": [
+        {
+          "name": "categories_slug_unique_idx",
+          "fields": [
+            "slug"
+          ],
+          "unique": true
+        },
+        {
+          "name": "categories_parent_idx",
+          "fields": [
+            "parentId",
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "category:create"
+          ],
+          "select": [
+            "id",
+            "name",
+            "slug",
+            "parentId",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "cache": {
+            "mode": "http",
+            "maxAge": 600
+          },
+          "select": [
+            "id",
+            "name",
+            "slug",
+            "parentId",
+            "icon",
+            "coverImage",
+            "description",
+            "sortOrder",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 50,
+            "maximumLimit": 200
+          },
+          "filter": [
+            "parentId",
+            "status"
+          ],
+          "sort": [
+            "sortOrder",
+            "name"
+          ],
+          "select": [
+            "id",
+            "name",
+            "slug",
+            "parentId",
+            "icon",
+            "sortOrder",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "category:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "name",
+            "slug",
+            "parentId",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "category:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "Provider": {
+      "table": "providers",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "ownerId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "legalName": {
+          "type": "string",
+          "required": true,
+          "maxLength": 255
+        },
+        "displayName": {
+          "type": "string",
+          "required": true,
+          "maxLength": 200
+        },
+        "slug": {
+          "type": "string",
+          "required": true,
+          "unique": true,
+          "maxLength": 250
+        },
+        "providerType": {
+          "type": "enum",
+          "values": [
+            "agency",
+            "tour_operator",
+            "guide",
+            "activity_provider",
+            "hotel",
+            "transport_operator",
+            "dmc",
+            "experience_host"
+          ],
+          "default": "tour_operator"
+        },
+        "registrationNumber": {
+          "type": "string",
+          "required": false,
+          "maxLength": 100
+        },
+        "taxId": {
+          "type": "string",
+          "required": false,
+          "maxLength": 100
+        },
+        "country": {
+          "type": "string",
+          "required": true,
+          "maxLength": 100
+        },
+        "address": {
+          "type": "text",
+          "required": false
+        },
+        "contactEmail": {
+          "type": "string",
+          "required": true,
+          "maxLength": 255
+        },
+        "contactPhone": {
+          "type": "string",
+          "required": false,
+          "maxLength": 30
+        },
+        "website": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "logoUrl": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "coverImage": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "description": {
+          "type": "text",
+          "required": false
+        },
+        "languages": {
+          "type": "json"
+        },
+        "operatingDestinations": {
+          "type": "json"
+        },
+        "socialLinks": {
+          "type": "json"
+        },
+        "certifications": {
+          "type": "json"
+        },
+        "commissionRate": {
+          "type": "decimal",
+          "precision": 5,
+          "scale": 2,
+          "required": false
+        },
+        "kycStatus": {
+          "type": "enum",
+          "values": [
+            "not_submitted",
+            "draft",
+            "submitted",
+            "under_review",
+            "info_required",
+            "approved",
+            "rejected",
+            "suspended",
+            "expired"
+          ],
+          "default": "not_submitted"
+        },
+        "approvalStatus": {
+          "type": "enum",
+          "values": [
+            "pending",
+            "approved",
+            "rejected",
+            "suspended"
+          ],
+          "default": "pending"
+        },
+        "rating": {
+          "type": "decimal",
+          "precision": 3,
+          "scale": 2
+        },
+        "totalBookings": {
+          "type": "integer",
+          "default": 0
+        },
+        "verifiedBadge": {
+          "type": "boolean",
+          "default": false
+        },
+        "isWithdrawalRestricted": {
+          "type": "boolean",
+          "default": false
+        },
+        "riskLevel": {
+          "type": "enum",
+          "values": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ],
+          "default": "low"
+        },
+        "internalNotes": {
+          "type": "text",
+          "required": false
+        }
+      },
+      "indexes": [
+        {
+          "name": "providers_owner_idx",
+          "fields": [
+            "ownerId"
+          ]
+        },
+        {
+          "name": "providers_slug_unique_idx",
+          "fields": [
+            "slug"
+          ],
+          "unique": true
+        },
+        {
+          "name": "providers_approval_kyc_idx",
+          "fields": [
+            "approvalStatus",
+            "kycStatus"
+          ]
+        },
+        {
+          "name": "providers_type_country_idx",
+          "fields": [
+            "providerType",
+            "country"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider:create"
+          ],
+          "idempotency": true,
+          "select": [
+            "id",
+            "legalName",
+            "displayName",
+            "slug",
+            "providerType",
+            "kycStatus",
+            "approvalStatus"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "cache": {
+            "mode": "http",
+            "maxAge": 60
+          },
+          "select": [
+            "id",
+            "legalName",
+            "displayName",
+            "slug",
+            "providerType",
+            "country",
+            "logoUrl",
+            "coverImage",
+            "description",
+            "rating",
+            "totalBookings",
+            "verifiedBadge",
+            "kycStatus",
+            "approvalStatus"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "providerType",
+            "approvalStatus",
+            "country",
+            "kycStatus"
+          ],
+          "sort": [
+            "rating",
+            "totalBookings"
+          ],
+          "select": [
+            "id",
+            "displayName",
+            "slug",
+            "providerType",
+            "country",
+            "logoUrl",
+            "rating",
+            "verifiedBadge",
+            "approvalStatus"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "displayName",
+            "slug",
+            "kycStatus",
+            "approvalStatus"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "ProviderStaff": {
+      "table": "provider_staff",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "providerId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Provider",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "userId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "role": {
+          "type": "enum",
+          "values": [
+            "manager",
+            "finance",
+            "content",
+            "guide",
+            "custom"
+          ],
+          "default": "manager"
+        },
+        "permissions": {
+          "type": "json"
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "active",
+            "inactive",
+            "invited"
+          ],
+          "default": "invited"
+        },
+        "invitedAt": {
+          "type": "timestamp"
+        },
+        "acceptedAt": {
+          "type": "timestamp"
+        }
+      },
+      "indexes": [
+        {
+          "name": "provider_staff_provider_idx",
+          "fields": [
+            "providerId",
+            "status"
+          ]
+        },
+        {
+          "name": "provider_staff_user_idx",
+          "fields": [
+            "userId"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider_staff:create"
+          ],
+          "select": [
+            "id",
+            "providerId",
+            "userId",
+            "role",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider_staff:read"
+          ],
+          "select": [
+            "id",
+            "providerId",
+            "userId",
+            "role",
+            "permissions",
+            "status",
+            "invitedAt",
+            "acceptedAt"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider_staff:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 50,
+            "maximumLimit": 200
+          },
+          "filter": [
+            "providerId",
+            "role",
+            "status"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "providerId",
+            "userId",
+            "role",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider_staff:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "role",
+            "permissions",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider_staff:delete"
+          ],
+          "mode": "hard"
+        }
+      }
+    },
+    "KycDocument": {
+      "table": "kyc_documents",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "providerId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Provider",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "documentType": {
+          "type": "enum",
+          "values": [
+            "trade_license",
+            "company_registration",
+            "tax_certificate",
+            "passport",
+            "national_id",
+            "bank_statement",
+            "insurance_certificate",
+            "guide_certification",
+            "proof_of_address"
+          ],
+          "default": "trade_license"
+        },
+        "documentNumber": {
+          "type": "string",
+          "required": false,
+          "maxLength": 100
+        },
+        "fileUrl": {
+          "type": "string",
+          "required": true,
+          "maxLength": 500
+        },
+        "fileName": {
+          "type": "string",
+          "required": false,
+          "maxLength": 255
+        },
+        "expiryDate": {
+          "type": "timestamp"
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "draft",
+            "submitted",
+            "under_review",
+            "approved",
+            "rejected",
+            "expired"
+          ],
+          "default": "draft"
+        },
+        "reviewNotes": {
+          "type": "text",
+          "required": false
+        },
+        "reviewedBy": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "reviewedAt": {
+          "type": "timestamp"
+        }
+      },
+      "indexes": [
+        {
+          "name": "kyc_documents_provider_idx",
+          "fields": [
+            "providerId",
+            "status"
+          ]
+        },
+        {
+          "name": "kyc_documents_type_idx",
+          "fields": [
+            "documentType",
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "kyc_document:create"
+          ],
+          "select": [
+            "id",
+            "providerId",
+            "documentType",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "kyc_document:read"
+          ],
+          "select": [
+            "id",
+            "providerId",
+            "documentType",
+            "documentNumber",
+            "fileUrl",
+            "expiryDate",
+            "status",
+            "reviewNotes",
+            "reviewedAt"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "kyc_document:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 50,
+            "maximumLimit": 200
+          },
+          "filter": [
+            "providerId",
+            "documentType",
+            "status"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "providerId",
+            "documentType",
+            "status",
+            "expiryDate"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "kyc_document:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "status",
+            "reviewNotes",
+            "reviewedAt"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "kyc_document:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "ProviderPayoutAccount": {
+      "table": "provider_payout_accounts",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "providerId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Provider",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "accountType": {
+          "type": "enum",
+          "values": [
+            "bank_account",
+            "mobile_wallet",
+            "payment_gateway"
+          ],
+          "default": "bank_account"
+        },
+        "providerName": {
+          "type": "string",
+          "required": true,
+          "maxLength": 150
+        },
+        "accountNumber": {
+          "type": "string",
+          "required": true,
+          "maxLength": 100
+        },
+        "accountName": {
+          "type": "string",
+          "required": true,
+          "maxLength": 200
+        },
+        "routingNumber": {
+          "type": "string",
+          "required": false,
+          "maxLength": 50
+        },
+        "bankName": {
+          "type": "string",
+          "required": false,
+          "maxLength": 200
+        },
+        "branchCode": {
+          "type": "string",
+          "required": false,
+          "maxLength": 50
+        },
+        "country": {
+          "type": "string",
+          "required": true,
+          "maxLength": 100
+        },
+        "currency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        },
+        "isDefault": {
+          "type": "boolean",
+          "default": false
+        },
+        "isVerified": {
+          "type": "boolean",
+          "default": false
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "active",
+            "inactive",
+            "pending_verification"
+          ],
+          "default": "pending_verification"
+        }
+      },
+      "indexes": [
+        {
+          "name": "payout_accounts_provider_idx",
+          "fields": [
+            "providerId",
+            "status"
+          ]
+        },
+        {
+          "name": "payout_accounts_default_idx",
+          "fields": [
+            "providerId",
+            "isDefault"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "payout_account:create"
+          ],
+          "select": [
+            "id",
+            "providerId",
+            "accountType",
+            "providerName",
+            "accountName",
+            "isDefault",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "payout_account:read"
+          ],
+          "select": [
+            "id",
+            "providerId",
+            "accountType",
+            "providerName",
+            "accountNumber",
+            "accountName",
+            "bankName",
+            "country",
+            "currency",
+            "isDefault",
+            "isVerified",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "payout_account:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 50
+          },
+          "filter": [
+            "providerId",
+            "status"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "accountType",
+            "providerName",
+            "accountName",
+            "isDefault",
+            "isVerified",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "payout_account:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "accountName",
+            "isDefault",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "payout_account:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "Amenity": {
+      "table": "amenities",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "name": {
+          "type": "string",
+          "required": true,
+          "maxLength": 150
+        },
+        "icon": {
+          "type": "string",
+          "required": false,
+          "maxLength": 100
+        },
+        "category": {
+          "type": "enum",
+          "values": [
+            "comfort",
+            "safety",
+            "accessibility",
+            "connectivity",
+            "catering",
+            "transport"
+          ],
+          "default": "comfort"
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "active",
+            "inactive"
+          ],
+          "default": "active"
+        }
+      },
+      "indexes": [
+        {
+          "name": "amenities_category_idx",
+          "fields": [
+            "category",
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "amenity:create"
+          ],
+          "select": [
+            "id",
+            "name",
+            "icon",
+            "category",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "cache": {
+            "mode": "http",
+            "maxAge": 3600
+          },
+          "select": [
+            "id",
+            "name",
+            "icon",
+            "category",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 100,
+            "maximumLimit": 500
+          },
+          "filter": [
+            "category",
+            "status"
+          ],
+          "sort": [
+            "name"
+          ],
+          "select": [
+            "id",
+            "name",
+            "icon",
+            "category",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "amenity:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "name",
+            "icon",
+            "category",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "amenity:delete"
+          ],
+          "mode": "hard"
+        }
+      }
+    },
+    "GuideProfile": {
+      "table": "guide_profiles",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "providerId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Provider",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "userId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "name": {
+          "type": "string",
+          "required": true,
+          "maxLength": 200
+        },
+        "photoUrl": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "bio": {
+          "type": "text",
+          "required": false
+        },
+        "languages": {
+          "type": "json"
+        },
+        "certifications": {
+          "type": "json"
+        },
+        "specialties": {
+          "type": "json"
+        },
+        "rating": {
+          "type": "decimal",
+          "precision": 3,
+          "scale": 2
+        },
+        "emergencyContact": {
+          "type": "json"
+        },
+        "isAvailable": {
+          "type": "boolean",
+          "default": true
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "active",
+            "inactive",
+            "suspended"
+          ],
+          "default": "active"
+        }
+      },
+      "indexes": [
+        {
+          "name": "guide_profiles_provider_idx",
+          "fields": [
+            "providerId",
+            "status"
+          ]
+        },
+        {
+          "name": "guide_profiles_user_idx",
+          "fields": [
+            "userId"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "guide_profile:create"
+          ],
+          "select": [
+            "id",
+            "providerId",
+            "name",
+            "isAvailable",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "select": [
+            "id",
+            "providerId",
+            "name",
+            "photoUrl",
+            "bio",
+            "languages",
+            "certifications",
+            "specialties",
+            "rating",
+            "isAvailable",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "guide_profile:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "providerId",
+            "isAvailable",
+            "status"
+          ],
+          "sort": [
+            "rating",
+            "name"
+          ],
+          "select": [
+            "id",
+            "name",
+            "photoUrl",
+            "rating",
+            "isAvailable",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "guide_profile:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "name",
+            "isAvailable",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "guide_profile:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "Package": {
+      "table": "packages",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "providerId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Provider",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "categoryId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "Category",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "destinationId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "Destination",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "title": {
+          "type": "string",
+          "required": true,
+          "maxLength": 300
+        },
+        "slug": {
+          "type": "string",
+          "required": true,
+          "unique": true,
+          "maxLength": 350
+        },
+        "shortDescription": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "description": {
+          "type": "text",
+          "required": false
+        },
+        "productType": {
+          "type": "enum",
+          "values": [
+            "fixed_tour",
+            "flexible_tour",
+            "private_tour",
+            "group_tour",
+            "activity",
+            "day_trip",
+            "multi_day_package",
+            "guided_city_tour",
+            "adventure_experience",
+            "cruise_boat",
+            "transfer_service",
+            "transport_rental",
+            "accommodation_package",
+            "custom_trip",
+            "event_package",
+            "ticket_pass",
+            "travel_product",
+            "package_addon"
+          ],
+          "default": "fixed_tour"
+        },
+        "durationHours": {
+          "type": "integer"
+        },
+        "durationDays": {
+          "type": "integer"
+        },
+        "minParticipants": {
+          "type": "integer"
+        },
+        "maxParticipants": {
+          "type": "integer"
+        },
+        "minAge": {
+          "type": "integer"
+        },
+        "maxAge": {
+          "type": "integer"
+        },
+        "difficultyLevel": {
+          "type": "enum",
+          "values": [
+            "easy",
+            "moderate",
+            "challenging",
+            "extreme"
+          ],
+          "default": "easy"
+        },
+        "confirmationType": {
+          "type": "enum",
+          "values": [
+            "instant",
+            "request_to_book"
+          ],
+          "default": "instant"
+        },
+        "cancellationPolicy": {
+          "type": "enum",
+          "values": [
+            "flexible",
+            "moderate",
+            "strict",
+            "non_refundable"
+          ],
+          "default": "moderate"
+        },
+        "cancellationPolicyDetails": {
+          "type": "text",
+          "required": false
+        },
+        "refundPolicy": {
+          "type": "text",
+          "required": false
+        },
+        "terms": {
+          "type": "text",
+          "required": false
+        },
+        "basePrice": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "currency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        },
+        "featuredImage": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "gallery": {
+          "type": "json"
+        },
+        "videoUrl": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "brochureUrl": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "meetingPoint": {
+          "type": "text",
+          "required": false
+        },
+        "meetingLatitude": {
+          "type": "decimal",
+          "precision": 10,
+          "scale": 7
+        },
+        "meetingLongitude": {
+          "type": "decimal",
+          "precision": 10,
+          "scale": 7
+        },
+        "departureLocation": {
+          "type": "string",
+          "required": false,
+          "maxLength": 400
+        },
+        "returnLocation": {
+          "type": "string",
+          "required": false,
+          "maxLength": 400
+        },
+        "inclusions": {
+          "type": "json"
+        },
+        "exclusions": {
+          "type": "json"
+        },
+        "amenities": {
+          "type": "json"
+        },
+        "languages": {
+          "type": "json"
+        },
+        "accessibilityInfo": {
+          "type": "text",
+          "required": false
+        },
+        "physicalRequirements": {
+          "type": "text",
+          "required": false
+        },
+        "tags": {
+          "type": "json"
+        },
+        "searchKeywords": {
+          "type": "text",
+          "required": false
+        },
+        "isFeatured": {
+          "type": "boolean",
+          "default": false
+        },
+        "rating": {
+          "type": "decimal",
+          "precision": 3,
+          "scale": 2
+        },
+        "reviewCount": {
+          "type": "integer",
+          "default": 0
+        },
+        "totalBookings": {
+          "type": "integer",
+          "default": 0
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "draft",
+            "submitted",
+            "approved",
+            "published",
+            "unpublished",
+            "rejected",
+            "archived",
+            "suspended",
+            "expired"
+          ],
+          "default": "draft"
+        },
+        "rejectionReason": {
+          "type": "text",
+          "required": false
+        },
+        "moderationNotes": {
+          "type": "text",
+          "required": false
+        },
+        "metaTitle": {
+          "type": "string",
+          "required": false,
+          "maxLength": 200
+        },
+        "metaDescription": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        }
+      },
+      "indexes": [
+        {
+          "name": "packages_provider_status_idx",
+          "fields": [
+            "providerId",
+            "status"
+          ]
+        },
+        {
+          "name": "packages_slug_unique_idx",
+          "fields": [
+            "slug"
+          ],
+          "unique": true
+        },
+        {
+          "name": "packages_destination_idx",
+          "fields": [
+            "destinationId",
+            "status"
+          ]
+        },
+        {
+          "name": "packages_category_idx",
+          "fields": [
+            "categoryId",
+            "status"
+          ]
+        },
+        {
+          "name": "packages_featured_idx",
+          "fields": [
+            "isFeatured",
+            "status"
+          ]
+        },
+        {
+          "name": "packages_type_idx",
+          "fields": [
+            "productType",
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "package:create"
+          ],
+          "idempotency": true,
+          "select": [
+            "id",
+            "providerId",
+            "title",
+            "slug",
+            "productType",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "cache": {
+            "mode": "http",
+            "maxAge": 60
+          },
+          "select": [
+            "id",
+            "providerId",
+            "categoryId",
+            "destinationId",
+            "title",
+            "slug",
+            "shortDescription",
+            "description",
+            "productType",
+            "durationHours",
+            "durationDays",
+            "minParticipants",
+            "maxParticipants",
+            "difficultyLevel",
+            "confirmationType",
+            "cancellationPolicy",
+            "basePrice",
+            "currency",
+            "featuredImage",
+            "gallery",
+            "inclusions",
+            "exclusions",
+            "amenities",
+            "isFeatured",
+            "rating",
+            "reviewCount",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "providerId",
+            "categoryId",
+            "destinationId",
+            "productType",
+            "status",
+            "isFeatured",
+            "difficultyLevel",
+            "confirmationType"
+          ],
+          "sort": [
+            "rating",
+            "totalBookings",
+            "basePrice"
+          ],
+          "select": [
+            "id",
+            "title",
+            "slug",
+            "productType",
+            "basePrice",
+            "currency",
+            "featuredImage",
+            "rating",
+            "reviewCount",
+            "isFeatured",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "package:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "title",
+            "slug",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "package:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "ItineraryItem": {
+      "table": "itinerary_items",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "packageId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Package",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "dayNumber": {
+          "type": "integer"
+        },
+        "sequenceOrder": {
+          "type": "integer",
+          "required": true
+        },
+        "title": {
+          "type": "string",
+          "required": true,
+          "maxLength": 300
+        },
+        "description": {
+          "type": "text",
+          "required": false
+        },
+        "startTime": {
+          "type": "string",
+          "required": false,
+          "maxLength": 10
+        },
+        "endTime": {
+          "type": "string",
+          "required": false,
+          "maxLength": 10
+        },
+        "locationName": {
+          "type": "string",
+          "required": false,
+          "maxLength": 300
+        },
+        "latitude": {
+          "type": "decimal",
+          "precision": 10,
+          "scale": 7
+        },
+        "longitude": {
+          "type": "decimal",
+          "precision": 10,
+          "scale": 7
+        },
+        "meals": {
+          "type": "json"
+        },
+        "accommodation": {
+          "type": "json"
+        },
+        "transport": {
+          "type": "json"
+        },
+        "includedItems": {
+          "type": "json"
+        },
+        "optionalItems": {
+          "type": "json"
+        },
+        "mediaUrls": {
+          "type": "json"
+        }
+      },
+      "indexes": [
+        {
+          "name": "itinerary_package_day_idx",
+          "fields": [
+            "packageId",
+            "dayNumber"
+          ]
+        },
+        {
+          "name": "itinerary_package_seq_idx",
+          "fields": [
+            "packageId",
+            "sequenceOrder"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "itinerary_item:create"
+          ],
+          "select": [
+            "id",
+            "packageId",
+            "dayNumber",
+            "sequenceOrder",
+            "title"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "select": [
+            "id",
+            "packageId",
+            "dayNumber",
+            "sequenceOrder",
+            "title",
+            "description",
+            "startTime",
+            "endTime",
+            "locationName",
+            "latitude",
+            "longitude",
+            "meals",
+            "accommodation",
+            "transport",
+            "includedItems",
+            "optionalItems"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "offset",
+            "defaultLimit": 100,
+            "maximumLimit": 500
+          },
+          "filter": [
+            "packageId"
+          ],
+          "sort": [
+            "dayNumber",
+            "sequenceOrder"
+          ],
+          "select": [
+            "id",
+            "packageId",
+            "dayNumber",
+            "sequenceOrder",
+            "title",
+            "startTime",
+            "endTime",
+            "locationName"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "itinerary_item:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "dayNumber",
+            "sequenceOrder",
+            "title"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "itinerary_item:delete"
+          ],
+          "mode": "hard"
+        }
+      }
+    },
+    "PackageFaq": {
+      "table": "package_faqs",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "packageId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Package",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "question": {
+          "type": "string",
+          "required": true,
+          "maxLength": 500
+        },
+        "answer": {
+          "type": "text",
+          "required": true
+        },
+        "sortOrder": {
+          "type": "integer"
+        }
+      },
+      "indexes": [
+        {
+          "name": "package_faqs_package_idx",
+          "fields": [
+            "packageId"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "package_faq:create"
+          ],
+          "select": [
+            "id",
+            "packageId",
+            "question",
+            "sortOrder"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "select": [
+            "id",
+            "packageId",
+            "question",
+            "answer",
+            "sortOrder"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "offset",
+            "defaultLimit": 50,
+            "maximumLimit": 200
+          },
+          "filter": [
+            "packageId"
+          ],
+          "sort": [
+            "sortOrder"
+          ],
+          "select": [
+            "id",
+            "question",
+            "answer",
+            "sortOrder"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "package_faq:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "question",
+            "answer",
+            "sortOrder"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "package_faq:delete"
+          ],
+          "mode": "hard"
+        }
+      }
+    },
+    "PackageAddon": {
+      "table": "package_addons",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "packageId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Package",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "title": {
+          "type": "string",
+          "required": true,
+          "maxLength": 200
+        },
+        "description": {
+          "type": "text",
+          "required": false
+        },
+        "price": {
+          "type": "decimal",
+          "precision": 10,
+          "scale": 2,
+          "required": true
+        },
+        "currency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        },
+        "pricingType": {
+          "type": "enum",
+          "values": [
+            "per_person",
+            "per_booking"
+          ],
+          "default": "per_person"
+        },
+        "maxQuantity": {
+          "type": "integer"
+        },
+        "isRequired": {
+          "type": "boolean",
+          "default": false
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "active",
+            "inactive"
+          ],
+          "default": "active"
+        }
+      },
+      "indexes": [
+        {
+          "name": "package_addons_package_idx",
+          "fields": [
+            "packageId",
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "package_addon:create"
+          ],
+          "select": [
+            "id",
+            "packageId",
+            "title",
+            "price",
+            "currency",
+            "pricingType",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "select": [
+            "id",
+            "packageId",
+            "title",
+            "description",
+            "price",
+            "currency",
+            "pricingType",
+            "maxQuantity",
+            "isRequired",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "offset",
+            "defaultLimit": 50,
+            "maximumLimit": 200
+          },
+          "filter": [
+            "packageId",
+            "status"
+          ],
+          "sort": [
+            "price"
+          ],
+          "select": [
+            "id",
+            "title",
+            "price",
+            "currency",
+            "pricingType",
+            "isRequired",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "package_addon:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "title",
+            "price",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "package_addon:delete"
+          ],
+          "mode": "hard"
+        }
+      }
+    },
+    "Departure": {
+      "table": "departures",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "packageId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Package",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "departureCode": {
+          "type": "string",
+          "required": true,
+          "maxLength": 50
+        },
+        "startDatetime": {
+          "type": "timestamp",
+          "required": true
+        },
+        "endDatetime": {
+          "type": "timestamp"
+        },
+        "capacity": {
+          "type": "integer",
+          "required": true
+        },
+        "bookedCount": {
+          "type": "integer",
+          "default": 0
+        },
+        "availableCount": {
+          "type": "integer"
+        },
+        "minParticipants": {
+          "type": "integer"
+        },
+        "assignedGuideId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "GuideProfile",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "priceOverride": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "bookingCutoffHours": {
+          "type": "integer"
+        },
+        "meetingPoint": {
+          "type": "text",
+          "required": false
+        },
+        "internalNotes": {
+          "type": "text",
+          "required": false
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "available",
+            "limited",
+            "sold_out",
+            "on_request",
+            "closed",
+            "cancelled",
+            "completed"
+          ],
+          "default": "available"
+        }
+      },
+      "indexes": [
+        {
+          "name": "departures_package_status_idx",
+          "fields": [
+            "packageId",
+            "status"
+          ]
+        },
+        {
+          "name": "departures_start_date_idx",
+          "fields": [
+            "startDatetime",
+            "status"
+          ]
+        },
+        {
+          "name": "departures_code_idx",
+          "fields": [
+            "departureCode"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "departure:create"
+          ],
+          "select": [
+            "id",
+            "packageId",
+            "departureCode",
+            "startDatetime",
+            "capacity",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "cache": {
+            "mode": "http",
+            "maxAge": 30
+          },
+          "select": [
+            "id",
+            "packageId",
+            "departureCode",
+            "startDatetime",
+            "endDatetime",
+            "capacity",
+            "bookedCount",
+            "availableCount",
+            "priceOverride",
+            "bookingCutoffHours",
+            "meetingPoint",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 30,
+            "maximumLimit": 200
+          },
+          "filter": [
+            "packageId",
+            "status"
+          ],
+          "sort": [
+            "startDatetime"
+          ],
+          "select": [
+            "id",
+            "departureCode",
+            "startDatetime",
+            "endDatetime",
+            "capacity",
+            "bookedCount",
+            "availableCount",
+            "priceOverride",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "departure:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "departureCode",
+            "capacity",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "departure:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "Waitlist": {
+      "table": "waitlists",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "departureId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Departure",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "userId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "travelerEmail": {
+          "type": "string",
+          "required": true,
+          "maxLength": 255
+        },
+        "travelerName": {
+          "type": "string",
+          "required": true,
+          "maxLength": 200
+        },
+        "requestedSeats": {
+          "type": "integer",
+          "required": true
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "waiting",
+            "offered",
+            "booked",
+            "expired",
+            "cancelled"
+          ],
+          "default": "waiting"
+        },
+        "offerExpiresAt": {
+          "type": "timestamp"
+        },
+        "notifiedAt": {
+          "type": "timestamp"
+        }
+      },
+      "indexes": [
+        {
+          "name": "waitlist_departure_idx",
+          "fields": [
+            "departureId",
+            "status"
+          ]
+        },
+        {
+          "name": "waitlist_user_idx",
+          "fields": [
+            "userId",
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": false,
+          "permissions": [],
+          "select": [
+            "id",
+            "departureId",
+            "travelerEmail",
+            "requestedSeats",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "waitlist:read"
+          ],
+          "select": [
+            "id",
+            "departureId",
+            "userId",
+            "travelerEmail",
+            "travelerName",
+            "requestedSeats",
+            "status",
+            "offerExpiresAt"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "waitlist:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "departureId",
+            "status"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "travelerEmail",
+            "travelerName",
+            "requestedSeats",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "waitlist:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "status",
+            "offerExpiresAt"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "waitlist:delete"
+          ],
+          "mode": "hard"
+        }
+      }
+    },
+    "PriceRule": {
+      "table": "price_rules",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "packageId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Package",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "departureId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "Departure",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "pricingType": {
+          "type": "enum",
+          "values": [
+            "per_person",
+            "per_adult",
+            "per_child",
+            "per_infant",
+            "per_senior",
+            "per_student",
+            "per_group",
+            "per_vehicle",
+            "per_room",
+            "per_hour",
+            "per_day"
+          ],
+          "default": "per_person"
+        },
+        "tierMin": {
+          "type": "integer"
+        },
+        "tierMax": {
+          "type": "integer"
+        },
+        "seasonType": {
+          "type": "enum",
+          "values": [
+            "standard",
+            "peak",
+            "off_peak",
+            "weekend",
+            "holiday",
+            "special_event"
+          ],
+          "default": "standard"
+        },
+        "startDate": {
+          "type": "timestamp"
+        },
+        "endDate": {
+          "type": "timestamp"
+        },
+        "price": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "required": true
+        },
+        "currency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "active",
+            "inactive"
+          ],
+          "default": "active"
+        }
+      },
+      "indexes": [
+        {
+          "name": "price_rules_package_idx",
+          "fields": [
+            "packageId",
+            "status"
+          ]
+        },
+        {
+          "name": "price_rules_departure_idx",
+          "fields": [
+            "departureId",
+            "status"
+          ]
+        },
+        {
+          "name": "price_rules_season_idx",
+          "fields": [
+            "seasonType",
+            "startDate",
+            "endDate"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "price_rule:create"
+          ],
+          "select": [
+            "id",
+            "packageId",
+            "pricingType",
+            "seasonType",
+            "price",
+            "currency",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "select": [
+            "id",
+            "packageId",
+            "departureId",
+            "pricingType",
+            "tierMin",
+            "tierMax",
+            "seasonType",
+            "startDate",
+            "endDate",
+            "price",
+            "currency",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "offset",
+            "defaultLimit": 50,
+            "maximumLimit": 200
+          },
+          "filter": [
+            "packageId",
+            "departureId",
+            "pricingType",
+            "seasonType",
+            "status"
+          ],
+          "sort": [
+            "price"
+          ],
+          "select": [
+            "id",
+            "pricingType",
+            "tierMin",
+            "tierMax",
+            "seasonType",
+            "startDate",
+            "endDate",
+            "price",
+            "currency",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "price_rule:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "price",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "price_rule:delete"
+          ],
+          "mode": "hard"
+        }
+      }
+    },
+    "ExchangeRate": {
+      "table": "exchange_rates",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "fromCurrency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        },
+        "toCurrency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        },
+        "rate": {
+          "type": "decimal",
+          "precision": 18,
+          "scale": 8,
+          "required": true
+        },
+        "source": {
+          "type": "string",
+          "required": false,
+          "maxLength": 50
+        },
+        "effectiveDate": {
+          "type": "timestamp",
+          "required": true
+        },
+        "isManualOverride": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "indexes": [
+        {
+          "name": "exchange_rates_pair_idx",
+          "fields": [
+            "fromCurrency",
+            "toCurrency"
+          ]
+        },
+        {
+          "name": "exchange_rates_date_idx",
+          "fields": [
+            "effectiveDate"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "exchange_rate:create"
+          ],
+          "select": [
+            "id",
+            "fromCurrency",
+            "toCurrency",
+            "rate",
+            "effectiveDate"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "cache": {
+            "mode": "http",
+            "maxAge": 300
+          },
+          "select": [
+            "id",
+            "fromCurrency",
+            "toCurrency",
+            "rate",
+            "source",
+            "effectiveDate",
+            "isManualOverride"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 100,
+            "maximumLimit": 500
+          },
+          "filter": [
+            "fromCurrency",
+            "toCurrency"
+          ],
+          "sort": [
+            "effectiveDate"
+          ],
+          "select": [
+            "id",
+            "fromCurrency",
+            "toCurrency",
+            "rate",
+            "effectiveDate"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "exchange_rate:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "rate",
+            "isManualOverride"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "exchange_rate:delete"
+          ],
+          "mode": "hard"
+        }
+      }
+    },
+    "Booking": {
+      "table": "bookings",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "bookingReference": {
+          "type": "string",
+          "required": true,
+          "unique": true,
+          "maxLength": 20
+        },
+        "travelerId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "packageId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Package",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "departureId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "Departure",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "guestEmail": {
+          "type": "string",
+          "required": false,
+          "maxLength": 255
+        },
+        "guestName": {
+          "type": "string",
+          "required": false,
+          "maxLength": 200
+        },
+        "participantCount": {
+          "type": "integer",
+          "required": true
+        },
+        "bookingStatus": {
+          "type": "enum",
+          "values": [
+            "draft",
+            "pending_payment",
+            "payment_processing",
+            "pending_provider_confirmation",
+            "confirmed",
+            "partially_paid",
+            "fully_paid",
+            "modification_requested",
+            "rescheduled",
+            "cancellation_requested",
+            "cancelled_by_traveler",
+            "cancelled_by_provider",
+            "cancelled_by_admin",
+            "refund_pending",
+            "partially_refunded",
+            "fully_refunded",
+            "in_progress",
+            "completed",
+            "no_show",
+            "disputed",
+            "expired"
+          ],
+          "default": "draft"
+        },
+        "totalAmount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "required": true
+        },
+        "baseAmount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "addonAmount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "discountAmount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "taxAmount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "serviceFeeAmount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "depositAmount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "paidAmount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "balanceDue": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "currency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        },
+        "displayCurrency": {
+          "type": "string",
+          "required": false,
+          "maxLength": 3
+        },
+        "exchangeRate": {
+          "type": "decimal",
+          "precision": 18,
+          "scale": 8
+        },
+        "couponCode": {
+          "type": "string",
+          "required": false,
+          "maxLength": 50
+        },
+        "walletCreditUsed": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "contactName": {
+          "type": "string",
+          "required": true,
+          "maxLength": 200
+        },
+        "contactEmail": {
+          "type": "string",
+          "required": true,
+          "maxLength": 255
+        },
+        "contactPhone": {
+          "type": "string",
+          "required": false,
+          "maxLength": 30
+        },
+        "pickupLocation": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "specialRequests": {
+          "type": "text",
+          "required": false
+        },
+        "qrCode": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "voucherUrl": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "checkinStatus": {
+          "type": "enum",
+          "values": [
+            "pending",
+            "checked_in",
+            "no_show"
+          ],
+          "default": "pending"
+        },
+        "checkinTime": {
+          "type": "timestamp"
+        },
+        "inventoryLockedUntil": {
+          "type": "timestamp"
+        },
+        "confirmedAt": {
+          "type": "timestamp"
+        },
+        "cancelledAt": {
+          "type": "timestamp"
+        },
+        "completedAt": {
+          "type": "timestamp"
+        }
+      },
+      "indexes": [
+        {
+          "name": "bookings_reference_unique_idx",
+          "fields": [
+            "bookingReference"
+          ],
+          "unique": true
+        },
+        {
+          "name": "bookings_traveler_status_idx",
+          "fields": [
+            "travelerId",
+            "bookingStatus"
+          ]
+        },
+        {
+          "name": "bookings_package_idx",
+          "fields": [
+            "packageId",
+            "bookingStatus"
+          ]
+        },
+        {
+          "name": "bookings_departure_idx",
+          "fields": [
+            "departureId",
+            "bookingStatus"
+          ]
+        },
+        {
+          "name": "bookings_status_idx",
+          "fields": [
+            "bookingStatus"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": false,
+          "permissions": [],
+          "idempotency": true,
+          "select": [
+            "id",
+            "bookingReference",
+            "travelerId",
+            "packageId",
+            "departureId",
+            "bookingStatus",
+            "totalAmount",
+            "currency",
+            "contactEmail"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "booking:read"
+          ],
+          "select": [
+            "id",
+            "bookingReference",
+            "travelerId",
+            "packageId",
+            "departureId",
+            "guestEmail",
+            "participantCount",
+            "bookingStatus",
+            "totalAmount",
+            "paidAmount",
+            "balanceDue",
+            "currency",
+            "contactName",
+            "contactEmail",
+            "contactPhone",
+            "pickupLocation",
+            "specialRequests",
+            "qrCode",
+            "voucherUrl",
+            "checkinStatus",
+            "checkinTime",
+            "confirmedAt",
+            "cancelledAt",
+            "completedAt"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "booking:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "travelerId",
+            "packageId",
+            "departureId",
+            "bookingStatus",
+            "checkinStatus"
+          ],
+          "sort": [
+            "confirmedAt"
+          ],
+          "select": [
+            "id",
+            "bookingReference",
+            "packageId",
+            "bookingStatus",
+            "totalAmount",
+            "paidAmount",
+            "currency",
+            "contactName"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "booking:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "bookingStatus",
+            "checkinStatus",
+            "paidAmount",
+            "balanceDue"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "booking:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "BookingParticipant": {
+      "table": "booking_participants",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "bookingId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Booking",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "fullName": {
+          "type": "string",
+          "required": true,
+          "maxLength": 200
+        },
+        "dateOfBirth": {
+          "type": "timestamp"
+        },
+        "gender": {
+          "type": "string",
+          "required": false,
+          "maxLength": 20
+        },
+        "nationality": {
+          "type": "string",
+          "required": false,
+          "maxLength": 100
+        },
+        "passportNumber": {
+          "type": "string",
+          "required": false,
+          "maxLength": 50
+        },
+        "passportExpiry": {
+          "type": "timestamp"
+        },
+        "emergencyContact": {
+          "type": "json"
+        },
+        "dietaryRequirements": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "accessibilityRequirements": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "voluntaryMedicalNotes": {
+          "type": "text",
+          "required": false
+        },
+        "isPrimaryContact": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "indexes": [
+        {
+          "name": "booking_participants_booking_idx",
+          "fields": [
+            "bookingId"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "booking_participant:create"
+          ],
+          "select": [
+            "id",
+            "bookingId",
+            "fullName",
+            "isPrimaryContact"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "booking_participant:read"
+          ],
+          "select": [
+            "id",
+            "bookingId",
+            "fullName",
+            "dateOfBirth",
+            "gender",
+            "nationality",
+            "dietaryRequirements",
+            "accessibilityRequirements",
+            "isPrimaryContact"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "booking_participant:list"
+          ],
+          "pagination": {
+            "type": "offset",
+            "defaultLimit": 50,
+            "maximumLimit": 200
+          },
+          "filter": [
+            "bookingId"
+          ],
+          "sort": [
+            "isPrimaryContact"
+          ],
+          "select": [
+            "id",
+            "fullName",
+            "nationality",
+            "isPrimaryContact"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "booking_participant:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "fullName",
+            "dietaryRequirements",
+            "accessibilityRequirements"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "booking_participant:delete"
+          ],
+          "mode": "hard"
+        }
+      }
+    },
+    "BookingAddonItem": {
+      "table": "booking_addon_items",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "bookingId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Booking",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "addonId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "PackageAddon",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "quantity": {
+          "type": "integer",
+          "required": true
+        },
+        "unitPrice": {
+          "type": "decimal",
+          "precision": 10,
+          "scale": 2,
+          "required": true
+        },
+        "totalPrice": {
+          "type": "decimal",
+          "precision": 10,
+          "scale": 2,
+          "required": true
+        },
+        "currency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        }
+      },
+      "indexes": [
+        {
+          "name": "booking_addon_items_booking_idx",
+          "fields": [
+            "bookingId"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "booking_addon_item:create"
+          ],
+          "select": [
+            "id",
+            "bookingId",
+            "addonId",
+            "quantity",
+            "unitPrice",
+            "totalPrice",
+            "currency"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "booking_addon_item:read"
+          ],
+          "select": [
+            "id",
+            "bookingId",
+            "addonId",
+            "quantity",
+            "unitPrice",
+            "totalPrice",
+            "currency"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "booking_addon_item:list"
+          ],
+          "pagination": {
+            "type": "offset",
+            "defaultLimit": 50,
+            "maximumLimit": 200
+          },
+          "filter": [
+            "bookingId"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "addonId",
+            "quantity",
+            "totalPrice",
+            "currency"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "booking_addon_item:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "quantity",
+            "totalPrice"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "booking_addon_item:delete"
+          ],
+          "mode": "hard"
+        }
+      }
+    },
+    "PaymentTransaction": {
+      "table": "payment_transactions",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "bookingId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Booking",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "gateway": {
+          "type": "enum",
+          "values": [
+            "stripe",
+            "bkash",
+            "sslcommerz",
+            "paypal",
+            "paygov",
+            "manual_transfer",
+            "wallet",
+            "gift_card"
+          ],
+          "default": "stripe"
+        },
+        "paymentMode": {
+          "type": "enum",
+          "values": [
+            "platform_collection",
+            "direct_provider",
+            "hybrid"
+          ],
+          "default": "platform_collection"
+        },
+        "transactionType": {
+          "type": "enum",
+          "values": [
+            "full_payment",
+            "deposit",
+            "installment",
+            "balance_payment",
+            "refund",
+            "chargeback_reversal"
+          ],
+          "default": "full_payment"
+        },
+        "transactionReference": {
+          "type": "string",
+          "required": false,
+          "maxLength": 200
+        },
+        "gatewayTransactionId": {
+          "type": "string",
+          "required": false,
+          "maxLength": 200
+        },
+        "amount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "required": true
+        },
+        "currency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "pending",
+            "processing",
+            "succeeded",
+            "failed",
+            "refunded",
+            "partially_refunded",
+            "cancelled",
+            "disputed"
+          ],
+          "default": "pending"
+        },
+        "failureReason": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "gatewayResponse": {
+          "type": "json"
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "required": false,
+          "maxLength": 100
+        },
+        "paidAt": {
+          "type": "timestamp"
+        }
+      },
+      "indexes": [
+        {
+          "name": "payment_transactions_booking_idx",
+          "fields": [
+            "bookingId",
+            "status"
+          ]
+        },
+        {
+          "name": "payment_transactions_gateway_ref_idx",
+          "fields": [
+            "gateway",
+            "transactionReference"
+          ]
+        },
+        {
+          "name": "payment_transactions_status_idx",
+          "fields": [
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "payment_transaction:create"
+          ],
+          "idempotency": true,
+          "select": [
+            "id",
+            "bookingId",
+            "gateway",
+            "transactionType",
+            "amount",
+            "currency",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "payment_transaction:read"
+          ],
+          "select": [
+            "id",
+            "bookingId",
+            "gateway",
+            "paymentMode",
+            "transactionType",
+            "transactionReference",
+            "amount",
+            "currency",
+            "status",
+            "failureReason",
+            "paidAt"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "payment_transaction:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "bookingId",
+            "gateway",
+            "status",
+            "transactionType"
+          ],
+          "sort": [
+            "paidAt"
+          ],
+          "select": [
+            "id",
+            "gateway",
+            "transactionType",
+            "amount",
+            "currency",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "payment_transaction:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "status",
+            "transactionReference",
+            "paidAt"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "payment_transaction:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "LedgerEntry": {
+      "table": "ledger_entries",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "entryType": {
+          "type": "enum",
+          "values": [
+            "credit",
+            "debit"
+          ],
+          "default": "credit"
+        },
+        "accountType": {
+          "type": "enum",
+          "values": [
+            "customer_payment",
+            "provider_earning",
+            "platform_commission",
+            "service_fee",
+            "tax",
+            "gateway_fee",
+            "coupon_discount",
+            "wallet_credit",
+            "refund",
+            "chargeback",
+            "withdrawal",
+            "manual_adjustment"
+          ],
+          "default": "customer_payment"
+        },
+        "referenceType": {
+          "type": "enum",
+          "values": [
+            "booking",
+            "transaction",
+            "withdrawal",
+            "refund",
+            "dispute",
+            "manual"
+          ],
+          "default": "booking"
+        },
+        "referenceId": {
+          "type": "uuid",
+          "required": true
+        },
+        "providerId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "Provider",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "userId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "amount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "required": true
+        },
+        "currency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        },
+        "balanceAfter": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "description": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "recordedBy": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "ledger_entries_provider_idx",
+          "fields": [
+            "providerId"
+          ]
+        },
+        {
+          "name": "ledger_entries_user_idx",
+          "fields": [
+            "userId"
+          ]
+        },
+        {
+          "name": "ledger_entries_reference_idx",
+          "fields": [
+            "referenceType",
+            "referenceId"
+          ]
+        },
+        {
+          "name": "ledger_entries_account_type_idx",
+          "fields": [
+            "accountType"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "ledger_entry:create"
+          ],
+          "select": [
+            "id",
+            "entryType",
+            "accountType",
+            "referenceType",
+            "referenceId",
+            "amount",
+            "currency",
+            "description"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "ledger_entry:read"
+          ],
+          "select": [
+            "id",
+            "entryType",
+            "accountType",
+            "referenceType",
+            "referenceId",
+            "providerId",
+            "userId",
+            "amount",
+            "currency",
+            "balanceAfter",
+            "description"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "ledger_entry:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "providerId",
+            "userId",
+            "entryType",
+            "accountType",
+            "referenceType"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "entryType",
+            "accountType",
+            "referenceType",
+            "amount",
+            "currency",
+            "description"
+          ]
+        },
+        "update": {
+          "enabled": false
+        },
+        "delete": {
+          "enabled": false
+        }
+      }
+    },
+    "ProviderWallet": {
+      "table": "provider_wallets",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "providerId": {
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "references": {
+            "entity": "Provider",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "pendingBalance": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "default": 0
+        },
+        "availableBalance": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "default": 0
+        },
+        "reservedBalance": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "default": 0
+        },
+        "withdrawnBalance": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "default": 0
+        },
+        "negativeBalance": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "default": 0
+        },
+        "currency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        }
+      },
+      "indexes": [
+        {
+          "name": "provider_wallets_provider_unique_idx",
+          "fields": [
+            "providerId"
+          ],
+          "unique": true
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider_wallet:create"
+          ],
+          "select": [
+            "id",
+            "providerId",
+            "availableBalance",
+            "currency"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider_wallet:read"
+          ],
+          "select": [
+            "id",
+            "providerId",
+            "pendingBalance",
+            "availableBalance",
+            "reservedBalance",
+            "withdrawnBalance",
+            "negativeBalance",
+            "currency"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider_wallet:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "providerId"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "providerId",
+            "availableBalance",
+            "pendingBalance",
+            "currency"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider_wallet:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "pendingBalance",
+            "availableBalance",
+            "reservedBalance",
+            "withdrawnBalance",
+            "negativeBalance"
+          ]
+        },
+        "delete": {
+          "enabled": false
+        }
+      }
+    },
+    "CustomerWallet": {
+      "table": "customer_wallets",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "userId": {
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "availableBalance": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "default": 0
+        },
+        "currency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "active",
+            "frozen"
+          ],
+          "default": "active"
+        }
+      },
+      "indexes": [
+        {
+          "name": "customer_wallets_user_unique_idx",
+          "fields": [
+            "userId"
+          ],
+          "unique": true
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "customer_wallet:create"
+          ],
+          "select": [
+            "id",
+            "userId",
+            "availableBalance",
+            "currency",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "customer_wallet:read"
+          ],
+          "select": [
+            "id",
+            "userId",
+            "availableBalance",
+            "currency",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "customer_wallet:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "userId",
+            "status"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "userId",
+            "availableBalance",
+            "currency",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "customer_wallet:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "availableBalance",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": false
+        }
+      }
+    },
+    "WithdrawalRequest": {
+      "table": "withdrawal_requests",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "providerId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Provider",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "payoutAccountId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "ProviderPayoutAccount",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "requestedAmount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "required": true
+        },
+        "feeAmount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "netAmount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "currency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "draft",
+            "submitted",
+            "under_review",
+            "approved",
+            "processing",
+            "paid",
+            "failed",
+            "rejected",
+            "cancelled",
+            "reversed"
+          ],
+          "default": "draft"
+        },
+        "payoutMethod": {
+          "type": "string",
+          "required": false,
+          "maxLength": 100
+        },
+        "transactionReference": {
+          "type": "string",
+          "required": false,
+          "maxLength": 200
+        },
+        "providerNotes": {
+          "type": "text",
+          "required": false
+        },
+        "adminNotes": {
+          "type": "text",
+          "required": false
+        },
+        "reviewedBy": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "processedAt": {
+          "type": "timestamp"
+        }
+      },
+      "indexes": [
+        {
+          "name": "withdrawal_requests_provider_status_idx",
+          "fields": [
+            "providerId",
+            "status"
+          ]
+        },
+        {
+          "name": "withdrawal_requests_status_idx",
+          "fields": [
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "withdrawal_request:create"
+          ],
+          "select": [
+            "id",
+            "providerId",
+            "payoutAccountId",
+            "requestedAmount",
+            "feeAmount",
+            "netAmount",
+            "currency",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "withdrawal_request:read"
+          ],
+          "select": [
+            "id",
+            "providerId",
+            "payoutAccountId",
+            "requestedAmount",
+            "feeAmount",
+            "netAmount",
+            "currency",
+            "status",
+            "payoutMethod",
+            "transactionReference",
+            "providerNotes",
+            "processedAt"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "withdrawal_request:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "providerId",
+            "status"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "requestedAmount",
+            "feeAmount",
+            "netAmount",
+            "currency",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "withdrawal_request:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "status",
+            "transactionReference",
+            "adminNotes",
+            "processedAt"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "withdrawal_request:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "RefundRequest": {
+      "table": "refund_requests",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "bookingId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Booking",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "initiatedBy": {
+          "type": "enum",
+          "values": [
+            "traveler",
+            "provider",
+            "admin",
+            "system"
+          ],
+          "default": "traveler"
+        },
+        "reason": {
+          "type": "string",
+          "required": true,
+          "maxLength": 500
+        },
+        "description": {
+          "type": "text",
+          "required": false
+        },
+        "requestedAmount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "required": true
+        },
+        "approvedAmount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "cancellationFee": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "refundMethod": {
+          "type": "enum",
+          "values": [
+            "original_payment",
+            "wallet",
+            "bank_transfer",
+            "mixed"
+          ],
+          "default": "original_payment"
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "pending",
+            "approved",
+            "rejected",
+            "processing",
+            "processed",
+            "failed"
+          ],
+          "default": "pending"
+        },
+        "reviewNotes": {
+          "type": "text",
+          "required": false
+        },
+        "reviewedBy": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "processedAt": {
+          "type": "timestamp"
+        }
+      },
+      "indexes": [
+        {
+          "name": "refund_requests_booking_idx",
+          "fields": [
+            "bookingId",
+            "status"
+          ]
+        },
+        {
+          "name": "refund_requests_status_idx",
+          "fields": [
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "refund_request:create"
+          ],
+          "select": [
+            "id",
+            "bookingId",
+            "initiatedBy",
+            "reason",
+            "requestedAmount",
+            "refundMethod",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "refund_request:read"
+          ],
+          "select": [
+            "id",
+            "bookingId",
+            "initiatedBy",
+            "reason",
+            "requestedAmount",
+            "approvedAmount",
+            "cancellationFee",
+            "refundMethod",
+            "status",
+            "reviewNotes",
+            "processedAt"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "refund_request:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "bookingId",
+            "initiatedBy",
+            "status",
+            "refundMethod"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "initiatedBy",
+            "requestedAmount",
+            "approvedAmount",
+            "refundMethod",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "refund_request:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "status",
+            "approvedAmount",
+            "reviewNotes",
+            "processedAt"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "refund_request:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "Dispute": {
+      "table": "disputes",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "bookingId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Booking",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "complainantId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "reason": {
+          "type": "string",
+          "required": true,
+          "maxLength": 300
+        },
+        "description": {
+          "type": "text",
+          "required": false
+        },
+        "evidenceUrls": {
+          "type": "json"
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "open",
+            "awaiting_traveler",
+            "awaiting_provider",
+            "under_investigation",
+            "resolved_traveler",
+            "resolved_provider",
+            "partially_resolved",
+            "closed",
+            "escalated"
+          ],
+          "default": "open"
+        },
+        "resolutionNotes": {
+          "type": "text",
+          "required": false
+        },
+        "financialAdjustment": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "assignedAgentId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "resolvedAt": {
+          "type": "timestamp"
+        }
+      },
+      "indexes": [
+        {
+          "name": "disputes_booking_idx",
+          "fields": [
+            "bookingId"
+          ]
+        },
+        {
+          "name": "disputes_status_idx",
+          "fields": [
+            "status"
+          ]
+        },
+        {
+          "name": "disputes_agent_idx",
+          "fields": [
+            "assignedAgentId",
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "dispute:create"
+          ],
+          "select": [
+            "id",
+            "bookingId",
+            "complainantId",
+            "reason",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "dispute:read"
+          ],
+          "select": [
+            "id",
+            "bookingId",
+            "complainantId",
+            "reason",
+            "description",
+            "evidenceUrls",
+            "status",
+            "resolutionNotes",
+            "financialAdjustment",
+            "resolvedAt"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "dispute:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "bookingId",
+            "status",
+            "assignedAgentId"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "bookingId",
+            "reason",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "dispute:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "status",
+            "resolutionNotes",
+            "assignedAgentId",
+            "resolvedAt"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "dispute:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "Coupon": {
+      "table": "coupons",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "code": {
+          "type": "string",
+          "required": true,
+          "unique": true,
+          "maxLength": 50
+        },
+        "discountType": {
+          "type": "enum",
+          "values": [
+            "percentage",
+            "fixed"
+          ],
+          "default": "percentage"
+        },
+        "discountValue": {
+          "type": "decimal",
+          "precision": 10,
+          "scale": 2,
+          "required": true
+        },
+        "currency": {
+          "type": "string",
+          "required": false,
+          "maxLength": 3
+        },
+        "minBookingValue": {
+          "type": "decimal",
+          "precision": 10,
+          "scale": 2
+        },
+        "maxDiscount": {
+          "type": "decimal",
+          "precision": 10,
+          "scale": 2
+        },
+        "providerId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "Provider",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "startsAt": {
+          "type": "timestamp"
+        },
+        "expiresAt": {
+          "type": "timestamp"
+        },
+        "maxUses": {
+          "type": "integer"
+        },
+        "usedCount": {
+          "type": "integer",
+          "default": 0
+        },
+        "maxUsesPerCustomer": {
+          "type": "integer"
+        },
+        "isFirstBookingOnly": {
+          "type": "boolean",
+          "default": false
+        },
+        "funder": {
+          "type": "enum",
+          "values": [
+            "marketplace",
+            "provider",
+            "shared"
+          ],
+          "default": "marketplace"
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "active",
+            "inactive",
+            "expired"
+          ],
+          "default": "active"
+        }
+      },
+      "indexes": [
+        {
+          "name": "coupons_code_unique_idx",
+          "fields": [
+            "code"
+          ],
+          "unique": true
+        },
+        {
+          "name": "coupons_status_expires_idx",
+          "fields": [
+            "status",
+            "expiresAt"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "coupon:create"
+          ],
+          "select": [
+            "id",
+            "code",
+            "discountType",
+            "discountValue",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "select": [
+            "id",
+            "code",
+            "discountType",
+            "discountValue",
+            "currency",
+            "minBookingValue",
+            "maxDiscount",
+            "startsAt",
+            "expiresAt",
+            "usedCount",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "coupon:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "status",
+            "discountType",
+            "providerId"
+          ],
+          "sort": [
+            "expiresAt"
+          ],
+          "select": [
+            "id",
+            "code",
+            "discountType",
+            "discountValue",
+            "usedCount",
+            "status",
+            "expiresAt"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "coupon:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "code",
+            "status",
+            "maxUses",
+            "expiresAt"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "coupon:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "GiftCard": {
+      "table": "gift_cards",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "code": {
+          "type": "string",
+          "required": true,
+          "unique": true,
+          "maxLength": 50
+        },
+        "initialBalance": {
+          "type": "decimal",
+          "precision": 10,
+          "scale": 2,
+          "required": true
+        },
+        "currentBalance": {
+          "type": "decimal",
+          "precision": 10,
+          "scale": 2,
+          "required": true
+        },
+        "currency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        },
+        "purchaserId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "recipientEmail": {
+          "type": "string",
+          "required": false,
+          "maxLength": 255
+        },
+        "recipientName": {
+          "type": "string",
+          "required": false,
+          "maxLength": 200
+        },
+        "personalMessage": {
+          "type": "text",
+          "required": false
+        },
+        "deliveryDate": {
+          "type": "timestamp"
+        },
+        "expiresAt": {
+          "type": "timestamp"
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "active",
+            "redeemed",
+            "expired",
+            "cancelled"
+          ],
+          "default": "active"
+        }
+      },
+      "indexes": [
+        {
+          "name": "gift_cards_code_unique_idx",
+          "fields": [
+            "code"
+          ],
+          "unique": true
+        },
+        {
+          "name": "gift_cards_status_idx",
+          "fields": [
+            "status",
+            "expiresAt"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "gift_card:create"
+          ],
+          "idempotency": true,
+          "select": [
+            "id",
+            "code",
+            "initialBalance",
+            "currency",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "gift_card:read"
+          ],
+          "select": [
+            "id",
+            "code",
+            "initialBalance",
+            "currentBalance",
+            "currency",
+            "recipientEmail",
+            "expiresAt",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "gift_card:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "purchaserId",
+            "status"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "code",
+            "initialBalance",
+            "currentBalance",
+            "currency",
+            "status",
+            "expiresAt"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "gift_card:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "currentBalance",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "gift_card:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "LoyaltyAccount": {
+      "table": "loyalty_accounts",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "userId": {
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "pointsBalance": {
+          "type": "integer",
+          "default": 0
+        },
+        "lifetimeEarned": {
+          "type": "integer",
+          "default": 0
+        },
+        "lifetimeRedeemed": {
+          "type": "integer",
+          "default": 0
+        },
+        "tier": {
+          "type": "enum",
+          "values": [
+            "bronze",
+            "silver",
+            "gold",
+            "platinum"
+          ],
+          "default": "bronze"
+        },
+        "tierUpdatedAt": {
+          "type": "timestamp"
+        }
+      },
+      "indexes": [
+        {
+          "name": "loyalty_accounts_user_unique_idx",
+          "fields": [
+            "userId"
+          ],
+          "unique": true
+        },
+        {
+          "name": "loyalty_accounts_tier_idx",
+          "fields": [
+            "tier"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "loyalty_account:create"
+          ],
+          "select": [
+            "id",
+            "userId",
+            "pointsBalance",
+            "tier"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "loyalty_account:read"
+          ],
+          "select": [
+            "id",
+            "userId",
+            "pointsBalance",
+            "lifetimeEarned",
+            "lifetimeRedeemed",
+            "tier",
+            "tierUpdatedAt"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "loyalty_account:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "userId",
+            "tier"
+          ],
+          "sort": [
+            "pointsBalance",
+            "lifetimeEarned"
+          ],
+          "select": [
+            "id",
+            "userId",
+            "pointsBalance",
+            "tier"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "loyalty_account:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "pointsBalance",
+            "lifetimeEarned",
+            "lifetimeRedeemed",
+            "tier"
+          ]
+        },
+        "delete": {
+          "enabled": false
+        }
+      }
+    },
+    "AffiliateAccount": {
+      "table": "affiliate_accounts",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "userId": {
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "referralCode": {
+          "type": "string",
+          "required": true,
+          "unique": true,
+          "maxLength": 30
+        },
+        "commissionRate": {
+          "type": "decimal",
+          "precision": 5,
+          "scale": 2,
+          "required": true
+        },
+        "totalClicks": {
+          "type": "integer",
+          "default": 0
+        },
+        "totalBookings": {
+          "type": "integer",
+          "default": 0
+        },
+        "totalCommissionEarned": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "default": 0
+        },
+        "pendingPayout": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "default": 0
+        },
+        "currency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "pending",
+            "active",
+            "suspended",
+            "rejected"
+          ],
+          "default": "pending"
+        }
+      },
+      "indexes": [
+        {
+          "name": "affiliate_accounts_user_unique_idx",
+          "fields": [
+            "userId"
+          ],
+          "unique": true
+        },
+        {
+          "name": "affiliate_accounts_code_unique_idx",
+          "fields": [
+            "referralCode"
+          ],
+          "unique": true
+        },
+        {
+          "name": "affiliate_accounts_status_idx",
+          "fields": [
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "affiliate_account:create"
+          ],
+          "select": [
+            "id",
+            "userId",
+            "referralCode",
+            "commissionRate",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "affiliate_account:read"
+          ],
+          "select": [
+            "id",
+            "userId",
+            "referralCode",
+            "commissionRate",
+            "totalClicks",
+            "totalBookings",
+            "totalCommissionEarned",
+            "pendingPayout",
+            "currency",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "affiliate_account:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "status"
+          ],
+          "sort": [
+            "totalCommissionEarned",
+            "totalBookings"
+          ],
+          "select": [
+            "id",
+            "referralCode",
+            "totalBookings",
+            "totalCommissionEarned",
+            "pendingPayout",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "affiliate_account:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "commissionRate",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "affiliate_account:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "Review": {
+      "table": "reviews",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "bookingId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Booking",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "packageId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Package",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "providerId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Provider",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "travelerId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "overallRating": {
+          "type": "integer",
+          "required": true
+        },
+        "packageRating": {
+          "type": "integer"
+        },
+        "providerRating": {
+          "type": "integer"
+        },
+        "guideRating": {
+          "type": "integer"
+        },
+        "valueRating": {
+          "type": "integer"
+        },
+        "serviceRating": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string",
+          "required": false,
+          "maxLength": 300
+        },
+        "content": {
+          "type": "text",
+          "required": false
+        },
+        "photos": {
+          "type": "json"
+        },
+        "isVerifiedBooking": {
+          "type": "boolean",
+          "default": true
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "submitted",
+            "published",
+            "flagged",
+            "hidden",
+            "rejected"
+          ],
+          "default": "submitted"
+        },
+        "moderationNotes": {
+          "type": "text",
+          "required": false
+        },
+        "publishedAt": {
+          "type": "timestamp"
+        }
+      },
+      "indexes": [
+        {
+          "name": "reviews_package_status_idx",
+          "fields": [
+            "packageId",
+            "status"
+          ]
+        },
+        {
+          "name": "reviews_provider_status_idx",
+          "fields": [
+            "providerId",
+            "status"
+          ]
+        },
+        {
+          "name": "reviews_traveler_idx",
+          "fields": [
+            "travelerId"
+          ]
+        },
+        {
+          "name": "reviews_booking_unique_idx",
+          "fields": [
+            "bookingId"
+          ],
+          "unique": true
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "review:create"
+          ],
+          "idempotency": true,
+          "lifecycle": {
+            "pre": [
+              "authenticate",
+              "authorize",
+              "validateEligibleBooking"
+            ],
+            "process": [
+              "createReview"
+            ],
+            "post": [
+              "publishReviewCreated",
+              "updatePackageRating",
+              "queueAuditEvent"
+            ]
+          },
+          "select": [
+            "id",
+            "bookingId",
+            "packageId",
+            "overallRating",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "select": [
+            "id",
+            "bookingId",
+            "packageId",
+            "providerId",
+            "travelerId",
+            "overallRating",
+            "packageRating",
+            "providerRating",
+            "guideRating",
+            "valueRating",
+            "serviceRating",
+            "title",
+            "content",
+            "photos",
+            "isVerifiedBooking",
+            "status",
+            "publishedAt"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "packageId",
+            "providerId",
+            "travelerId",
+            "status"
+          ],
+          "sort": [
+            "publishedAt",
+            "overallRating"
+          ],
+          "select": [
+            "id",
+            "travelerId",
+            "overallRating",
+            "title",
+            "content",
+            "photos",
+            "isVerifiedBooking",
+            "status",
+            "publishedAt"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "review:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "status",
+            "publishedAt"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "review:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "ReviewResponse": {
+      "table": "review_responses",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "reviewId": {
+          "type": "uuid",
+          "required": true,
+          "unique": true,
+          "references": {
+            "entity": "Review",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "providerId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Provider",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "responseText": {
+          "type": "text",
+          "required": true
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "published",
+            "hidden"
+          ],
+          "default": "published"
+        }
+      },
+      "indexes": [
+        {
+          "name": "review_responses_review_unique_idx",
+          "fields": [
+            "reviewId"
+          ],
+          "unique": true
+        },
+        {
+          "name": "review_responses_provider_idx",
+          "fields": [
+            "providerId"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "review_response:create"
+          ],
+          "select": [
+            "id",
+            "reviewId",
+            "providerId",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "select": [
+            "id",
+            "reviewId",
+            "providerId",
+            "responseText",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 10,
+            "maximumLimit": 50
+          },
+          "filter": [
+            "reviewId",
+            "providerId",
+            "status"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "reviewId",
+            "responseText",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "review_response:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "responseText",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "review_response:delete"
+          ],
+          "mode": "hard"
+        }
+      }
+    },
+    "SupportTicket": {
+      "table": "support_tickets",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "ticketNumber": {
+          "type": "string",
+          "required": true,
+          "unique": true,
+          "maxLength": 20
+        },
+        "userId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "providerId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "Provider",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "bookingId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "Booking",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "subject": {
+          "type": "string",
+          "required": true,
+          "maxLength": 300
+        },
+        "description": {
+          "type": "text",
+          "required": false
+        },
+        "priority": {
+          "type": "enum",
+          "values": [
+            "low",
+            "medium",
+            "high",
+            "urgent"
+          ],
+          "default": "medium"
+        },
+        "category": {
+          "type": "string",
+          "required": false,
+          "maxLength": 100
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "open",
+            "in_progress",
+            "awaiting_customer",
+            "awaiting_provider",
+            "resolved",
+            "closed"
+          ],
+          "default": "open"
+        },
+        "assignedAgentId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "slDeadline": {
+          "type": "timestamp"
+        },
+        "resolvedAt": {
+          "type": "timestamp"
+        },
+        "satisfactionRating": {
+          "type": "integer"
+        }
+      },
+      "indexes": [
+        {
+          "name": "support_tickets_number_unique_idx",
+          "fields": [
+            "ticketNumber"
+          ],
+          "unique": true
+        },
+        {
+          "name": "support_tickets_user_status_idx",
+          "fields": [
+            "userId",
+            "status"
+          ]
+        },
+        {
+          "name": "support_tickets_status_priority_idx",
+          "fields": [
+            "status",
+            "priority"
+          ]
+        },
+        {
+          "name": "support_tickets_agent_idx",
+          "fields": [
+            "assignedAgentId",
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": false,
+          "permissions": [],
+          "select": [
+            "id",
+            "ticketNumber",
+            "subject",
+            "priority",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "support_ticket:read"
+          ],
+          "select": [
+            "id",
+            "ticketNumber",
+            "userId",
+            "providerId",
+            "bookingId",
+            "subject",
+            "priority",
+            "category",
+            "status",
+            "assignedAgentId",
+            "slDeadline",
+            "resolvedAt",
+            "satisfactionRating"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "support_ticket:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "userId",
+            "status",
+            "priority",
+            "assignedAgentId"
+          ],
+          "sort": [
+            "priority"
+          ],
+          "select": [
+            "id",
+            "ticketNumber",
+            "subject",
+            "priority",
+            "status",
+            "assignedAgentId"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "support_ticket:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "status",
+            "assignedAgentId",
+            "resolvedAt",
+            "satisfactionRating"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "support_ticket:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "TicketMessage": {
+      "table": "ticket_messages",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "ticketId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "SupportTicket",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "senderId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "senderType": {
+          "type": "enum",
+          "values": [
+            "traveler",
+            "provider",
+            "agent",
+            "system"
+          ],
+          "default": "traveler"
+        },
+        "message": {
+          "type": "text",
+          "required": true
+        },
+        "attachments": {
+          "type": "json"
+        },
+        "isInternalNote": {
+          "type": "boolean",
+          "default": false
+        },
+        "readAt": {
+          "type": "timestamp"
+        }
+      },
+      "indexes": [
+        {
+          "name": "ticket_messages_ticket_idx",
+          "fields": [
+            "ticketId"
+          ]
+        },
+        {
+          "name": "ticket_messages_sender_idx",
+          "fields": [
+            "senderId"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "ticket_message:create"
+          ],
+          "select": [
+            "id",
+            "ticketId",
+            "senderId",
+            "senderType",
+            "isInternalNote"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "ticket_message:read"
+          ],
+          "select": [
+            "id",
+            "ticketId",
+            "senderId",
+            "senderType",
+            "message",
+            "attachments",
+            "isInternalNote",
+            "readAt"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "ticket_message:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 50,
+            "maximumLimit": 200
+          },
+          "filter": [
+            "ticketId",
+            "isInternalNote"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "senderId",
+            "senderType",
+            "message",
+            "isInternalNote"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "ticket_message:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "readAt"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "ticket_message:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "TripInquiry": {
+      "table": "trip_inquiries",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "travelerId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "destinationId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "Destination",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "contactEmail": {
+          "type": "string",
+          "required": true,
+          "maxLength": 255
+        },
+        "contactName": {
+          "type": "string",
+          "required": true,
+          "maxLength": 200
+        },
+        "startDate": {
+          "type": "timestamp"
+        },
+        "endDate": {
+          "type": "timestamp"
+        },
+        "travelerCount": {
+          "type": "integer"
+        },
+        "estimatedBudget": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "budgetCurrency": {
+          "type": "string",
+          "required": false,
+          "maxLength": 3
+        },
+        "preferences": {
+          "type": "json"
+        },
+        "specialRequests": {
+          "type": "text",
+          "required": false
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "open",
+            "quoted",
+            "accepted",
+            "booked",
+            "expired",
+            "closed"
+          ],
+          "default": "open"
+        },
+        "expiresAt": {
+          "type": "timestamp"
+        }
+      },
+      "indexes": [
+        {
+          "name": "trip_inquiries_traveler_idx",
+          "fields": [
+            "travelerId",
+            "status"
+          ]
+        },
+        {
+          "name": "trip_inquiries_status_idx",
+          "fields": [
+            "status"
+          ]
+        },
+        {
+          "name": "trip_inquiries_destination_idx",
+          "fields": [
+            "destinationId",
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": false,
+          "permissions": [],
+          "select": [
+            "id",
+            "contactEmail",
+            "contactName",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "trip_inquiry:read"
+          ],
+          "select": [
+            "id",
+            "travelerId",
+            "destinationId",
+            "contactEmail",
+            "contactName",
+            "startDate",
+            "endDate",
+            "travelerCount",
+            "estimatedBudget",
+            "budgetCurrency",
+            "preferences",
+            "specialRequests",
+            "status",
+            "expiresAt"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "trip_inquiry:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "travelerId",
+            "destinationId",
+            "status"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "contactName",
+            "destinationId",
+            "travelerCount",
+            "status"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "trip_inquiry:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "status"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "trip_inquiry:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "ProviderQuotation": {
+      "table": "provider_quotations",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "inquiryId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "TripInquiry",
+            "field": "id",
+            "onDelete": "cascade"
+          }
+        },
+        "providerId": {
+          "type": "uuid",
+          "required": true,
+          "references": {
+            "entity": "Provider",
+            "field": "id",
+            "onDelete": "restrict"
+          }
+        },
+        "title": {
+          "type": "string",
+          "required": true,
+          "maxLength": 300
+        },
+        "itineraryDetails": {
+          "type": "json"
+        },
+        "inclusions": {
+          "type": "json"
+        },
+        "exclusions": {
+          "type": "json"
+        },
+        "totalPrice": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2,
+          "required": true
+        },
+        "currency": {
+          "type": "string",
+          "required": true,
+          "maxLength": 3
+        },
+        "depositAmount": {
+          "type": "decimal",
+          "precision": 12,
+          "scale": 2
+        },
+        "terms": {
+          "type": "text",
+          "required": false
+        },
+        "validUntil": {
+          "type": "timestamp",
+          "required": true
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "draft",
+            "submitted",
+            "accepted",
+            "rejected",
+            "expired",
+            "revoked"
+          ],
+          "default": "draft"
+        }
+      },
+      "indexes": [
+        {
+          "name": "provider_quotations_inquiry_idx",
+          "fields": [
+            "inquiryId",
+            "status"
+          ]
+        },
+        {
+          "name": "provider_quotations_provider_idx",
+          "fields": [
+            "providerId",
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider_quotation:create"
+          ],
+          "select": [
+            "id",
+            "inquiryId",
+            "providerId",
+            "title",
+            "totalPrice",
+            "currency",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider_quotation:read"
+          ],
+          "select": [
+            "id",
+            "inquiryId",
+            "providerId",
+            "title",
+            "itineraryDetails",
+            "inclusions",
+            "exclusions",
+            "totalPrice",
+            "currency",
+            "depositAmount",
+            "terms",
+            "validUntil",
+            "status"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider_quotation:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "inquiryId",
+            "providerId",
+            "status"
+          ],
+          "sort": [
+            "totalPrice"
+          ],
+          "select": [
+            "id",
+            "providerId",
+            "title",
+            "totalPrice",
+            "currency",
+            "status",
+            "validUntil"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider_quotation:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "status",
+            "validUntil"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "provider_quotation:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "CmsPage": {
+      "table": "cms_pages",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "title": {
+          "type": "string",
+          "required": true,
+          "maxLength": 300
+        },
+        "slug": {
+          "type": "string",
+          "required": true,
+          "unique": true,
+          "maxLength": 350
+        },
+        "content": {
+          "type": "text",
+          "required": false
+        },
+        "excerpt": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "templateType": {
+          "type": "enum",
+          "values": [
+            "static",
+            "landing",
+            "destination",
+            "campaign",
+            "legal",
+            "help",
+            "provider_info"
+          ],
+          "default": "static"
+        },
+        "featuredImage": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "draft",
+            "published",
+            "archived"
+          ],
+          "default": "draft"
+        },
+        "publishedAt": {
+          "type": "timestamp"
+        },
+        "scheduledAt": {
+          "type": "timestamp"
+        },
+        "metaTitle": {
+          "type": "string",
+          "required": false,
+          "maxLength": 200
+        },
+        "metaDescription": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "canonicalUrl": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "language": {
+          "type": "string",
+          "required": true,
+          "maxLength": 10
+        },
+        "authorId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "cms_pages_slug_unique_idx",
+          "fields": [
+            "slug"
+          ],
+          "unique": true
+        },
+        {
+          "name": "cms_pages_status_idx",
+          "fields": [
+            "status",
+            "publishedAt"
+          ]
+        },
+        {
+          "name": "cms_pages_type_idx",
+          "fields": [
+            "templateType",
+            "status"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "cms_page:create"
+          ],
+          "select": [
+            "id",
+            "title",
+            "slug",
+            "templateType",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "cache": {
+            "mode": "http",
+            "maxAge": 300
+          },
+          "select": [
+            "id",
+            "title",
+            "slug",
+            "content",
+            "templateType",
+            "featuredImage",
+            "status",
+            "publishedAt",
+            "metaTitle",
+            "metaDescription"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "templateType",
+            "status",
+            "language"
+          ],
+          "sort": [
+            "publishedAt",
+            "title"
+          ],
+          "select": [
+            "id",
+            "title",
+            "slug",
+            "templateType",
+            "status",
+            "publishedAt"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "cms_page:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "title",
+            "slug",
+            "status",
+            "publishedAt"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "cms_page:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "BlogPost": {
+      "table": "blog_posts",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "title": {
+          "type": "string",
+          "required": true,
+          "maxLength": 300
+        },
+        "slug": {
+          "type": "string",
+          "required": true,
+          "unique": true,
+          "maxLength": 350
+        },
+        "excerpt": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "content": {
+          "type": "text",
+          "required": false
+        },
+        "featuredImage": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "authorId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "destinationId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "Destination",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "categories": {
+          "type": "json"
+        },
+        "tags": {
+          "type": "json"
+        },
+        "status": {
+          "type": "enum",
+          "values": [
+            "draft",
+            "published",
+            "scheduled",
+            "archived"
+          ],
+          "default": "draft"
+        },
+        "publishedAt": {
+          "type": "timestamp"
+        },
+        "scheduledAt": {
+          "type": "timestamp"
+        },
+        "metaTitle": {
+          "type": "string",
+          "required": false,
+          "maxLength": 200
+        },
+        "metaDescription": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "language": {
+          "type": "string",
+          "required": true,
+          "maxLength": 10
+        },
+        "viewCount": {
+          "type": "integer",
+          "default": 0
+        }
+      },
+      "indexes": [
+        {
+          "name": "blog_posts_slug_unique_idx",
+          "fields": [
+            "slug"
+          ],
+          "unique": true
+        },
+        {
+          "name": "blog_posts_status_idx",
+          "fields": [
+            "status",
+            "publishedAt"
+          ]
+        },
+        {
+          "name": "blog_posts_destination_idx",
+          "fields": [
+            "destinationId",
+            "status"
+          ]
+        },
+        {
+          "name": "blog_posts_author_idx",
+          "fields": [
+            "authorId"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "blog_post:create"
+          ],
+          "select": [
+            "id",
+            "title",
+            "slug",
+            "status"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": false,
+          "cache": {
+            "mode": "http",
+            "maxAge": 300
+          },
+          "select": [
+            "id",
+            "title",
+            "slug",
+            "excerpt",
+            "content",
+            "featuredImage",
+            "authorId",
+            "destinationId",
+            "categories",
+            "tags",
+            "status",
+            "publishedAt",
+            "metaTitle",
+            "metaDescription"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": false,
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 20,
+            "maximumLimit": 100
+          },
+          "filter": [
+            "status",
+            "destinationId",
+            "authorId",
+            "language"
+          ],
+          "sort": [
+            "publishedAt",
+            "viewCount"
+          ],
+          "select": [
+            "id",
+            "title",
+            "slug",
+            "excerpt",
+            "featuredImage",
+            "status",
+            "publishedAt"
+          ]
+        },
+        "update": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "blog_post:update"
+          ],
+          "concurrency": {
+            "mode": "updatedAt"
+          },
+          "select": [
+            "id",
+            "title",
+            "slug",
+            "status",
+            "publishedAt"
+          ]
+        },
+        "delete": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "blog_post:delete"
+          ],
+          "mode": "soft"
+        }
+      }
+    },
+    "AuditLog": {
+      "table": "audit_logs",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "primary": true,
+          "generated": true
+        },
+        "actorId": {
+          "type": "uuid",
+          "required": false,
+          "references": {
+            "entity": "User",
+            "field": "id",
+            "onDelete": "set-null"
+          }
+        },
+        "actorRole": {
+          "type": "string",
+          "required": false,
+          "maxLength": 100
+        },
+        "action": {
+          "type": "string",
+          "required": true,
+          "maxLength": 200
+        },
+        "entityType": {
+          "type": "string",
+          "required": false,
+          "maxLength": 100
+        },
+        "entityId": {
+          "type": "uuid",
+          "required": false
+        },
+        "previousState": {
+          "type": "json"
+        },
+        "newState": {
+          "type": "json"
+        },
+        "ipAddress": {
+          "type": "string",
+          "required": false,
+          "maxLength": 50
+        },
+        "userAgent": {
+          "type": "string",
+          "required": false,
+          "maxLength": 500
+        },
+        "correlationId": {
+          "type": "string",
+          "required": false,
+          "maxLength": 100
+        },
+        "severity": {
+          "type": "enum",
+          "values": [
+            "info",
+            "warning",
+            "critical"
+          ],
+          "default": "info"
+        }
+      },
+      "indexes": [
+        {
+          "name": "audit_logs_actor_idx",
+          "fields": [
+            "actorId"
+          ]
+        },
+        {
+          "name": "audit_logs_entity_idx",
+          "fields": [
+            "entityType",
+            "entityId"
+          ]
+        },
+        {
+          "name": "audit_logs_action_idx",
+          "fields": [
+            "action"
+          ]
+        },
+        {
+          "name": "audit_logs_severity_idx",
+          "fields": [
+            "severity"
+          ]
+        }
+      ],
+      "crud": {
+        "create": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "audit_log:create"
+          ],
+          "select": [
+            "id",
+            "actorId",
+            "action",
+            "entityType",
+            "entityId",
+            "severity"
+          ]
+        },
+        "get": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "audit_log:read"
+          ],
+          "select": [
+            "id",
+            "actorId",
+            "actorRole",
+            "action",
+            "entityType",
+            "entityId",
+            "previousState",
+            "newState",
+            "ipAddress",
+            "severity",
+            "correlationId"
+          ]
+        },
+        "list": {
+          "enabled": true,
+          "auth": true,
+          "permissions": [
+            "audit_log:list"
+          ],
+          "pagination": {
+            "type": "cursor",
+            "defaultLimit": 50,
+            "maximumLimit": 500
+          },
+          "filter": [
+            "actorId",
+            "entityType",
+            "severity"
+          ],
+          "sort": [],
+          "select": [
+            "id",
+            "actorId",
+            "actorRole",
+            "action",
+            "entityType",
+            "entityId",
+            "severity"
+          ]
+        },
+        "update": {
+          "enabled": false
+        },
+        "delete": {
+          "enabled": false
+        }
+      }
+    }
+  }
+}
