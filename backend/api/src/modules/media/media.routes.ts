@@ -8,18 +8,20 @@ import { logger } from '@core/observability/logger.js';
 
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg","image/png","image/webp","application/pdf","video/mp4"]);
 const MAX_BYTES = 20971520;
-const PUBLIC_BASE_URL = 'https://media.travellerai.com';
+const DEFAULT_PUBLIC_BASE_URL = 'https://media.travellerai.com';
 const URL_EXPIRY_SECONDS = 300;
 
 /**
  * @author arefin
- * @description Initialize and return an S3 client configured with B2-compatible credentials from the environment
+ * @description Initialize and return an S3 client configured with B2/R2-compatible credentials from the environment
  */
 function getS3Client(env: Env): S3Client {
   const e = env as unknown as Record<string, string>;
+  const endpoint = e['B2_ENDPOINT'] || 'https://s3.us-west-002.backblazeb2.com';
+  const region = e['B2_REGION'] || 'auto';
   return new S3Client({
-    region: 'auto',
-    endpoint: `https://s3.us-west-002.backblazeb2.com`,
+    region,
+    endpoint,
     credentials: {
       accessKeyId: e['B2_KEY_ID'] ?? '',
       secretAccessKey: e['B2_APP_KEY'] ?? '',
@@ -64,7 +66,8 @@ export async function uploadUrlRoute(c: Context<{ Bindings: Env }>): Promise<Res
   });
 
   const uploadUrl = await getSignedUrl(s3, command, { expiresIn: URL_EXPIRY_SECONDS });
-  const publicUrl = `${PUBLIC_BASE_URL}/${objectKey}`;
+  const publicBase = (c.env as unknown as Record<string, string>)['MEDIA_PUBLIC_URL'] || DEFAULT_PUBLIC_BASE_URL;
+  const publicUrl = `${publicBase}/${objectKey}`;
 
   logger.info({ action: 'presigned_url_generated', objectKey, userId: session.userId, correlationId });
 
@@ -85,7 +88,8 @@ export async function completeUploadRoute(c: Context<{ Bindings: Env }>): Promis
   const body = await c.req.json() as { objectKey: string; entityType: string; entityId: string };
   const { objectKey, entityType, entityId } = body;
 
-  const publicUrl = `${PUBLIC_BASE_URL}/${objectKey}`;
+  const publicBase = (c.env as unknown as Record<string, string>)['MEDIA_PUBLIC_URL'] || DEFAULT_PUBLIC_BASE_URL;
+  const publicUrl = `${publicBase}/${objectKey}`;
 
   logger.info({ action: 'upload_completed', objectKey, entityType, entityId, correlationId });
 
