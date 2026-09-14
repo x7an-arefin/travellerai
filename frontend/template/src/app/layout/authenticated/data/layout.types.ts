@@ -15,6 +15,7 @@ export type BaseNavItem = {
   badge?: string
   icon?: string
   permissions?: string[]
+  roles?: string[]
 }
 
 export type NavLink = BaseNavItem & {
@@ -31,6 +32,8 @@ export type NavItem = NavCollapsible | NavLink
 
 export type NavGroup = {
   title: string
+  roles?: string[]
+  permissions?: string[]
   items: NavItem[]
 }
 

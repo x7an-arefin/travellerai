@@ -61,8 +61,25 @@ export const MOCK_USERS: Record<string, AuthUser> = {
     name: 'Elena Rostova',
     email: 'elena@alpineadventures.com',
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
-    role: ['ProviderOwner', 'Provider'],
-    permissions: ['packages.manage', 'departures.manage', 'bookings.view', 'withdrawals.request'],
+    role: ['ProviderOwner', 'Provider', 'AgencyOwner'],
+    permissions: [
+      'overview.view',
+      'analytics.view',
+      'packages.manage',
+      'departures.manage',
+      'destinations.view',
+      'categories.view',
+      'bookings.view',
+      'reviews.view',
+      'inquiries.manage',
+      'staff.manage',
+      'affiliates.view',
+      'wallets.view',
+      'withdrawals.request',
+      'campaigns.manage',
+      'tickets.view',
+      'settings.manage',
+    ],
   },
   'marco@swissguides.ch': {
     id: 'usr-guide-1',
@@ -70,15 +87,34 @@ export const MOCK_USERS: Record<string, AuthUser> = {
     email: 'marco@swissguides.ch',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
     role: ['Guide', 'Staff'],
-    permissions: ['departures.view', 'bookings.checkin'],
+    permissions: [
+      'departures.view',
+      'destinations.view',
+      'bookings.checkin',
+      'reviews.view',
+      'tickets.view',
+      'settings.manage',
+    ],
   },
   'finance@traveller.ai': {
     id: 'usr-finance-1',
     name: 'Sarah Jenkins',
     email: 'finance@traveller.ai',
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80',
-    role: ['FinanceAdmin'],
-    permissions: ['wallets.manage', 'withdrawals.approve', 'ledger.view'],
+    role: ['FinanceAdmin', 'Finance'],
+    permissions: [
+      'overview.view',
+      'analytics.view',
+      'bookings.view',
+      'kyc.manage',
+      'affiliates.view',
+      'wallets.manage',
+      'withdrawals.approve',
+      'campaigns.view',
+      'audit.view',
+      'tickets.view',
+      'settings.manage',
+    ],
   },
   'emma.richardson@gmail.com': {
     id: 'usr-traveler-1',
@@ -86,7 +122,13 @@ export const MOCK_USERS: Record<string, AuthUser> = {
     email: 'emma.richardson@gmail.com',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
     role: ['Traveler'],
-    permissions: ['bookings.create', 'reviews.write'],
+    permissions: [
+      'bookings.view',
+      'reviews.write',
+      'inquiries.create',
+      'tickets.view',
+      'settings.manage',
+    ],
   },
 }
 
@@ -208,17 +250,52 @@ export class AuthService {
   }
 
   hasRole(role: string | string[]): boolean {
+    const user = this._user()
+    if (!user) return false
     const required = Array.isArray(role) ? role : [role]
-    const roles = (this._user()?.role ?? []).map((value) => value.toLowerCase())
-    return required.some((value) => roles.includes(value.toLowerCase())) || roles.includes('admin') || roles.includes('superadmin')
+    const roles = (user.role ?? []).map((value) => value.toLowerCase())
+    if (roles.includes('admin') || roles.includes('superadmin')) return true
+    return required.some((value) => roles.includes(value.toLowerCase()))
   }
 
   hasPermission(permission: string): boolean {
-    return this.hasRole(['admin', 'superadmin']) || (this._user()?.permissions ?? []).includes(permission)
+    const user = this._user()
+    if (!user) return false
+    const userRoles = (user.role ?? []).map((r) => r.toLowerCase())
+    if (userRoles.includes('admin') || userRoles.includes('superadmin')) return true
+    const userPerms = user.permissions ?? []
+    if (userPerms.includes('all')) return true
+    return userPerms.includes(permission)
+  }
+
+  hasAccess(permissions?: string[], roles?: string[]): boolean {
+    const user = this._user()
+    if (!user) return false
+    const userRoles = (user.role ?? []).map((r) => r.toLowerCase())
+    if (userRoles.includes('admin') || userRoles.includes('superadmin')) return true
+    const userPerms = user.permissions ?? []
+    if (userPerms.includes('all')) return true
+
+    const roleMatched = roles && roles.length > 0 ? roles.some((r) => userRoles.includes(r.toLowerCase())) : false
+    const permMatched = permissions && permissions.length > 0 ? permissions.some((p) => userPerms.includes(p)) : false
+
+    if (roles && roles.length > 0 && permissions && permissions.length > 0) {
+      return roleMatched || permMatched
+    }
+
+    if (roles && roles.length > 0) {
+      return roleMatched
+    }
+
+    if (permissions && permissions.length > 0) {
+      return permMatched
+    }
+
+    return true
   }
 
   hasAnyPermission(permissions: string[]): boolean {
-    return permissions.length === 0 || this.hasRole(['admin', 'superadmin']) || permissions.some((permission) => this.hasPermission(permission))
+    return this.hasAccess(permissions)
   }
 
   getDefaultRouteForRole(): string {

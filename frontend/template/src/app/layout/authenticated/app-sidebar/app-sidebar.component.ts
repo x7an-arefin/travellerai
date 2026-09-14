@@ -64,13 +64,14 @@ export class AppSidebarComponent {
   })
 
   readonly visibleNavGroups = computed(() => this.data.navGroups
+    .filter((group) => this.auth.hasAccess(group.permissions, group.roles))
     .map((group) => ({
       ...group,
       items: group.items
         .map((item) => item.items
-          ? { ...item, items: item.items.filter((child) => this.auth.hasAnyPermission(child.permissions ?? [])) }
+          ? { ...item, items: item.items.filter((child) => this.auth.hasAccess(child.permissions, child.roles)) }
           : item)
-        .filter((item) => this.auth.hasAnyPermission(item.permissions ?? []) && (!item.items || item.items.length > 0)),
+        .filter((item) => this.auth.hasAccess(item.permissions, item.roles) && (!item.items || item.items.length > 0)),
     }))
     .filter((group) => group.items.length > 0))
 

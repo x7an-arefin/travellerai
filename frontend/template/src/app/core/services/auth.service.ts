@@ -178,8 +178,34 @@ export class AuthService {
     return this.hasRole(['admin', 'superadmin']) || (this._user()?.permissions ?? []).includes(permission)
   }
 
+  hasAccess(permissions?: string[], roles?: string[]): boolean {
+    const user = this._user()
+    if (!user) return false
+    const userRoles = (user.role ?? []).map((r) => r.toLowerCase())
+    if (userRoles.includes('admin') || userRoles.includes('superadmin')) return true
+    const userPerms = user.permissions ?? []
+    if (userPerms.includes('all')) return true
+
+    const roleMatched = roles && roles.length > 0 ? roles.some((r) => userRoles.includes(r.toLowerCase())) : false
+    const permMatched = permissions && permissions.length > 0 ? permissions.some((p) => userPerms.includes(p)) : false
+
+    if (roles && roles.length > 0 && permissions && permissions.length > 0) {
+      return roleMatched || permMatched
+    }
+
+    if (roles && roles.length > 0) {
+      return roleMatched
+    }
+
+    if (permissions && permissions.length > 0) {
+      return permMatched
+    }
+
+    return true
+  }
+
   hasAnyPermission(permissions: string[]): boolean {
-    return permissions.length === 0 || this.hasRole(['admin', 'superadmin']) || permissions.some((permission) => this.hasPermission(permission))
+    return this.hasAccess(permissions)
   }
 
   getDefaultRouteForRole(): string {
