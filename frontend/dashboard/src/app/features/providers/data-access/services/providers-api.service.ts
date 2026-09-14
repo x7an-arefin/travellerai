@@ -1,13 +1,15 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient, HttpParams } from '@angular/common/http'
 import { firstValueFrom } from 'rxjs'
+import { ApiConfigService } from '../../../../core/services/api-config.service'
 import { Provider } from '../models/providers.model'
 import { NewProvider, UpdateProvider, ProviderListResponse } from '../models/providers-api.types'
 
 @Injectable({ providedIn: 'root' })
 export class ProvidersApiService {
   private readonly http = inject(HttpClient)
-  private readonly baseUrl = 'http://localhost:8000/api/v1/providers'
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly baseUrl = this.apiConfig.buildUrl('providers')
 
   private mockProviders: Provider[] = [
     {

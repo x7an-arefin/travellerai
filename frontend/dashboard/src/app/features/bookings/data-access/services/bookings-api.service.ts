@@ -1,13 +1,15 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient, HttpParams } from '@angular/common/http'
 import { firstValueFrom } from 'rxjs'
+import { ApiConfigService } from '../../../../core/services/api-config.service'
 import { Booking } from '../models/bookings.model'
 import { NewBooking, UpdateBooking, BookingListResponse } from '../models/bookings-api.types'
 
 @Injectable({ providedIn: 'root' })
 export class BookingsApiService {
   private readonly http = inject(HttpClient)
-  private readonly baseUrl = 'http://localhost:8000/api/v1/bookings'
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly baseUrl = this.apiConfig.buildUrl('bookings')
 
   private mockBookings: Booking[] = [
     {

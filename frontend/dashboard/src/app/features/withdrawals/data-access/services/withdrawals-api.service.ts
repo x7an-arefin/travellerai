@@ -1,13 +1,15 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient, HttpParams } from '@angular/common/http'
 import { firstValueFrom } from 'rxjs'
+import { ApiConfigService } from '../../../../core/services/api-config.service'
 import { WithdrawalRequest } from '../models/withdrawals.model'
 import { NewWithdrawalRequest, UpdateWithdrawalRequest, WithdrawalListResponse } from '../models/withdrawals-api.types'
 
 @Injectable({ providedIn: 'root' })
 export class WithdrawalsApiService {
   private readonly http = inject(HttpClient)
-  private readonly baseUrl = 'http://localhost:8000/api/v1/withdrawal-requests'
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly baseUrl = this.apiConfig.buildUrl('withdrawal-requests')
 
   private mockWithdrawals: WithdrawalRequest[] = [
     {

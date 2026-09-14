@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
 import { firstValueFrom } from 'rxjs'
+import { ApiConfigService } from '../../../../core/services/api-config.service'
 import { AuditLog } from '../models/audit-logs.model'
 import { AuditLogListResponse } from '../models/audit-logs-api.types'
 
@@ -9,7 +10,8 @@ import { AuditLogListResponse } from '../models/audit-logs-api.types'
 })
 export class AuditLogsApiService {
   private readonly http = inject(HttpClient)
-  private readonly baseUrl = 'http://localhost:8000/api/v1/audit-logs'
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly baseUrl = this.apiConfig.buildUrl('audit-logs')
 
   private mockLogs: AuditLog[] = [
     {

@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
 import { firstValueFrom } from 'rxjs'
+import { ApiConfigService } from '../../../../core/services/api-config.service'
 import { Departure } from '../models/departures.model'
 import { CreateDepartureInput, UpdateDepartureInput, DepartureListResponse } from '../models/departures-api.types'
 
@@ -9,7 +10,8 @@ import { CreateDepartureInput, UpdateDepartureInput, DepartureListResponse } fro
 })
 export class DeparturesApiService {
   private readonly http = inject(HttpClient)
-  private readonly baseUrl = 'http://localhost:8000/api/v1/departures'
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly baseUrl = this.apiConfig.buildUrl('departures')
 
   private mockDepartures: Departure[] = [
     {

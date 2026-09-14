@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
 import { firstValueFrom } from 'rxjs'
+import { ApiConfigService } from '../../../../core/services/api-config.service'
 import { Review, ReviewResponse } from '../models/reviews.model'
 import { UpdateReviewStatusInput, CreateReviewResponseInput, ReviewListResponse } from '../models/reviews-api.types'
 
@@ -9,8 +10,9 @@ import { UpdateReviewStatusInput, CreateReviewResponseInput, ReviewListResponse 
 })
 export class ReviewsApiService {
   private readonly http = inject(HttpClient)
-  private readonly baseUrl = 'http://localhost:8000/api/v1/reviews'
-  private readonly responsesUrl = 'http://localhost:8000/api/v1/review-responses'
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly baseUrl = this.apiConfig.buildUrl('reviews')
+  private readonly responsesUrl = this.apiConfig.buildUrl('review-responses')
 
   private mockReviews: Review[] = [
     {

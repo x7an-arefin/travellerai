@@ -1,13 +1,17 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
 import { firstValueFrom } from 'rxjs'
+import { ApiConfigService } from '../../../../core/services/api-config.service'
 import { ProviderWallet, LedgerEntry, PayoutAccount } from '../models/wallets.model'
 import { WalletDataResponse, NewPayoutAccount } from '../models/wallets-api.types'
 
 @Injectable({ providedIn: 'root' })
 export class WalletsApiService {
   private readonly http = inject(HttpClient)
-  private readonly baseUrl = 'http://localhost:8000/api/v1/provider-wallets'
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly baseUrl = this.apiConfig.buildUrl('provider-wallets')
+  private readonly ledgerUrl = this.apiConfig.buildUrl('ledger-entries')
+  private readonly payoutAccountsUrl = this.apiConfig.buildUrl('provider-payout-accounts')
 
   private mockWallet: ProviderWallet = {
     id: 'wlt-1',
@@ -125,8 +129,8 @@ export class WalletsApiService {
   async getWalletData(): Promise<{ ok: true; data: WalletDataResponse } | { ok: false; error: string }> {
     try {
       const wallet = await firstValueFrom(this.http.get<ProviderWallet>(`${this.baseUrl}/current`))
-      const ledger = await firstValueFrom(this.http.get<LedgerEntry[]>(`http://localhost:8000/api/v1/ledger-entries`))
-      const payoutAccounts = await firstValueFrom(this.http.get<PayoutAccount[]>(`http://localhost:8000/api/v1/provider-payout-accounts`))
+      const ledger = await firstValueFrom(this.http.get<LedgerEntry[]>(this.ledgerUrl))
+      const payoutAccounts = await firstValueFrom(this.http.get<PayoutAccount[]>(this.payoutAccountsUrl))
       return {
         ok: true,
         data: { wallet, ledger, payoutAccounts },
@@ -145,7 +149,7 @@ export class WalletsApiService {
 
   async addPayoutAccount(dto: NewPayoutAccount): Promise<{ ok: true; data: PayoutAccount } | { ok: false; error: string }> {
     try {
-      const data = await firstValueFrom(this.http.post<PayoutAccount>(`http://localhost:8000/api/v1/provider-payout-accounts`, dto))
+      const data = await firstValueFrom(this.http.post<PayoutAccount>(this.payoutAccountsUrl, dto))
       return { ok: true, data }
     } catch {
       const masked = dto.accountNumber.length > 4 ? `****${dto.accountNumber.slice(-4)}` : dto.accountNumber

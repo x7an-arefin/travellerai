@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
 import { firstValueFrom } from 'rxjs'
+import { ApiConfigService } from '../../../../core/services/api-config.service'
 import { Coupon } from '../models/campaigns.model'
 import { CreateCouponInput, UpdateCouponInput, CouponListResponse } from '../models/campaigns-api.types'
 
@@ -9,7 +10,8 @@ import { CreateCouponInput, UpdateCouponInput, CouponListResponse } from '../mod
 })
 export class CampaignsApiService {
   private readonly http = inject(HttpClient)
-  private readonly baseUrl = 'http://localhost:8000/api/v1/coupons'
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly baseUrl = this.apiConfig.buildUrl('coupons')
 
   private mockCoupons: Coupon[] = [
     {

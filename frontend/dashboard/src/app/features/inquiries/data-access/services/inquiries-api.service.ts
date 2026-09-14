@@ -1,13 +1,16 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
 import { firstValueFrom } from 'rxjs'
+import { ApiConfigService } from '../../../../core/services/api-config.service'
 import { TripInquiry, Quotation } from '../models/inquiries.model'
 import { NewTripInquiry, UpdateTripInquiry, NewQuotation, TripInquiryListResponse } from '../models/inquiries-api.types'
 
 @Injectable({ providedIn: 'root' })
 export class InquiriesApiService {
   private readonly http = inject(HttpClient)
-  private readonly baseUrl = 'http://localhost:8000/api/v1/trip-inquiries'
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly baseUrl = this.apiConfig.buildUrl('trip-inquiries')
+  private readonly quotationsUrl = this.apiConfig.buildUrl('provider-quotations')
 
   private mockInquiries: TripInquiry[] = [
     {
@@ -167,7 +170,7 @@ export class InquiriesApiService {
 
   async addQuotation(inquiryId: string, quote: NewQuotation): Promise<{ ok: true; data: Quotation } | { ok: false; error: string }> {
     try {
-      const data = await firstValueFrom(this.http.post<Quotation>(`http://localhost:8000/api/v1/provider-quotations`, quote))
+      const data = await firstValueFrom(this.http.post<Quotation>(this.quotationsUrl, quote))
       return { ok: true, data }
     } catch {
       const newQuot: Quotation = {

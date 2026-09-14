@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
 import { firstValueFrom } from 'rxjs'
+import { ApiConfigService } from '../../../../core/services/api-config.service'
 import { AffiliateAccount } from '../models/affiliates.model'
 import { CreateAffiliateInput, UpdateAffiliateInput, AffiliateListResponse } from '../models/affiliates-api.types'
 
@@ -9,7 +10,8 @@ import { CreateAffiliateInput, UpdateAffiliateInput, AffiliateListResponse } fro
 })
 export class AffiliatesApiService {
   private readonly http = inject(HttpClient)
-  private readonly baseUrl = 'http://localhost:8000/api/v1/affiliate-accounts'
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly baseUrl = this.apiConfig.buildUrl('affiliate-accounts')
 
   private mockAffiliates: AffiliateAccount[] = [
     {

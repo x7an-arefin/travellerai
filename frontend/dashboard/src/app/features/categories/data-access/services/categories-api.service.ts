@@ -1,13 +1,15 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
 import { firstValueFrom } from 'rxjs'
+import { ApiConfigService } from '../../../../core/services/api-config.service'
 import { Category } from '../models/categories.model'
 import { NewCategory, UpdateCategory, CategoryListResponse } from '../models/categories-api.types'
 
 @Injectable({ providedIn: 'root' })
 export class CategoriesApiService {
   private readonly http = inject(HttpClient)
-  private readonly baseUrl = 'http://localhost:8000/api/v1/categories'
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly baseUrl = this.apiConfig.buildUrl('categories')
 
   private mockCategories: Category[] = [
     {

@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
 import { firstValueFrom } from 'rxjs'
+import { ApiConfigService } from '../../../../core/services/api-config.service'
 import { KycDocument } from '../models/kyc.model'
 import { UpdateKycDecisionInput, KycListResponse } from '../models/kyc-api.types'
 
@@ -9,7 +10,8 @@ import { UpdateKycDecisionInput, KycListResponse } from '../models/kyc-api.types
 })
 export class KycApiService {
   private readonly http = inject(HttpClient)
-  private readonly baseUrl = 'http://localhost:8000/api/v1/kyc-documents'
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly baseUrl = this.apiConfig.buildUrl('kyc-documents')
 
   private mockDocuments: KycDocument[] = [
     {

@@ -1,13 +1,15 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient, HttpParams } from '@angular/common/http'
 import { firstValueFrom } from 'rxjs'
+import { ApiConfigService } from '../../../../core/services/api-config.service'
 import { Package } from '../models/packages.model'
 import { NewPackage, UpdatePackage, PackageListResponse } from '../models/packages-api.types'
 
 @Injectable({ providedIn: 'root' })
 export class PackagesApiService {
   private readonly http = inject(HttpClient)
-  private readonly baseUrl = 'http://localhost:8000/api/v1/packages'
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly baseUrl = this.apiConfig.buildUrl('packages')
 
   // Default seed/mock data so the dashboard is immediately demonstrable
   private mockPackages: Package[] = [

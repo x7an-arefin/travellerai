@@ -1,13 +1,16 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
 import { firstValueFrom } from 'rxjs'
+import { ApiConfigService } from '../../../../core/services/api-config.service'
 import { GuideProfile, StaffMember } from '../models/staff.model'
 import { StaffDataResponse, NewGuideProfile, UpdateGuideProfile, NewStaffMember } from '../models/staff-api.types'
 
 @Injectable({ providedIn: 'root' })
 export class StaffApiService {
   private readonly http = inject(HttpClient)
-  private readonly baseUrl = 'http://localhost:8000/api/v1'
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly guidesUrl = this.apiConfig.buildUrl('guide-profiles')
+  private readonly staffUrl = this.apiConfig.buildUrl('provider-staff')
 
   private mockGuides: GuideProfile[] = [
     {
@@ -105,8 +108,8 @@ export class StaffApiService {
 
   async getStaffData(): Promise<{ ok: true; data: StaffDataResponse } | { ok: false; error: string }> {
     try {
-      const guides = await firstValueFrom(this.http.get<GuideProfile[]>(`${this.baseUrl}/guide-profiles`))
-      const staff = await firstValueFrom(this.http.get<StaffMember[]>(`${this.baseUrl}/provider-staff`))
+      const guides = await firstValueFrom(this.http.get<GuideProfile[]>(this.guidesUrl))
+      const staff = await firstValueFrom(this.http.get<StaffMember[]>(this.staffUrl))
       return {
         ok: true,
         data: { guides, staff },
@@ -124,7 +127,7 @@ export class StaffApiService {
 
   async createGuide(dto: NewGuideProfile): Promise<{ ok: true; data: GuideProfile } | { ok: false; error: string }> {
     try {
-      const data = await firstValueFrom(this.http.post<GuideProfile>(`${this.baseUrl}/guide-profiles`, dto))
+      const data = await firstValueFrom(this.http.post<GuideProfile>(this.guidesUrl, dto))
       return { ok: true, data }
     } catch {
       const newGuide: GuideProfile = {
@@ -141,7 +144,7 @@ export class StaffApiService {
 
   async updateGuide(id: string, dto: UpdateGuideProfile): Promise<{ ok: true; data: GuideProfile } | { ok: false; error: string }> {
     try {
-      const data = await firstValueFrom(this.http.patch<GuideProfile>(`${this.baseUrl}/guide-profiles/${id}`, dto))
+      const data = await firstValueFrom(this.http.patch<GuideProfile>(`${this.guidesUrl}/${id}`, dto))
       return { ok: true, data }
     } catch {
       const idx = this.mockGuides.findIndex(g => g.id === id)
@@ -155,7 +158,7 @@ export class StaffApiService {
 
   async inviteStaff(dto: NewStaffMember): Promise<{ ok: true; data: StaffMember } | { ok: false; error: string }> {
     try {
-      const data = await firstValueFrom(this.http.post<StaffMember>(`${this.baseUrl}/provider-staff`, dto))
+      const data = await firstValueFrom(this.http.post<StaffMember>(this.staffUrl, dto))
       return { ok: true, data }
     } catch {
       const newMember: StaffMember = {
@@ -172,7 +175,7 @@ export class StaffApiService {
 
   async removeGuide(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
     try {
-      await firstValueFrom(this.http.delete(`${this.baseUrl}/guide-profiles/${id}`))
+      await firstValueFrom(this.http.delete(`${this.guidesUrl}/${id}`))
       return { ok: true }
     } catch {
       this.mockGuides = this.mockGuides.filter(g => g.id !== id)
