@@ -325,16 +325,21 @@ function normalizeEntity(
     normalizeField(fname, fraw, entityName, allEntities)
   );
 
-  // Auto-inject audit timestamp fields
-  const createdAtField = normalizeField('createdAt', { type: 'timestamp', generated: 'createdAt' }, entityName, allEntities);
-  const updatedAtField = normalizeField('updatedAt', { type: 'timestamp', generated: 'updatedAt' }, entityName, allEntities);
-  fields.push(createdAtField, updatedAtField);
+  // Auto-inject audit timestamp fields (if not already defined in raw entity spec)
+  if (!fields.some((f) => f.name === 'createdAt')) {
+    const createdAtField = normalizeField('createdAt', { type: 'timestamp', generated: 'createdAt' }, entityName, allEntities);
+    fields.push(createdAtField);
+  }
+  if (!fields.some((f) => f.name === 'updatedAt')) {
+    const updatedAtField = normalizeField('updatedAt', { type: 'timestamp', generated: 'updatedAt' }, entityName, allEntities);
+    fields.push(updatedAtField);
+  }
 
   // Compute hasSoftDelete early to decide if we inject deletedAt
   const rawCrudForCheck = raw['crud'] as Record<string, RawSpec> | undefined;
   const rawDeleteOp = rawCrudForCheck?.['delete'] as RawSpec | undefined;
   const softDelete = rawDeleteOp && rawDeleteOp['enabled'] !== false && ((rawDeleteOp['mode'] as string | undefined) ?? 'soft') === 'soft';
-  if (softDelete) {
+  if (softDelete && !fields.some((f) => f.name === 'deletedAt')) {
     const deletedAtField = normalizeField('deletedAt', { type: 'timestamp' }, entityName, allEntities);
     fields.push(deletedAtField);
   }

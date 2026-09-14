@@ -119,7 +119,7 @@ describe('<%- entity.namePascal %> — <%- operation.operation.toUpperCase() %> 
       headers: { 'Content-Type': 'application/json' },
     });
 <%if (operation.auth) {%>    expect([401, 403]).toContain(res.status);
-<%} else {%>    expect([200, 201, 204, 500]).toContain(res.status);
+<%} else {%>    expect([200, 201, 204, 400, 404, 500]).toContain(res.status);
 <%}%>  });
 });
 

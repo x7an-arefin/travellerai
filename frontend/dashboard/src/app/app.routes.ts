@@ -29,6 +29,16 @@ export const routes: Routes = [
           import('./features/bookings/bookings.routes').then((m) => m.BookingsRoutes),
       },
       {
+        path: 'hotels',
+        loadChildren: () =>
+          import('./features/hotels/hotels.routes').then((m) => m.HotelsRoutes),
+      },
+      {
+        path: 'vehicles',
+        loadChildren: () =>
+          import('./features/vehicles/vehicles.routes').then((m) => m.VehiclesRoutes),
+      },
+      {
         path: 'departures',
         loadChildren: () =>
           import('./features/departures/departures.routes').then((m) => m.DeparturesRoutes),

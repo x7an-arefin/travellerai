@@ -80,6 +80,34 @@ export const sidebarData: SidebarData = {
       ],
     },
     {
+      title: 'Hospitality & Hotels',
+      roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Staff'],
+      items: [
+        {
+          title: 'Hotel PMS Console',
+          url: '/hotels',
+          badge: 'PMS',
+          icon: 'lucideBedDouble',
+          roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Staff'],
+          permissions: ['hotels.view', 'hotels.manage'],
+        },
+      ],
+    },
+    {
+      title: 'Fleet & Ground Transport',
+      roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Staff'],
+      items: [
+        {
+          title: 'Vehicle Fleet & Rentals',
+          url: '/vehicles',
+          badge: 'FMS',
+          icon: 'lucideCar',
+          roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Staff'],
+          permissions: ['vehicles.view', 'vehicles.manage'],
+        },
+      ],
+    },
+    {
       title: 'Bookings & Operations',
       roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Guide', 'Staff', 'FinanceAdmin', 'Traveler'],
       items: [

@@ -59,6 +59,8 @@ import {
   lucideGraduationCap,
   lucideUserCheck,
   lucideShield,
+  lucideCar,
+  lucideBedDouble,
 } from '@ng-icons/lucide'
 import { NavGroup, NavItem } from '../data/layout.types'
 import { LayoutService } from '@core/services/layout.service'
@@ -126,6 +128,8 @@ import { HlmBadgeImports } from '@ui/badge/hlm-badge.directive'
       lucideGraduationCap,
       lucideUserCheck,
       lucideShield,
+      lucideCar,
+      lucideBedDouble,
     }),
   ],
   template: `
