@@ -182,6 +182,18 @@ export class AuthService {
     return permissions.length === 0 || this.hasRole(['admin', 'superadmin']) || permissions.some((permission) => this.hasPermission(permission))
   }
 
+  getDefaultRouteForRole(): string {
+    const user = this._user()
+    if (!user || !user.role || !user.role.length) return '/'
+    const roles = user.role.map((r) => r.toLowerCase())
+    if (roles.includes('superadmin') || roles.includes('admin')) return '/'
+    if (roles.includes('providerowner') || roles.includes('provider') || roles.includes('agency_owner')) return '/'
+    if (roles.includes('guide')) return '/departures'
+    if (roles.includes('financeadmin') || roles.includes('finance')) return '/wallets'
+    if (roles.includes('traveler')) return '/bookings'
+    return '/'
+  }
+
   private apply(response: AuthResponse): void {
     if (response.user) {
       const role = Array.isArray(response.user.role) ? response.user.role : response.user.role ? [response.user.role] : []

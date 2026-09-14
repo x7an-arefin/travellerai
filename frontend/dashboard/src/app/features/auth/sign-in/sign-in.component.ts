@@ -139,7 +139,8 @@ export class SignInComponent {
       return
     }
     toast.success('Signed in successfully!')
-    this.router.navigate(['/'])
+    const targetRoute = this.authService.getDefaultRouteForRole()
+    this.router.navigateByUrl(targetRoute)
   }
 
   async loginAsDemo(email: string): Promise<void> {
@@ -147,7 +148,8 @@ export class SignInComponent {
     const success = await this.authService.signInAsync(email, 'password123')
     if (success) {
       toast.success(`Logged in as ${email}`)
-      this.router.navigate(['/'])
+      const targetRoute = this.authService.getDefaultRouteForRole()
+      this.router.navigateByUrl(targetRoute)
     }
   }
 }

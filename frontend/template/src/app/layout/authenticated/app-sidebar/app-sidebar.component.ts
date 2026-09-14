@@ -42,7 +42,7 @@ import { cn } from '../../../core/utils/cn'
 
       <!-- Footer -->
       <div class="h-16 flex items-center px-2.5 border-t border-sidebar-border shrink-0 mt-auto">
-        <app-nav-user [user]="data.user" class="w-full" />
+        <app-nav-user [user]="currentUser()" class="w-full" />
       </div>
     </aside>
   `,
@@ -50,6 +50,18 @@ import { cn } from '../../../core/utils/cn'
 export class AppSidebarComponent {
   readonly data = sidebarData
   private readonly auth = inject(AuthService)
+
+  readonly currentUser = computed(() => {
+    const u = this.auth.user()
+    if (!u) {
+      return this.data.user
+    }
+    return {
+      name: u.name,
+      email: u.email,
+      avatar: u.avatar || this.data.user.avatar,
+    }
+  })
 
   readonly visibleNavGroups = computed(() => this.data.navGroups
     .map((group) => ({
