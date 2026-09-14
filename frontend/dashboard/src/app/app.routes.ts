@@ -44,6 +44,16 @@ export const routes: Routes = [
           import('./features/departures/departures.routes').then((m) => m.DeparturesRoutes),
       },
       {
+        path: 'search',
+        loadChildren: () =>
+          import('./features/search/search.routes').then((m) => m.SearchRoutes),
+      },
+      {
+        path: 'trip-pass',
+        loadChildren: () =>
+          import('./features/trip-pass/trip-pass.routes').then((m) => m.TripPassRoutes),
+      },
+      {
         path: 'destinations',
         loadChildren: () =>
           import('./features/destinations/destinations.routes').then((m) => m.DestinationsRoutes),

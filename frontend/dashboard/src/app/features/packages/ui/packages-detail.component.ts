@@ -11,14 +11,19 @@ import {
   lucideShieldCheck,
   lucideDollarSign,
   lucideGlobe,
+  lucideBuilding2,
+  lucideBedDouble,
+  lucideCar,
+  lucidePrinter,
 } from '@ng-icons/lucide'
 import { Package } from '../data-access/models/packages.model'
 import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
+import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
 
 @Component({
   selector: 'app-packages-detail',
   standalone: true,
-  imports: [CommonModule, NgIcon, ...HlmBadgeImports],
+  imports: [CommonModule, NgIcon, ...HlmBadgeImports, ...HlmButtonImports],
   providers: [
     provideIcons({
       lucideMapPin,
@@ -30,6 +35,10 @@ import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
       lucideShieldCheck,
       lucideDollarSign,
       lucideGlobe,
+      lucideBuilding2,
+      lucideBedDouble,
+      lucideCar,
+      lucidePrinter,
     }),
   ],
   template: `
@@ -122,6 +131,47 @@ import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
           </div>
         </div>
 
+        <!-- Multi-Modal Bundled Services Card -->
+        @if (package.hotelPropertyName || package.vehicleCategory) {
+          <div class="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                <ng-icon name="lucideBuilding2" class="size-4" />
+                Bundled Travel Logistics
+              </h4>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-primary text-primary-foreground">Multi-Modal Linked</span>
+            </div>
+
+            <div class="space-y-2 text-xs">
+              @if (package.hotelPropertyName) {
+                <div class="flex items-center justify-between p-2.5 rounded-lg bg-background/90 border border-border/50">
+                  <div class="flex items-center gap-2.5">
+                    <ng-icon name="lucideBedDouble" class="size-4 text-primary shrink-0" />
+                    <div>
+                      <p class="font-semibold text-foreground">{{ package.hotelPropertyName }}</p>
+                      <p class="text-[11px] text-muted-foreground capitalize">Board: {{ (package.boardBasis || 'bed_breakfast').replace('_', ' ') }}</p>
+                    </div>
+                  </div>
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">Contracted PMS Partner</span>
+                </div>
+              }
+
+              @if (package.vehicleCategory) {
+                <div class="flex items-center justify-between p-2.5 rounded-lg bg-background/90 border border-border/50">
+                  <div class="flex items-center gap-2.5">
+                    <ng-icon name="lucideCar" class="size-4 text-primary shrink-0" />
+                    <div>
+                      <p class="font-semibold text-foreground">{{ package.vehicleCategory }}</p>
+                      <p class="text-[11px] text-muted-foreground">{{ package.vehicleTransferType || 'Airport Meet & Greet + Excursions' }}</p>
+                    </div>
+                  </div>
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold">Chauffeur FMS Assigned</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
         <!-- Description -->
         @if (package.shortDescription) {
           <div class="space-y-1.5">
@@ -181,10 +231,29 @@ import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
             </div>
           </div>
         }
+
+        <!-- Print / Export Action -->
+        <div class="pt-4 border-t border-border/50 flex items-center justify-between">
+          <span class="text-[11px] text-muted-foreground">Brochure code: TRV-PKG-{{ package.id.slice(0, 6).toUpperCase() }}</span>
+          <button
+            hlmBtn
+            variant="outline"
+            size="sm"
+            (click)="onPrintBrochure()"
+            class="cursor-pointer flex items-center gap-1.5 text-xs"
+          >
+            <ng-icon name="lucidePrinter" class="size-3.5" />
+            <span>Print Official Brochure</span>
+          </button>
+        </div>
       </div>
     }
   `,
 })
 export class PackagesDetailComponent {
   @Input() package: Package | null = null
+
+  onPrintBrochure(): void {
+    window.print()
+  }
 }

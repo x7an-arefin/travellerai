@@ -61,6 +61,10 @@ import {
   lucideShield,
   lucideCar,
   lucideBedDouble,
+  lucideCompass,
+  lucideSearch,
+  lucideRoute,
+  lucideClipboardCheck,
 } from '@ng-icons/lucide'
 import { NavGroup, NavItem } from '../data/layout.types'
 import { LayoutService } from '@core/services/layout.service'
@@ -130,6 +134,10 @@ import { HlmBadgeImports } from '@ui/badge/hlm-badge.directive'
       lucideShield,
       lucideCar,
       lucideBedDouble,
+      lucideCompass,
+      lucideSearch,
+      lucideRoute,
+      lucideClipboardCheck,
     }),
   ],
   template: `

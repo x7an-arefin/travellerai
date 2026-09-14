@@ -33,6 +33,52 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
         />
       </div>
 
+      <!-- Multi-Modal Line Item Estimator -->
+      <div class="p-3.5 rounded-xl border border-primary/20 bg-primary/5 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="text-xs font-bold text-foreground">Multi-Modal Service Estimator</h4>
+            <p class="text-[11px] text-muted-foreground">Calculate combined quotation with Hotel PMS stays and Chauffeur FMS transit</p>
+          </div>
+          <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">Auto-Tally</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 text-xs">
+          <div class="space-y-1">
+            <label class="text-[11px] font-medium text-muted-foreground">Guide / Tour ($)</label>
+            <input
+              type="number"
+              [(ngModel)]="lineItems.guideFee"
+              name="guideFee"
+              (ngModelChange)="recalculateTotal()"
+              class="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs text-foreground shadow-2xs"
+            />
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-[11px] font-medium text-muted-foreground">Hotel Nights ($)</label>
+            <input
+              type="number"
+              [(ngModel)]="lineItems.hotelFee"
+              name="hotelFee"
+              (ngModelChange)="recalculateTotal()"
+              class="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs text-foreground shadow-2xs"
+            />
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-[11px] font-medium text-muted-foreground">Vehicle Transit ($)</label>
+            <input
+              type="number"
+              [(ngModel)]="lineItems.vehicleFee"
+              name="vehicleFee"
+              (ngModelChange)="recalculateTotal()"
+              class="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs text-foreground shadow-2xs"
+            />
+          </div>
+        </div>
+      </div>
+
       <!-- Price & Currency -->
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
@@ -41,9 +87,10 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
             type="number"
             name="totalPrice"
             [(ngModel)]="formData.totalPrice"
+            (ngModelChange)="onPriceChange()"
             required
             placeholder="e.g. 12500"
-            class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs"
+            class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground font-bold text-primary focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs"
           />
         </div>
 
@@ -61,7 +108,7 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
       <!-- Deposit & Validity -->
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
-          <label class="text-xs font-semibold text-foreground">Initial Deposit Required</label>
+          <label class="text-xs font-semibold text-foreground">Initial Deposit Required (30%)</label>
           <input
             type="number"
             name="depositAmount"
@@ -85,7 +132,32 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
 
       <!-- Inclusions & Exclusions -->
       <div class="space-y-1.5">
-        <label class="text-xs font-semibold text-foreground">Inclusions (Comma separated)</label>
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-foreground">Inclusions (Comma separated)</label>
+          <div class="flex gap-1">
+            <button
+              type="button"
+              (click)="addInclusion('5-Star Hotel Stay')"
+              class="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground cursor-pointer"
+            >
+              + Hotel
+            </button>
+            <button
+              type="button"
+              (click)="addInclusion('VIP Chauffeur Transfer')"
+              class="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground cursor-pointer"
+            >
+              + Chauffeur
+            </button>
+            <button
+              type="button"
+              (click)="addInclusion('All Meals & Permits')"
+              class="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground cursor-pointer"
+            >
+              + Meals
+            </button>
+          </div>
+        </div>
         <input
           type="text"
           name="inclusions"
@@ -136,14 +208,38 @@ export class QuotationFormComponent {
   @Output() submitQuote = new EventEmitter<NewQuotation>()
   @Output() cancel = new EventEmitter<void>()
 
+  lineItems = {
+    guideFee: 1200,
+    hotelFee: 2400,
+    vehicleFee: 850,
+  }
+
   formData = {
     title: '',
-    totalPrice: 0,
+    totalPrice: 4450,
     currency: 'USD',
-    depositAmount: 0,
+    depositAmount: 1335,
     validUntil: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
     inclusionsStr: 'Private Chauffeur, 5-Star Accommodations, Certified Guide, All Breakfasts & Special Dinners',
-    terms: '50% deposit required upon acceptance. Full balance due 14 days prior to departure.',
+    terms: '30% deposit required upon acceptance. Full balance due 14 days prior to departure.',
+  }
+
+  recalculateTotal(): void {
+    const total = Number(this.lineItems.guideFee || 0) + Number(this.lineItems.hotelFee || 0) + Number(this.lineItems.vehicleFee || 0)
+    this.formData.totalPrice = total
+    this.formData.depositAmount = Math.round(total * 0.3)
+  }
+
+  onPriceChange(): void {
+    this.formData.depositAmount = Math.round(Number(this.formData.totalPrice || 0) * 0.3)
+  }
+
+  addInclusion(item: string): void {
+    if (!this.formData.inclusionsStr) {
+      this.formData.inclusionsStr = item
+    } else if (!this.formData.inclusionsStr.includes(item)) {
+      this.formData.inclusionsStr += `, ${item}`
+    }
   }
 
   onSubmit(): void {

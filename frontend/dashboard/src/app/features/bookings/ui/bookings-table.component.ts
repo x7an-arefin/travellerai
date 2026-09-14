@@ -10,6 +10,10 @@ import {
   lucideCheckCircle2,
   lucideClock,
   lucideDownload,
+  lucideHotel,
+  lucideCar,
+  lucideCompass,
+  lucidePackage,
 } from '@ng-icons/lucide'
 import { Booking } from '../data-access/models/bookings.model'
 import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
@@ -29,6 +33,10 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
       lucideCheckCircle2,
       lucideClock,
       lucideDownload,
+      lucideHotel,
+      lucideCar,
+      lucideCompass,
+      lucidePackage,
     }),
   ],
   template: `
@@ -39,8 +47,8 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
             <tr>
               <th scope="col" class="py-3.5 px-4">Booking Ref</th>
               <th scope="col" class="py-3.5 px-4">Traveler</th>
-              <th scope="col" class="py-3.5 px-4">Experience / Package</th>
-              <th scope="col" class="py-3.5 px-4">Departure</th>
+              <th scope="col" class="py-3.5 px-4">Service & Experience</th>
+              <th scope="col" class="py-3.5 px-4">Date / Itinerary</th>
               <th scope="col" class="py-3.5 px-4">Amount</th>
               <th scope="col" class="py-3.5 px-4">Payment</th>
               <th scope="col" class="py-3.5 px-4">Check-in</th>
@@ -71,14 +79,37 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
             } @else {
               @for (b of rows; track b.id) {
                 <tr class="hover:bg-muted/20 transition-colors group">
-                  <!-- Ref -->
+                  <!-- Ref & Service Badge -->
                   <td class="py-3.5 px-4">
-                    <span
-                      class="font-mono text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded cursor-pointer hover:underline"
-                      (click)="viewClicked.emit(b.id)"
-                    >
-                      {{ b.bookingReference }}
-                    </span>
+                    <div class="flex flex-col gap-1 items-start">
+                      <span
+                        class="font-mono text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded cursor-pointer hover:underline"
+                        (click)="viewClicked.emit(b.id)"
+                      >
+                        {{ b.bookingReference }}
+                      </span>
+                      @if (b.serviceType === 'hotel') {
+                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">
+                          <ng-icon name="lucideHotel" class="size-2.5" />
+                          Hotel Stay
+                        </span>
+                      } @else if (b.serviceType === 'vehicle') {
+                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                          <ng-icon name="lucideCar" class="size-2.5" />
+                          Transfer / Car
+                        </span>
+                      } @else if (b.serviceType === 'bundle') {
+                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
+                          <ng-icon name="lucidePackage" class="size-2.5" />
+                          Bundle Deal
+                        </span>
+                      } @else {
+                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                          <ng-icon name="lucideCompass" class="size-2.5" />
+                          Guided Tour
+                        </span>
+                      }
+                    </div>
                   </td>
 
                   <!-- Traveler Info -->
@@ -91,22 +122,32 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
                     </div>
                   </td>
 
-                  <!-- Package Title -->
+                  <!-- Experience Title & Sub-detail -->
                   <td class="py-3.5 px-4 max-w-xs">
-                    <div class="text-xs font-medium text-foreground truncate">
-                      {{ b.packageTitle }}
+                    <div class="text-xs font-semibold text-foreground truncate">
+                      {{ b.packageTitle || b.serviceDetails?.hotelName || b.serviceDetails?.vehicleModel || 'Travel Booking' }}
                     </div>
-                    <div class="text-[11px] text-muted-foreground flex items-center gap-1">
-                      <ng-icon name="lucideUsers" class="size-3 text-primary" />
-                      <span>{{ b.participantCount }} travelers</span>
-                    </div>
+                    @if (b.serviceDetails?.roomType) {
+                      <div class="text-[11px] text-muted-foreground truncate">
+                        {{ b.serviceDetails?.roomType }} • {{ b.serviceDetails?.nights }} nights
+                      </div>
+                    } @else if (b.serviceDetails?.vehicleModel) {
+                      <div class="text-[11px] text-muted-foreground truncate">
+                        {{ b.serviceDetails?.vehicleCategory }} • Flight {{ b.serviceDetails?.flightNumber }}
+                      </div>
+                    } @else {
+                      <div class="text-[11px] text-muted-foreground flex items-center gap-1">
+                        <ng-icon name="lucideUsers" class="size-3 text-primary" />
+                        <span>{{ b.participantCount }} travelers</span>
+                      </div>
+                    }
                   </td>
 
-                  <!-- Departure Date -->
+                  <!-- Departure / Date -->
                   <td class="py-3.5 px-4 text-xs font-medium text-foreground">
                     <div class="flex items-center gap-1.5">
                       <ng-icon name="lucideCalendar" class="size-3.5 text-muted-foreground" />
-                      <span>{{ b.departureDate }}</span>
+                      <span>{{ b.departureDate || 'Scheduled' }}</span>
                     </div>
                   </td>
 

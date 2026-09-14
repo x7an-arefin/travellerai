@@ -40,6 +40,7 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
 import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
 import { toast } from 'ngx-sonner'
 import { HotelBooking, HotelProperty, RoomUnit } from '../data-access/models/hotel.model'
+import { YieldCalendarMatrixComponent } from './yield-calendar-matrix.component'
 
 @Component({
   selector: 'app-hotels-page',
@@ -55,6 +56,7 @@ import { HotelBooking, HotelProperty, RoomUnit } from '../data-access/models/hot
     ThemeSwitchComponent,
     NotificationCenterComponent,
     ProfileDropdownComponent,
+    YieldCalendarMatrixComponent,
     ...HlmSheetImports,
     ...HlmDialogImports,
     ...HlmButtonImports,
@@ -856,74 +858,7 @@ import { HotelBooking, HotelProperty, RoomUnit } from '../data-access/models/hot
         <!-- ========================================================================================= -->
         @if (activeTab() === 'calendar') {
           <div class="space-y-6 animate-in fade-in-50 duration-200">
-            <div class="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
-              <div class="px-5 py-4 border-b border-border flex items-center justify-between">
-                <div>
-                  <h3 class="font-bold text-foreground">Spreadsheet-Style Availability Matrix</h3>
-                  <p class="text-xs text-muted-foreground">Daily inventory allotments, stop-sell switches, and rate multipliers</p>
-                </div>
-                <div class="flex items-center gap-2 text-xs">
-                  <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded bg-emerald-500"></span> Available</span>
-                  <span class="flex items-center gap-1"><span class="h-2.5 w-2.5 rounded bg-rose-500"></span> Stop Sell</span>
-                </div>
-              </div>
-
-              <!-- Calendar Spreadsheet Demo Grid -->
-              <div class="overflow-x-auto">
-                <table class="w-full text-center text-xs border-collapse">
-                  <thead class="bg-muted text-muted-foreground border-b border-border">
-                    <tr>
-                      <th class="p-3 text-left font-bold min-w-[200px] border-r border-border">Room Category</th>
-                      <th class="p-2 border-r border-border">Today<br><span class="text-[10px] font-normal">Sep 14</span></th>
-                      <th class="p-2 border-r border-border">Tue<br><span class="text-[10px] font-normal">Sep 15</span></th>
-                      <th class="p-2 border-r border-border">Wed<br><span class="text-[10px] font-normal">Sep 16</span></th>
-                      <th class="p-2 border-r border-border">Thu<br><span class="text-[10px] font-normal">Sep 17</span></th>
-                      <th class="p-2 border-r border-border font-bold text-primary">Fri (Wknd)<br><span class="text-[10px] font-normal">Sep 18</span></th>
-                      <th class="p-2 border-r border-border font-bold text-primary">Sat (Wknd)<br><span class="text-[10px] font-normal">Sep 19</span></th>
-                      <th class="p-2">Sun<br><span class="text-[10px] font-normal">Sep 20</span></th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-border">
-                    @for (rt of facade.roomTypes(); track rt.id) {
-                      <tr class="hover:bg-muted/20">
-                        <td class="p-3 text-left font-semibold text-foreground border-r border-border">
-                          <div>{{ rt.name }}</div>
-                          <div class="text-[10px] text-muted-foreground font-mono">Base: \${{ rt.basePricePerNight }}</div>
-                        </td>
-                        <td class="p-2 border-r border-border bg-emerald-500/5">
-                          <div class="font-bold text-emerald-500">14 Avail</div>
-                          <div class="text-[10px] text-muted-foreground">\${{ rt.basePricePerNight }}</div>
-                        </td>
-                        <td class="p-2 border-r border-border bg-emerald-500/5">
-                          <div class="font-bold text-emerald-500">12 Avail</div>
-                          <div class="text-[10px] text-muted-foreground">\${{ rt.basePricePerNight }}</div>
-                        </td>
-                        <td class="p-2 border-r border-border bg-emerald-500/5">
-                          <div class="font-bold text-emerald-500">9 Avail</div>
-                          <div class="text-[10px] text-muted-foreground">\${{ rt.basePricePerNight }}</div>
-                        </td>
-                        <td class="p-2 border-r border-border bg-emerald-500/5">
-                          <div class="font-bold text-emerald-500">6 Avail</div>
-                          <div class="text-[10px] text-muted-foreground">\${{ rt.basePricePerNight }}</div>
-                        </td>
-                        <td class="p-2 border-r border-border bg-amber-500/10">
-                          <div class="font-bold text-amber-500">2 Left</div>
-                          <div class="text-[10px] text-amber-500 font-bold">\${{ rt.basePricePerNight * 1.25 }} (1.25x)</div>
-                        </td>
-                        <td class="p-2 border-r border-border bg-rose-500/10">
-                          <div class="font-bold text-rose-500">Sold Out</div>
-                          <div class="text-[10px] text-rose-500">Stop Sell</div>
-                        </td>
-                        <td class="p-2 bg-emerald-500/5">
-                          <div class="font-bold text-emerald-500">8 Avail</div>
-                          <div class="text-[10px] text-muted-foreground">\${{ rt.basePricePerNight }}</div>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <app-yield-calendar-matrix />
           </div>
         }
 

@@ -8,10 +8,13 @@ import {
   lucideSend,
   lucideCheckCircle2,
   lucideCompass,
+  lucideCopy,
+  lucideCheck,
 } from '@ng-icons/lucide'
 import { TripInquiry } from '../data-access/models/inquiries.model'
 import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
 import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
+import { toast } from 'ngx-sonner'
 
 @Component({
   selector: 'app-inquiries-detail',
@@ -25,6 +28,8 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
       lucideSend,
       lucideCheckCircle2,
       lucideCompass,
+      lucideCopy,
+      lucideCheck,
     }),
   ],
   template: `
@@ -120,6 +125,40 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
                       {{ q.status }}
                     </span>
                   </div>
+
+                  <!-- Inclusions Badges -->
+                  @if (q.inclusions && q.inclusions.length) {
+                    <div class="flex flex-wrap gap-1 pt-1.5 border-t border-border/30">
+                      @for (inc of q.inclusions; track inc) {
+                        <span class="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+                          {{ inc }}
+                        </span>
+                      }
+                    </div>
+                  }
+
+                  <!-- Actions: Copy Payment Link -->
+                  <div class="flex items-center justify-between pt-2 border-t border-border/40">
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="sm"
+                      class="h-6 px-2 text-[10px] gap-1 cursor-pointer text-muted-foreground hover:text-foreground"
+                      (click)="onCopyPaymentLink(q.id)"
+                    >
+                      <ng-icon name="lucideCopy" class="size-3" />
+                      <span>Copy Client Payment Link</span>
+                    </button>
+
+                    <button
+                      hlmBtn
+                      variant="default"
+                      size="sm"
+                      class="h-6 px-2.5 text-[10px] cursor-pointer"
+                    >
+                      Accept & Book
+                    </button>
+                  </div>
                 </div>
               }
             </div>
@@ -136,4 +175,10 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
 export class InquiriesDetailComponent {
   @Input() inquiry: TripInquiry | null = null
   @Output() quote = new EventEmitter<string>()
+
+  onCopyPaymentLink(quoteId: string): void {
+    const link = `${window.location.origin}/checkout?quoteId=${quoteId}`
+    navigator.clipboard.writeText(link)
+    toast.success('Client payment checkout link copied to clipboard!')
+  }
 }

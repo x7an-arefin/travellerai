@@ -11,6 +11,11 @@ import {
   lucideFileText,
   lucideCheckCircle2,
   lucideDownload,
+  lucideHotel,
+  lucideCar,
+  lucideCompass,
+  lucidePackage,
+  lucideQrCode,
 } from '@ng-icons/lucide'
 import { Booking } from '../data-access/models/bookings.model'
 import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
@@ -31,6 +36,11 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
       lucideFileText,
       lucideCheckCircle2,
       lucideDownload,
+      lucideHotel,
+      lucideCar,
+      lucideCompass,
+      lucidePackage,
+      lucideQrCode,
     }),
   ],
   template: `
@@ -58,22 +68,75 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
           </div>
         </div>
 
-        <!-- Experience Info -->
+        <!-- Experience / Service Info -->
         <div class="space-y-3">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tour Experience</h4>
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Service Specification</h4>
+            @if (booking.serviceType === 'hotel') {
+              <span class="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded flex items-center gap-1">
+                <ng-icon name="lucideHotel" class="size-3" /> Hotel Stay
+              </span>
+            } @else if (booking.serviceType === 'vehicle') {
+              <span class="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded flex items-center gap-1">
+                <ng-icon name="lucideCar" class="size-3" /> Chauffeur / Transfer
+              </span>
+            } @else if (booking.serviceType === 'bundle') {
+              <span class="text-[10px] font-semibold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded flex items-center gap-1">
+                <ng-icon name="lucidePackage" class="size-3" /> All-in-One Bundle
+              </span>
+            } @else {
+              <span class="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded flex items-center gap-1">
+                <ng-icon name="lucideCompass" class="size-3" /> Guided Tour
+              </span>
+            }
+          </div>
+
           <div class="p-3.5 rounded-xl border border-border/40 bg-card space-y-2">
-            <h5 class="text-sm font-bold text-foreground">{{ booking.packageTitle }}</h5>
-            <div class="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-1">
+            <h5 class="text-sm font-bold text-foreground">
+              {{ booking.packageTitle || booking.serviceDetails?.hotelName || booking.serviceDetails?.vehicleModel }}
+            </h5>
+
+            @if (booking.serviceDetails?.hotelName) {
+              <div class="text-xs text-muted-foreground flex items-center justify-between">
+                <span>Room Type: <strong class="text-foreground">{{ booking.serviceDetails?.roomType }}</strong></span>
+                <span>Nights: <strong class="text-foreground">{{ booking.serviceDetails?.nights }}</strong></span>
+              </div>
+            }
+
+            @if (booking.serviceDetails?.vehicleModel) {
+              <div class="text-xs text-muted-foreground flex items-center justify-between">
+                <span>Vehicle: <strong class="text-foreground">{{ booking.serviceDetails?.vehicleModel }}</strong></span>
+                <span>Flight Radar: <strong class="font-mono text-primary">{{ booking.serviceDetails?.flightNumber }}</strong></span>
+              </div>
+            }
+
+            <div class="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-1 border-t border-border/30">
               <span class="flex items-center gap-1.5">
                 <ng-icon name="lucideCalendar" class="size-3.5 text-primary" />
-                {{ booking.departureDate }}
+                {{ booking.departureDate || 'Scheduled' }}
               </span>
               <span class="flex items-center gap-1.5">
                 <ng-icon name="lucideUsers" class="size-3.5 text-emerald-500" />
-                {{ booking.participantCount }} Participants
+                {{ booking.participantCount }} Guests
               </span>
             </div>
           </div>
+        </div>
+
+        <!-- Digital Pass / QR Verification -->
+        <div class="p-4 rounded-xl border border-primary/20 bg-primary/5 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="size-12 rounded-lg bg-background border border-border flex items-center justify-center text-primary shadow-xs">
+              <ng-icon name="lucideQrCode" class="size-7" />
+            </div>
+            <div>
+              <div class="font-mono text-xs font-bold text-foreground">DIGITAL VOUCHER PASS</div>
+              <p class="text-[10px] text-muted-foreground">Scannable QR pass for hotel check-in and vehicle boarding</p>
+            </div>
+          </div>
+          <span class="font-mono text-[11px] bg-background/80 px-2 py-1 rounded border border-border/50 text-primary font-bold">
+            OTP: 884-219
+          </span>
         </div>
 
         <!-- Traveler Dossier -->
@@ -125,15 +188,20 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
           </div>
         }
 
-        <!-- Financial Summary -->
+        <!-- Financial & Split Escrow Summary -->
         <div class="space-y-2 pt-2 border-t border-border/40">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Split-Escrow Financial Breakdown</h4>
           <div class="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Total Package Price</span>
-            <span>\${{ booking.totalAmount | number:'1.2-2' }}</span>
+            <span>Customer Paid Amount</span>
+            <span class="font-semibold text-foreground">\${{ booking.totalAmount | number:'1.2-2' }}</span>
           </div>
-          <div class="flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-            <span>Amount Paid</span>
-            <span>\${{ booking.paidAmount | number:'1.2-2' }}</span>
+          <div class="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Traveller AI Platform Escrow Fee (3.5%)</span>
+            <span class="font-mono text-purple-600 dark:text-purple-400">-\${{ (booking.totalAmount * 0.035) | number:'1.2-2' }}</span>
+          </div>
+          <div class="flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400 font-medium border-t border-border/30 pt-1">
+            <span>Net Provider Settlement (In Escrow)</span>
+            <span class="font-bold">\${{ (booking.totalAmount * 0.965) | number:'1.2-2' }}</span>
           </div>
           @if (booking.balanceDue && booking.balanceDue > 0) {
             <div class="flex items-center justify-between text-xs text-rose-500 font-medium">

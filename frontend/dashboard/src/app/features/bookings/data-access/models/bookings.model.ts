@@ -1,8 +1,11 @@
+export type BookingServiceType = 'package' | 'hotel' | 'vehicle' | 'bundle'
+
 export interface Booking {
   id: string
   bookingReference: string
+  serviceType?: BookingServiceType
   travelerId?: string
-  packageId: string
+  packageId?: string
   packageTitle?: string
   destination?: string
   departureId?: string
@@ -24,4 +27,14 @@ export interface Booking {
   qrCode?: string
   confirmedAt?: string
   createdAt?: string
+  serviceDetails?: {
+    hotelName?: string
+    roomType?: string
+    nights?: number
+    vehicleModel?: string
+    vehicleCategory?: string
+    flightNumber?: string
+    bundleItemCount?: number
+  }
 }
+

@@ -49,6 +49,14 @@ export const sidebarData: SidebarData = {
       roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Guide', 'Staff'],
       items: [
         {
+          title: 'Metasearch Discovery',
+          url: '/search',
+          badge: 'Meta',
+          icon: 'lucideCompass',
+          roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Guide', 'Staff', 'Traveler'],
+          permissions: ['packages.view', 'destinations.view'],
+        },
+        {
           title: 'Packages & Tours',
           url: '/packages',
           badge: '24',
@@ -91,6 +99,21 @@ export const sidebarData: SidebarData = {
           roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Staff'],
           permissions: ['hotels.view', 'hotels.manage'],
         },
+        {
+          title: 'Reservations Desk',
+          url: '/hotels/reservations',
+          badge: 'Desk',
+          icon: 'lucideCalendar',
+          roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Staff'],
+          permissions: ['hotels.view', 'hotels.manage'],
+        },
+        {
+          title: 'Room Maintenance',
+          url: '/hotels/maintenance',
+          icon: 'lucideWrench',
+          roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Staff'],
+          permissions: ['hotels.view', 'hotels.manage'],
+        },
       ],
     },
     {
@@ -105,12 +128,34 @@ export const sidebarData: SidebarData = {
           roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Staff'],
           permissions: ['vehicles.view', 'vehicles.manage'],
         },
+        {
+          title: 'Transfer Routes & Fares',
+          url: '/vehicles/routes',
+          icon: 'lucideRoute',
+          roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Staff'],
+          permissions: ['vehicles.view', 'vehicles.manage'],
+        },
+        {
+          title: 'Inspection Archive',
+          url: '/vehicles/inspections',
+          icon: 'lucideClipboardCheck',
+          roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Staff'],
+          permissions: ['vehicles.view', 'vehicles.manage'],
+        },
       ],
     },
     {
       title: 'Bookings & Operations',
       roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Guide', 'Staff', 'FinanceAdmin', 'Traveler'],
       items: [
+        {
+          title: 'Digital Trip Pass & Vouchers',
+          url: '/trip-pass',
+          badge: 'Pass',
+          icon: 'lucideSparkles',
+          roles: ['SuperAdmin', 'Admin', 'ProviderOwner', 'Provider', 'AgencyOwner', 'Guide', 'Staff', 'FinanceAdmin', 'Traveler'],
+          permissions: ['bookings.view'],
+        },
         {
           title: 'Bookings Pipeline',
           url: '/bookings',

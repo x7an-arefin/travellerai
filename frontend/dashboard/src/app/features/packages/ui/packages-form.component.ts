@@ -139,6 +139,78 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
         </div>
       </div>
 
+      <!-- Multi-Modal Aggregator Bundling (Accommodations & Fleet Transfers) -->
+      <div class="rounded-lg border border-primary/20 bg-primary/5 p-3.5 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="text-xs font-bold text-foreground">Multi-Modal Logistics Bundling</h4>
+            <p class="text-[11px] text-muted-foreground">Attach contracted hotels and vehicle transfers directly into this tour package</p>
+          </div>
+          <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/30 uppercase tracking-wider">Aggregator Linked</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-1">
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-foreground">Hotel Partner Property</label>
+            <select
+              name="hotelPropertyName"
+              [(ngModel)]="formData.hotelPropertyName"
+              class="w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs"
+            >
+              <option value="">None / Self-Arranged</option>
+              <option value="Grand Sylhet 5-Star Resort & Spa">Grand Sylhet 5-Star Resort & Spa</option>
+              <option value="Shajek Valley Cloud Eco-Lodge">Shajek Valley Cloud Eco-Lodge</option>
+              <option value="Sea Pearl Beach Resort & Spa">Sea Pearl Beach Resort & Spa</option>
+              <option value="Alpine Grand Chalet & Wellness">Alpine Grand Chalet & Wellness</option>
+            </select>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-foreground">Board / Meal Plan</label>
+            <select
+              name="boardBasis"
+              [(ngModel)]="formData.boardBasis"
+              class="w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs"
+            >
+              <option value="bed_breakfast">Bed & Breakfast (Included)</option>
+              <option value="half_board">Half Board (Breakfast & Dinner)</option>
+              <option value="all_inclusive">All-Inclusive Resort Dining</option>
+              <option value="room_only">Room Only</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-foreground">Ground Transport Class</label>
+            <select
+              name="vehicleCategory"
+              [(ngModel)]="formData.vehicleCategory"
+              class="w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs"
+            >
+              <option value="">None / Self-Travel</option>
+              <option value="VIP Chauffeur Luxury Sedan">VIP Chauffeur Luxury Sedan</option>
+              <option value="4x4 Expedition SUV">4x4 Expedition SUV</option>
+              <option value="14-Seater Tourist HiAce Microbus">14-Seater Tourist HiAce Microbus</option>
+              <option value="Eco Electric & CNG Green Transit">Eco Electric & CNG Green Transit</option>
+            </select>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-foreground">Transfer Scope</label>
+            <select
+              name="vehicleTransferType"
+              [(ngModel)]="formData.vehicleTransferType"
+              class="w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs"
+            >
+              <option value="Airport Meet & Greet + Sightseeing">Airport Meet & Greet + Sightseeing</option>
+              <option value="Airport Return Transfer Only">Airport Return Transfer Only</option>
+              <option value="Dedicated Full-Time Chauffeur">Dedicated Full-Time Chauffeur</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <!-- Image URL -->
       <div class="space-y-1.5">
         <label class="text-xs font-semibold text-foreground">Featured Image URL</label>
@@ -206,6 +278,10 @@ export class PackagesFormComponent implements OnInit {
     status: 'published',
     shortDescription: '',
     featuredImage: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600',
+    hotelPropertyName: 'Grand Sylhet 5-Star Resort & Spa',
+    boardBasis: 'bed_breakfast',
+    vehicleCategory: '14-Seater Tourist HiAce Microbus',
+    vehicleTransferType: 'Airport Meet & Greet + Sightseeing',
   }
 
   ngOnInit(): void {
@@ -222,6 +298,12 @@ export class PackagesFormComponent implements OnInit {
         status: this.initialValue.status,
         shortDescription: this.initialValue.shortDescription || '',
         featuredImage: this.initialValue.featuredImage || '',
+        hotelPropertyId: this.initialValue.hotelPropertyId,
+        hotelPropertyName: this.initialValue.hotelPropertyName || 'Grand Sylhet 5-Star Resort & Spa',
+        roomTypeName: this.initialValue.roomTypeName,
+        boardBasis: this.initialValue.boardBasis || 'bed_breakfast',
+        vehicleCategory: this.initialValue.vehicleCategory || '14-Seater Tourist HiAce Microbus',
+        vehicleTransferType: this.initialValue.vehicleTransferType || 'Airport Meet & Greet + Sightseeing',
       }
     }
   }

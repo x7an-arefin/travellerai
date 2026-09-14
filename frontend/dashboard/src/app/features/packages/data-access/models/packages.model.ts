@@ -49,6 +49,12 @@ export interface Package {
   languages?: string[]
   itinerary?: ItineraryDay[]
   faqs?: PackageFaqItem[]
+  hotelPropertyId?: string
+  hotelPropertyName?: string
+  roomTypeName?: string
+  boardBasis?: 'room_only' | 'bed_breakfast' | 'half_board' | 'all_inclusive'
+  vehicleCategory?: string
+  vehicleTransferType?: string
   createdAt?: string
   updatedAt?: string
 }
