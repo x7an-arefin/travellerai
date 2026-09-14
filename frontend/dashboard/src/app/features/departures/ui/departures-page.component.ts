@@ -1,4 +1,4 @@
-import { Component, signal, computed } from '@angular/core'
+import { Component, OnInit, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -10,8 +10,13 @@ import {
   lucideMapPin,
   lucideSearch,
   lucideAlertTriangle,
+  lucideDownload,
   lucideCheckCircle2,
 } from '@ng-icons/lucide'
+import { DeparturesFacade } from '../data-access/departures.facade'
+import { DeparturesTableComponent } from './departures-table.component'
+import { DeparturesFormComponent } from './departures-form.component'
+import { DeparturesManifestModalComponent } from './departures-manifest-modal.component'
 import { HeaderComponent } from '../../../layout/authenticated/header/header.component'
 import { MainComponent } from '../../../layout/authenticated/main/main.component'
 import { TopNavComponent } from '../../../layout/authenticated/top-nav/top-nav.component'
@@ -19,11 +24,12 @@ import { SearchComponent } from '../../../shared/components/search/search.compon
 import { ThemeSwitchComponent } from '../../../shared/components/theme-switch/theme-switch.component'
 import { NotificationCenterComponent } from '../../../shared/components/notification-center/notification-center.component'
 import { ProfileDropdownComponent } from '../../../shared/components/profile-dropdown/profile-dropdown.component'
-import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
+import { HlmSheetImports } from '../../../ui/sheet/hlm-sheet.components'
+import { HlmDialogImports } from '../../../ui/dialog/hlm-dialog.components'
 import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
-import { HlmCardImports } from '../../../ui/card/hlm-card.directives'
+import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
+import { ExportService } from '../../../core/services/export.service'
 import { toast } from 'ngx-sonner'
-import { Departure } from '../data-access/models/departures.model'
 
 @Component({
   selector: 'app-departures-page',
@@ -39,9 +45,13 @@ import { Departure } from '../data-access/models/departures.model'
     ThemeSwitchComponent,
     NotificationCenterComponent,
     ProfileDropdownComponent,
-    ...HlmBadgeImports,
+    DeparturesTableComponent,
+    DeparturesFormComponent,
+    DeparturesManifestModalComponent,
+    ...HlmSheetImports,
+    ...HlmDialogImports,
     ...HlmButtonImports,
-    ...HlmCardImports,
+    ...HlmBadgeImports,
   ],
   providers: [
     provideIcons({
@@ -52,6 +62,7 @@ import { Departure } from '../data-access/models/departures.model'
       lucideMapPin,
       lucideSearch,
       lucideAlertTriangle,
+      lucideDownload,
       lucideCheckCircle2,
     }),
   ],
@@ -68,241 +79,245 @@ import { Departure } from '../data-access/models/departures.model'
     </app-header>
 
     <!-- Main Content -->
-    <app-main>
-      <!-- Page Header -->
-      <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <app-main [fixed]="true" class="space-y-6">
+      <!-- Header Actions -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-2xl font-bold tracking-tight">Departures & Schedules</h1>
-            <span hlmBadge variant="outline" class="text-xs">
-              {{ departures().length }} Scheduled
-            </span>
+          <div class="flex items-center gap-2.5">
+            <div class="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <ng-icon name="lucideClock" class="size-4.5" />
+            </div>
+            <div>
+              <h1 class="text-2xl font-bold tracking-tight text-foreground">Departures & Tour Scheduling</h1>
+              <p class="text-xs text-muted-foreground mt-0.5">
+                Real-time departure calendar, seat allocation, guide assignments, and passenger boarding manifests.
+              </p>
+            </div>
           </div>
-          <p class="text-xs text-muted-foreground mt-0.5">
-            Manage seasonal dates, seat inventory caps, and certified tour guide assignments.
-          </p>
         </div>
 
-        <button
-          hlmBtn
-          variant="default"
-          size="sm"
-          class="gap-1.5 cursor-pointer h-9 shadow-xs"
-          (click)="scheduleDeparture()"
-        >
-          <ng-icon name="lucidePlus" class="size-4" />
-          <span>Add Departure</span>
-        </button>
-      </div>
+        <div class="flex items-center gap-2">
+          <button
+            hlmBtn
+            variant="outline"
+            size="sm"
+            (click)="exportAllCsv()"
+            class="gap-1.5 cursor-pointer shadow-xs text-xs"
+          >
+            <ng-icon name="lucideDownload" class="size-3.5" />
+            <span>Export Schedule CSV</span>
+          </button>
 
-      <!-- Quick Metrics -->
-      <div class="grid gap-4 sm:grid-cols-3 mb-6">
-        <div hlmCard class="p-4">
-          <div class="text-xs text-muted-foreground font-semibold uppercase">Upcoming Next 14 Days</div>
-          <div class="text-2xl font-bold text-foreground mt-1">42 Departures</div>
-          <div class="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">94% seat fill rate</div>
-        </div>
-
-        <div hlmCard class="p-4">
-          <div class="text-xs text-muted-foreground font-semibold uppercase">Unassigned Guides</div>
-          <div class="text-2xl font-bold text-amber-500 mt-1">1 Tour</div>
-          <div class="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">Swiss Alps (Sep 18)</div>
-        </div>
-
-        <div hlmCard class="p-4">
-          <div class="text-xs text-muted-foreground font-semibold uppercase">Total Guaranteed Seats</div>
-          <div class="text-2xl font-bold text-foreground mt-1">680 Seats</div>
-          <div class="text-xs text-muted-foreground mt-1">Across all operating destinations</div>
+          <button
+            hlmBtn
+            variant="default"
+            size="sm"
+            (click)="facade.openAddDrawer()"
+            class="gap-1.5 cursor-pointer shadow-xs text-xs"
+          >
+            <ng-icon name="lucidePlus" class="size-3.5" />
+            <span>Schedule Departure</span>
+          </button>
         </div>
       </div>
 
-      <!-- Departures Schedule List -->
-      <div class="rounded-xl border border-border/50 bg-card overflow-hidden shadow-xs">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead class="bg-muted/40 text-xs font-semibold uppercase text-muted-foreground tracking-wider border-b border-border/40">
-              <tr>
-                <th scope="col" class="py-3.5 px-4">Tour Experience</th>
-                <th scope="col" class="py-3.5 px-4">Departure Dates</th>
-                <th scope="col" class="py-3.5 px-4">Capacity & Booked</th>
-                <th scope="col" class="py-3.5 px-4">Assigned Guide</th>
-                <th scope="col" class="py-3.5 px-4">Status</th>
-                <th scope="col" class="py-3.5 px-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-border/30">
-              @for (dep of departures(); track dep.id) {
-                <tr class="hover:bg-muted/20 transition-colors">
-                  <!-- Tour -->
-                  <td class="py-3.5 px-4 max-w-xs">
-                    <div class="font-semibold text-foreground text-sm truncate">
-                      {{ dep.packageTitle }}
-                    </div>
-                    <div class="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <ng-icon name="lucideMapPin" class="size-3 text-primary" />
-                      <span>{{ dep.destination }}</span>
-                    </div>
-                  </td>
+      <!-- KPI Summary Cards -->
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="p-4 rounded-xl border border-border/50 bg-card shadow-xs space-y-1">
+          <div class="flex items-center justify-between text-muted-foreground text-xs">
+            <span class="font-medium">Total Scheduled Seats</span>
+            <ng-icon name="lucideUsers" class="size-4 text-blue-500" />
+          </div>
+          <div class="text-2xl font-bold text-foreground">
+            {{ facade.totalScheduledSeats() }}
+          </div>
+          <p class="text-[10px] text-muted-foreground">Inventory across all dates</p>
+        </div>
 
-                  <!-- Dates -->
-                  <td class="py-3.5 px-4 text-xs font-medium text-foreground">
-                    <div class="flex items-center gap-1.5">
-                      <ng-icon name="lucideCalendar" class="size-3.5 text-muted-foreground" />
-                      <span>{{ dep.startDate }} &rarr; {{ dep.endDate }}</span>
-                    </div>
-                  </td>
+        <div class="p-4 rounded-xl border border-border/50 bg-card shadow-xs space-y-1">
+          <div class="flex items-center justify-between text-muted-foreground text-xs">
+            <span class="font-medium">Booked Passengers</span>
+            <ng-icon name="lucideCheckCircle2" class="size-4 text-emerald-500" />
+          </div>
+          <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            {{ facade.totalBookedSeats() }}
+          </div>
+          <p class="text-[10px] text-muted-foreground">Confirmed group members</p>
+        </div>
 
-                  <!-- Capacity -->
-                  <td class="py-3.5 px-4">
-                    <div class="flex items-center gap-2">
-                      <div class="text-xs font-bold tabular-nums">
-                        {{ dep.bookedCount }} / {{ dep.capacity }}
-                      </div>
-                      <span class="text-[10px] text-muted-foreground">({{ Math.round((dep.bookedCount / dep.capacity) * 100) }}%)</span>
-                    </div>
-                    <div class="h-1.5 w-24 bg-muted/50 rounded-full overflow-hidden mt-1">
-                      <div
-                        class="h-full bg-primary rounded-full"
-                        [style.width.%]="(dep.bookedCount / dep.capacity) * 100"
-                      ></div>
-                    </div>
-                  </td>
+        <div class="p-4 rounded-xl border border-border/50 bg-card shadow-xs space-y-1">
+          <div class="flex items-center justify-between text-muted-foreground text-xs">
+            <span class="font-medium">Average Occupancy</span>
+            <ng-icon name="lucideCalendar" class="size-4 text-amber-500" />
+          </div>
+          <div class="text-2xl font-bold text-foreground">
+            {{ facade.averageOccupancyRate() }}%
+          </div>
+          <p class="text-[10px] text-muted-foreground">Fleet utilization</p>
+        </div>
 
-                  <!-- Guide -->
-                  <td class="py-3.5 px-4 text-xs">
-                    @if (dep.assignedGuideName) {
-                      <span class="font-medium text-foreground">{{ dep.assignedGuideName }}</span>
-                    } @else {
-                      <span class="text-amber-500 font-semibold flex items-center gap-1">
-                        <ng-icon name="lucideAlertTriangle" class="size-3.5" />
-                        Unassigned
-                      </span>
-                    }
-                  </td>
-
-                  <!-- Status -->
-                  <td class="py-3.5 px-4">
-                    @if (dep.status === 'available') {
-                      <span hlmBadge variant="default" class="text-[11px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                        Available
-                      </span>
-                    } @else if (dep.status === 'limited') {
-                      <span hlmBadge variant="outline" class="text-[11px] text-amber-600 dark:text-amber-400 border-amber-500/30">
-                        Few Seats
-                      </span>
-                    } @else if (dep.status === 'sold_out') {
-                      <span hlmBadge variant="secondary" class="text-[11px]">
-                        Sold Out
-                      </span>
-                    }
-                  </td>
-
-                  <!-- Actions -->
-                  <td class="py-3.5 px-4 text-right">
-                    <button
-                      hlmBtn
-                      variant="outline"
-                      size="sm"
-                      class="text-xs h-8"
-                      (click)="editDeparture(dep)"
-                    >
-                      Manage
-                    </button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <div class="p-4 rounded-xl border border-border/50 bg-card shadow-xs space-y-1">
+          <div class="flex items-center justify-between text-muted-foreground text-xs">
+            <span class="font-medium">Scheduled Departures</span>
+            <ng-icon name="lucideClock" class="size-4 text-purple-500" />
+          </div>
+          <div class="text-2xl font-bold text-foreground">
+            {{ facade.allItems().length }}
+          </div>
+          <p class="text-[10px] text-muted-foreground">Active tour runs</p>
         </div>
       </div>
+
+      <!-- Search & Status Filter Bar -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div class="relative flex-1 max-w-sm">
+          <ng-icon name="lucideSearch" class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            [ngModel]="facade.searchQuery()"
+            (ngModelChange)="facade.setSearchQuery($event)"
+            placeholder="Search code, package title, destination, guide..."
+            class="w-full pl-9 pr-4 py-1.5 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs"
+          />
+        </div>
+
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          @for (tab of statusTabs; track tab.value) {
+            <button
+              hlmBtn
+              [variant]="facade.activeStatusFilter() === tab.value ? 'default' : 'ghost'"
+              size="sm"
+              class="h-7 text-xs px-2.5 rounded-lg cursor-pointer"
+              (click)="facade.setStatusFilter(tab.value)"
+            >
+              {{ tab.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Departures Table -->
+      <app-departures-table
+        [items]="facade.items()"
+        [isLoading]="facade.isLoading()"
+        (manifestClick)="facade.openManifestModal($event)"
+        (editClick)="facade.openEditDrawer($event)"
+        (deleteClick)="facade.requestDelete($event)"
+      />
     </app-main>
+
+    <!-- Create / Edit Departure Slide-over Drawer -->
+    <hlm-sheet [isOpen]="facade.drawerMode() === 'add' || facade.drawerMode() === 'edit'" (closed)="facade.closeDrawer()" sheetSize="md" side="right">
+      <div class="h-full flex flex-col justify-between p-6 overflow-y-auto">
+        <div>
+          <div class="pb-3 border-b border-border/40 mb-4">
+            <h3 class="text-base font-bold text-foreground">
+              {{ facade.drawerMode() === 'add' ? 'Schedule New Departure' : 'Edit Departure' }}
+            </h3>
+            <p class="text-xs text-muted-foreground mt-0.5">
+              Set calendar dates, max passenger quota, assigned mountain/cultural guide, and meeting point.
+            </p>
+          </div>
+
+          <app-departures-form
+            [initialValue]="facade.selected()"
+            [isEdit]="facade.drawerMode() === 'edit'"
+            (save)="onSaveDeparture($event)"
+            (cancel)="facade.closeDrawer()"
+          />
+        </div>
+      </div>
+    </hlm-sheet>
+
+    <!-- Boarding Manifest Modal -->
+    <hlm-dialog [isOpen]="facade.drawerMode() === 'manifest'" (closed)="facade.closeDrawer()">
+      <app-departures-manifest-modal
+        [departure]="facade.selected()"
+        (close)="facade.closeDrawer()"
+      />
+    </hlm-dialog>
+
+    <!-- Delete Confirmation Modal -->
+    <hlm-dialog [isOpen]="!!facade.deleteConfirmId()" (closed)="facade.cancelDelete()">
+      <div class="space-y-4 text-xs">
+        <div class="flex items-center gap-2 text-destructive">
+          <ng-icon name="lucideAlertTriangle" class="size-5" />
+          <h3 class="text-base font-bold">Cancel & Delete Departure?</h3>
+        </div>
+        <p class="text-muted-foreground">
+          Are you sure you want to cancel this scheduled tour departure? Confirmed passengers will need reassignment or refunds issued.
+        </p>
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button hlmBtn variant="outline" size="sm" (click)="facade.cancelDelete()" class="cursor-pointer">
+            Cancel
+          </button>
+          <button hlmBtn variant="destructive" size="sm" (click)="onConfirmDelete()" class="cursor-pointer">
+            Delete Departure
+          </button>
+        </div>
+      </div>
+    </hlm-dialog>
   `,
 })
-export class DeparturesPageComponent {
-  readonly Math = Math
+export class DeparturesPageComponent implements OnInit {
+  readonly facade = inject(DeparturesFacade)
+  private readonly exportService = inject(ExportService)
 
-  readonly departures = signal<Departure[]>([
-    {
-      id: 'dep-1',
-      packageId: 'pkg-1',
-      packageTitle: 'Swiss Alps Grand Panorama Express',
-      destination: 'Switzerland',
-      startDate: 'Sep 18, 2026',
-      endDate: 'Sep 23, 2026',
-      capacity: 16,
-      bookedCount: 14,
-      minParticipants: 4,
-      assignedGuideName: undefined,
-      status: 'limited',
-      meetingPoint: 'Zurich Main Station Concourse',
-    },
-    {
-      id: 'dep-2',
-      packageId: 'pkg-2',
-      packageTitle: 'Ubud Sacred Valley & Waterfalls',
-      destination: 'Bali, Indonesia',
-      startDate: 'Sep 15, 2026',
-      endDate: 'Sep 18, 2026',
-      capacity: 12,
-      bookedCount: 12,
-      minParticipants: 2,
-      assignedGuideName: 'Wayan Sudarta',
-      status: 'sold_out',
-      meetingPoint: 'Ubud Palace Gates',
-    },
-    {
-      id: 'dep-3',
-      packageId: 'pkg-3',
-      packageTitle: 'Serengeti Migration Luxury Safari',
-      destination: 'Tanzania',
-      startDate: 'Sep 24, 2026',
-      endDate: 'Sep 30, 2026',
-      capacity: 8,
-      bookedCount: 6,
-      minParticipants: 2,
-      assignedGuideName: 'Juma Mwamba',
-      status: 'available',
-      meetingPoint: 'Arusha Safari Center',
-    },
-    {
-      id: 'dep-4',
-      packageId: 'pkg-4',
-      packageTitle: 'Kyoto Ancient Temples & Tea Rituals',
-      destination: 'Kyoto, Japan',
-      startDate: 'Oct 02, 2026',
-      endDate: 'Oct 06, 2026',
-      capacity: 10,
-      bookedCount: 8,
-      minParticipants: 2,
-      assignedGuideName: 'Kenji Sato',
-      status: 'available',
-      meetingPoint: 'Kyoto Station North Exit',
-    },
-    {
-      id: 'dep-5',
-      packageId: 'pkg-5',
-      packageTitle: 'Santorini Sunset Sailing & Catamaran',
-      destination: 'Santorini, Greece',
-      startDate: 'Sep 12, 2026',
-      endDate: 'Sep 12, 2026',
-      capacity: 16,
-      bookedCount: 16,
-      minParticipants: 4,
-      assignedGuideName: 'Nikos Katsaros',
-      status: 'sold_out',
-      meetingPoint: 'Amoudi Bay Dock',
-    },
-  ])
+  readonly statusTabs = [
+    { label: 'All Departures', value: 'all' },
+    { label: 'Available', value: 'available' },
+    { label: 'Limited Seats', value: 'limited' },
+    { label: 'Sold Out', value: 'sold_out' },
+    { label: 'Cancelled', value: 'cancelled' },
+  ]
 
-  scheduleDeparture(): void {
-    toast.success('Departure Created', {
-      description: 'New departure schedule opened for booking.',
-    })
+  ngOnInit(): void {
+    this.facade.loadAll()
   }
 
-  editDeparture(dep: Departure): void {
-    toast.info('Departure Management', {
-      description: `Editing departure for ${dep.packageTitle}.`,
-    })
+  async onSaveDeparture(dto: any): Promise<void> {
+    if (this.facade.drawerMode() === 'add') {
+      const ok = await this.facade.create(dto)
+      if (ok) {
+        toast.success('Departure Scheduled', {
+          description: `Tour departure "${dto.departureCode}" created successfully.`,
+        })
+      }
+    } else if (this.facade.drawerMode() === 'edit' && this.facade.selected()) {
+      const ok = await this.facade.update(this.facade.selected()!.id, dto)
+      if (ok) {
+        toast.success('Departure Updated', {
+          description: `Departure "${dto.departureCode}" saved.`,
+        })
+      }
+    }
+  }
+
+  async onConfirmDelete(): Promise<void> {
+    const id = this.facade.deleteConfirmId()
+    if (id) {
+      const ok = await this.facade.remove(id)
+      if (ok) {
+        toast.success('Departure Cancelled and Removed')
+      }
+    }
+  }
+
+  exportAllCsv(): void {
+    this.exportService.exportToCsv('departures-schedule', this.facade.items(), [
+      { header: 'Departure Code', accessor: d => d.departureCode },
+      { header: 'Package Title', accessor: d => d.packageTitle || '' },
+      { header: 'Destination', accessor: d => d.destination || '' },
+      { header: 'Start Date', accessor: d => d.startDate },
+      { header: 'End Date', accessor: d => d.endDate },
+      { header: 'Capacity', accessor: d => d.capacity },
+      { header: 'Booked Seats', accessor: d => d.bookedCount },
+      { header: 'Available Seats', accessor: d => d.availableCount },
+      { header: 'Assigned Guide', accessor: d => d.assignedGuideName || 'Unassigned' },
+      { header: 'Price Override ($)', accessor: d => d.priceOverride || '' },
+      { header: 'Status', accessor: d => d.status },
+      { header: 'Meeting Point', accessor: d => d.meetingPoint || '' },
+    ])
+    toast.success('Departures schedule CSV exported')
   }
 }

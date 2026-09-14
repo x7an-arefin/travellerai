@@ -8,6 +8,8 @@ import {
   lucideFilter,
 } from '@ng-icons/lucide'
 import { WithdrawalsFacade } from '../data-access/withdrawals.facade'
+import { WithdrawalRequest } from '../data-access/models/withdrawals.model'
+import { ExportService } from '../../../core/services/export.service'
 import { WithdrawalsTableComponent } from './withdrawals-table.component'
 import { WithdrawalsDetailComponent } from './withdrawals-detail.component'
 import { HeaderComponent } from '../../../layout/authenticated/header/header.component'
@@ -153,7 +155,8 @@ import { toast } from 'ngx-sonner'
 
             <app-withdrawals-detail
               [withdrawal]="facade.selected()"
-              (approvePayout)="onApprovePayout($event)"
+              (settlePayout)="onSettlePayout($event)"
+              (rejectPayout)="onRejectPayout($event)"
             />
           </div>
 
@@ -174,25 +177,49 @@ import { toast } from 'ngx-sonner'
 })
 export class WithdrawalsPageComponent implements OnInit {
   protected readonly facade = inject(WithdrawalsFacade)
+  private readonly exportService = inject(ExportService)
 
   ngOnInit(): void {
     this.facade.loadAll()
   }
 
   exportSummary(): void {
-    toast.success('Settlement Log Downloaded', {
-      description: 'The batch disbursement file is ready for accounting.',
-    })
+    this.exportService.exportToCsv('withdrawal-settlements-batch', this.facade.items(), [
+      { header: 'Withdrawal ID', accessor: (w: WithdrawalRequest) => w.id },
+      { header: 'Provider', accessor: (w: WithdrawalRequest) => w.providerName },
+      { header: 'Amount ($)', accessor: (w: WithdrawalRequest) => w.amount },
+      { header: 'Fee ($)', accessor: (w: WithdrawalRequest) => w.feeAmount || 0 },
+      { header: 'Net Settlement ($)', accessor: (w: WithdrawalRequest) => w.netAmount },
+      { header: 'Payout Method', accessor: (w: WithdrawalRequest) => w.payoutMethod },
+      { header: 'Account Last 4', accessor: (w: WithdrawalRequest) => w.accountLast4 || '' },
+      { header: 'Status', accessor: (w: WithdrawalRequest) => w.status },
+      { header: 'Requested At', accessor: (w: WithdrawalRequest) => w.createdAt },
+      { header: 'Processed At', accessor: (w: WithdrawalRequest) => w.processedAt || '' },
+    ])
+    toast.success('Settlement Batch CSV Downloaded')
   }
 
-  async onApprovePayout(id: string): Promise<void> {
-    const ok = await this.facade.update(id, {
+  async onSettlePayout(evt: { id: string; reference: string }): Promise<void> {
+    const ok = await this.facade.update(evt.id, {
       status: 'completed',
       processedAt: new Date().toISOString(),
     })
     if (ok) {
-      toast.success('Payout Authorized & Processed', {
-        description: 'Wire settlement has been triggered for provider.',
+      toast.success('Payout Settlement Finalized', {
+        description: `Wire reference ${evt.reference} recorded and funds cleared.`,
+      })
+      this.facade.closeDrawer()
+    }
+  }
+
+  async onRejectPayout(evt: { id: string; reason: string }): Promise<void> {
+    const ok = await this.facade.update(evt.id, {
+      status: 'rejected',
+      processedAt: new Date().toISOString(),
+    })
+    if (ok) {
+      toast.error('Payout Request Rejected', {
+        description: `Funds returned to provider wallet. Reason: ${evt.reason}`,
       })
       this.facade.closeDrawer()
     }

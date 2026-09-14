@@ -1,4 +1,4 @@
-import { Component, signal, computed } from '@angular/core'
+import { Component, signal, computed, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -19,7 +19,10 @@ import {
   lucideExternalLink,
   lucidePaperclip,
   lucideMoreVertical,
+  lucideDownload,
+  lucidePrinter,
 } from '@ng-icons/lucide'
+import { ExportService } from '../../core/services/export.service'
 import { HeaderComponent } from '../../layout/authenticated/header/header.component'
 import { MainComponent } from '../../layout/authenticated/main/main.component'
 import { SearchComponent } from '../../shared/components/search/search.component'
@@ -97,6 +100,8 @@ export interface SupportTicket {
       lucideExternalLink,
       lucidePaperclip,
       lucideMoreVertical,
+      lucideDownload,
+      lucidePrinter,
     }),
   ],
   template: `
@@ -121,6 +126,17 @@ export interface SupportTicket {
         </div>
 
         <div class="flex items-center gap-2">
+          <button
+            hlmBtn
+            variant="outline"
+            size="sm"
+            (click)="exportTicketsCsv()"
+            class="gap-1.5 cursor-pointer h-9 shadow-xs"
+          >
+            <ng-icon name="lucideDownload" class="size-3.5" />
+            <span>Export CSV</span>
+          </button>
+
           <button hlmBtn size="sm" (click)="openCreateDrawer()" class="gap-1.5 cursor-pointer h-9 shadow-xs">
             <ng-icon name="lucidePlus" class="size-3.5" />
             <span>Create Ticket</span>
@@ -252,6 +268,17 @@ export interface SupportTicket {
               </div>
 
               <div class="flex items-center gap-2">
+                <button
+                  hlmBtn
+                  variant="outline"
+                  size="sm"
+                  (click)="printTicketThread()"
+                  class="h-8 text-xs cursor-pointer gap-1"
+                >
+                  <ng-icon name="lucidePrinter" class="size-3.5" />
+                  <span>Print</span>
+                </button>
+
                 <button
                   hlmBtn
                   variant="outline"
@@ -682,5 +709,70 @@ export class TicketsComponent {
     this.selectedTicket.set(ticket)
     toast.success(`Created ticket ${ticket.ticketNumber}.`)
     this.createDrawerOpen.set(false)
+  }
+
+  private readonly exportService = inject(ExportService)
+
+  exportTicketsCsv(): void {
+    const data = this.filteredTickets().map((t) => ({
+      ticketNumber: t.ticketNumber,
+      subject: t.subject,
+      customerName: t.customer.name,
+      customerEmail: t.customer.email,
+      tier: t.customer.tier,
+      priority: t.priority,
+      status: t.status,
+      slaMinutesLeft: t.slaRemainingMinutes,
+      assignee: t.assignee.name,
+      createdAt: t.createdAt,
+      messageCount: t.messages.length,
+    }))
+    this.exportService.exportToCsv('support-desk-sla-tickets.csv', data)
+  }
+
+  printTicketThread(): void {
+    const t = this.selectedTicket()
+    if (!t) return
+
+    const messagesHtml = t.messages
+      .map(
+        (m) => `
+      <div style="margin-bottom:12px; padding:10px; border:1px solid #e2e8f0; border-radius:6px; background:${
+        m.isInternal ? '#fef3c7' : '#f8fafc'
+      }">
+        <div style="font-weight:600; font-size:12px; margin-bottom:4px; display:flex; justify-content:space-between;">
+          <span>
+            ${m.senderName} (${m.sender})
+            ${
+              m.isInternal
+                ? '<span style="color:#d97706; font-size:10px; font-weight:700; margin-left:8px; background:#fde68a; padding:2px 6px; border-radius:4px;">INTERNAL STAFF NOTE</span>'
+                : ''
+            }
+          </span>
+          <span style="color:#64748b; font-size:11px;">${m.time}</span>
+        </div>
+        <div style="font-size:13px; line-height:1.5; color:#1e293b;">${m.body}</div>
+      </div>
+    `,
+      )
+      .join('')
+
+    this.exportService.printDocument({
+      title: `Support Ticket: ${t.ticketNumber}`,
+      subtitle: `${t.subject} | Status: ${t.status.toUpperCase()} | Priority: ${t.priority.toUpperCase()}`,
+      meta: [
+        { label: 'Customer', value: `${t.customer.name} (${t.customer.email})` },
+        { label: 'SLA Tier', value: t.customer.tier },
+        { label: 'Assignee', value: t.assignee.name },
+        { label: 'Created', value: t.createdAt },
+        { label: 'SLA Remaining', value: `${t.slaRemainingMinutes} min` },
+      ],
+      bodyHtml: `
+        <div style="margin-top: 16px;">
+          <h3 style="font-size:14px; font-weight:700; margin-bottom:12px; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">Conversation History & SLA Audit</h3>
+          ${messagesHtml}
+        </div>
+      `,
+    })
   }
 }

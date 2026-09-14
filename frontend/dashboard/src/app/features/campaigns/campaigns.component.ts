@@ -1,48 +1,32 @@
-import { Component, signal, computed } from '@angular/core'
+import { Component, OnInit, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
 import {
-  lucideMegaphone,
-  lucideTarget,
-  lucideSend,
-  lucideSearch,
+  lucideTag,
   lucidePlus,
-  lucideCheck,
-  lucideClock,
-  lucideTrendingUp,
-  lucideMail,
-  lucideSmartphone,
-  lucideEye,
+  lucideSearch,
   lucideDownload,
-  lucideLayers,
+  lucideTrendingUp,
+  lucideCheckCircle2,
+  lucideAlertTriangle,
 } from '@ng-icons/lucide'
+import { CampaignsFacade } from './data-access/campaigns.facade'
+import { CampaignsTableComponent } from './ui/campaigns-table.component'
+import { CampaignsFormComponent } from './ui/campaigns-form.component'
 import { HeaderComponent } from '../../layout/authenticated/header/header.component'
 import { MainComponent } from '../../layout/authenticated/main/main.component'
+import { TopNavComponent } from '../../layout/authenticated/top-nav/top-nav.component'
 import { SearchComponent } from '../../shared/components/search/search.component'
 import { ThemeSwitchComponent } from '../../shared/components/theme-switch/theme-switch.component'
-import { ConfigDrawerComponent } from '../../shared/components/config-drawer/config-drawer.component'
 import { NotificationCenterComponent } from '../../shared/components/notification-center/notification-center.component'
 import { ProfileDropdownComponent } from '../../shared/components/profile-dropdown/profile-dropdown.component'
-import { HlmCardImports } from '../../ui/card/hlm-card.directives'
+import { HlmSheetImports } from '../../ui/sheet/hlm-sheet.components'
+import { HlmDialogImports } from '../../ui/dialog/hlm-dialog.components'
 import { HlmButtonImports } from '../../ui/button/hlm-button.directive'
 import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
-import { HlmSheetImports } from '../../ui/sheet/hlm-sheet.components'
-import { HlmTableImports } from '../../ui/table/hlm-table.components'
-import { HlmSelectImports, SelectOption } from '../../ui/select/hlm-select.components'
+import { ExportService } from '../../core/services/export.service'
 import { toast } from 'ngx-sonner'
-
-export interface CampaignItem {
-  id: string
-  name: string
-  channel: 'Email' | 'SMS' | 'Push Notification'
-  status: 'active' | 'scheduled' | 'draft' | 'completed'
-  sentCount: number
-  openRate: number
-  clickRate: number
-  conversionRate: number
-  scheduleDate: string
-}
 
 @Component({
   selector: 'app-campaigns',
@@ -53,42 +37,36 @@ export interface CampaignItem {
     NgIcon,
     HeaderComponent,
     MainComponent,
+    TopNavComponent,
     SearchComponent,
     ThemeSwitchComponent,
-    ConfigDrawerComponent,
     NotificationCenterComponent,
     ProfileDropdownComponent,
-    ...HlmCardImports,
+    CampaignsTableComponent,
+    CampaignsFormComponent,
+    ...HlmSheetImports,
+    ...HlmDialogImports,
     ...HlmButtonImports,
     ...HlmBadgeImports,
-    ...HlmSheetImports,
-    ...HlmTableImports,
-    ...HlmSelectImports,
   ],
   providers: [
     provideIcons({
-      lucideMegaphone,
-      lucideTarget,
-      lucideSend,
-      lucideSearch,
+      lucideTag,
       lucidePlus,
-      lucideCheck,
-      lucideClock,
-      lucideTrendingUp,
-      lucideMail,
-      lucideSmartphone,
-      lucideEye,
+      lucideSearch,
       lucideDownload,
-      lucideLayers,
+      lucideTrendingUp,
+      lucideCheckCircle2,
+      lucideAlertTriangle,
     }),
   ],
   template: `
     <!-- Top Header -->
     <app-header [fixed]="true">
+      <app-top-nav class="mr-auto" />
       <div class="flex items-center gap-2">
         <app-search />
         <app-theme-switch />
-        <app-config-drawer />
         <app-notification-center />
         <app-profile-dropdown />
       </div>
@@ -96,331 +74,241 @@ export interface CampaignItem {
 
     <!-- Main Content -->
     <app-main [fixed]="true" class="space-y-6">
-      <!-- Title & Actions Bar -->
+      <!-- Page Header -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight text-foreground">Marketing Campaigns & Automation</h1>
-          <p class="text-xs text-muted-foreground">Deliver multi-channel campaigns, measure click-through rates, and run A/B test experiments.</p>
+          <div class="flex items-center gap-2.5">
+            <div class="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <ng-icon name="lucideTag" class="size-4.5" />
+            </div>
+            <div>
+              <h1 class="text-2xl font-bold tracking-tight text-foreground">Promotions & Discount Coupons</h1>
+              <p class="text-xs text-muted-foreground mt-0.5">
+                Manage promotional discount codes, minimum order requirements, redemption caps, and expiration schedules.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div class="flex items-center gap-2">
-          <button hlmBtn size="sm" (click)="openCreateDrawer()" class="gap-1.5 cursor-pointer h-9 shadow-xs">
+          <button
+            hlmBtn
+            variant="outline"
+            size="sm"
+            (click)="exportCouponsCsv()"
+            class="gap-1.5 cursor-pointer shadow-xs text-xs"
+          >
+            <ng-icon name="lucideDownload" class="size-3.5" />
+            <span>Export Coupons CSV</span>
+          </button>
+
+          <button
+            hlmBtn
+            variant="default"
+            size="sm"
+            (click)="facade.openAddDrawer()"
+            class="gap-1.5 cursor-pointer shadow-xs text-xs"
+          >
             <ng-icon name="lucidePlus" class="size-3.5" />
-            <span>Create Campaign</span>
+            <span>New Promo Code</span>
           </button>
         </div>
       </div>
 
       <!-- KPI Summary Cards -->
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div hlmCard class="p-4 space-y-1 hover:border-primary/40 transition-colors shadow-2xs">
-          <span class="text-xs font-semibold text-muted-foreground">Total Delivered Messages</span>
-          <div class="text-2xl font-bold text-foreground">248,920</div>
-          <p class="text-[11px] text-emerald-600 font-semibold">99.82% delivery success</p>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="p-4 rounded-xl border border-border/50 bg-card shadow-xs space-y-1">
+          <div class="flex items-center justify-between text-muted-foreground text-xs">
+            <span class="font-medium">Total Redemptions</span>
+            <ng-icon name="lucideTrendingUp" class="size-4 text-emerald-500" />
+          </div>
+          <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            {{ facade.totalRedemptions() }}
+          </div>
+          <p class="text-[10px] text-muted-foreground">Times coupons applied</p>
         </div>
 
-        <div hlmCard class="p-4 space-y-1 hover:border-primary/40 transition-colors shadow-2xs">
-          <span class="text-xs font-semibold text-muted-foreground">Average Open Rate</span>
-          <div class="text-2xl font-bold text-foreground">38.4%</div>
-          <p class="text-[11px] text-emerald-600 font-semibold">+4.2% above benchmark</p>
+        <div class="p-4 rounded-xl border border-border/50 bg-card shadow-xs space-y-1">
+          <div class="flex items-center justify-between text-muted-foreground text-xs">
+            <span class="font-medium">Active Coupons</span>
+            <ng-icon name="lucideCheckCircle2" class="size-4 text-primary" />
+          </div>
+          <div class="text-2xl font-bold text-foreground">
+            {{ facade.activeCouponsCount() }}
+          </div>
+          <p class="text-[10px] text-muted-foreground">Currently redeemable</p>
         </div>
 
-        <div hlmCard class="p-4 space-y-1 hover:border-primary/40 transition-colors shadow-2xs">
-          <span class="text-xs font-semibold text-muted-foreground">Click-Through Rate (CTR)</span>
-          <div class="text-2xl font-bold text-foreground">14.6%</div>
-          <p class="text-[11px] text-sky-500 font-semibold">36,340 link interactions</p>
+        <div class="p-4 rounded-xl border border-border/50 bg-card shadow-xs space-y-1">
+          <div class="flex items-center justify-between text-muted-foreground text-xs">
+            <span class="font-medium">Total Promo Campaigns</span>
+            <ng-icon name="lucideTag" class="size-4 text-purple-500" />
+          </div>
+          <div class="text-2xl font-bold text-foreground">
+            {{ facade.allItems().length }}
+          </div>
+          <p class="text-[10px] text-muted-foreground">Vouchers configured</p>
         </div>
 
-        <div hlmCard class="p-4 space-y-1 hover:border-primary/40 transition-colors shadow-2xs">
-          <span class="text-xs font-semibold text-muted-foreground">Attributed Revenue</span>
-          <div class="text-2xl font-bold text-emerald-600">\$84,200</div>
-          <p class="text-[11px] text-emerald-600 font-semibold">4.8x ROAS yield</p>
+        <div class="p-4 rounded-xl border border-border/50 bg-card shadow-xs space-y-1">
+          <div class="flex items-center justify-between text-muted-foreground text-xs">
+            <span class="font-medium">Conversion Incentive</span>
+            <ng-icon name="lucideCheckCircle2" class="size-4 text-blue-500" />
+          </div>
+          <div class="text-2xl font-bold text-foreground">
+            15% Avg
+          </div>
+          <p class="text-[10px] text-muted-foreground">Effective discount tier</p>
         </div>
       </div>
 
-      <!-- Filter Controls & Search -->
+      <!-- Search & Status Filter Bar -->
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div class="relative w-full sm:w-72">
-          <ng-icon name="lucideSearch" class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+        <div class="relative flex-1 max-w-sm">
+          <ng-icon name="lucideSearch" class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
-            [(ngModel)]="searchQuery"
-            placeholder="Search campaign name..."
-            class="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            [ngModel]="facade.searchQuery()"
+            (ngModelChange)="facade.setSearchQuery($event)"
+            placeholder="Search code, campaign name, discount type..."
+            class="w-full pl-9 pr-4 py-1.5 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs"
           />
         </div>
 
-        <div class="w-44">
-          <hlm-custom-select
-            [options]="channelOptions"
-            [ngModel]="selectedChannel()"
-            (valueChange)="selectedChannel.set($event)"
-            placeholder="All Channels"
-          />
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          @for (tab of statusTabs; track tab.value) {
+            <button
+              hlmBtn
+              [variant]="facade.activeStatusFilter() === tab.value ? 'default' : 'ghost'"
+              size="sm"
+              class="h-7 text-xs px-2.5 rounded-lg cursor-pointer"
+              (click)="facade.setStatusFilter(tab.value)"
+            >
+              {{ tab.label }}
+            </button>
+          }
         </div>
       </div>
 
-      <!-- Campaigns Table -->
-      <div hlmCard class="p-0 overflow-hidden shadow-2xs">
-        <table hlmTable class="w-full min-w-[700px] text-xs">
-          <thead hlmTableHeader>
-            <tr hlmTableRow>
-              <th hlmTableHead class="ps-4">Campaign Name</th>
-              <th hlmTableHead>Channel</th>
-              <th hlmTableHead>Delivered</th>
-              <th hlmTableHead>Open Rate</th>
-              <th hlmTableHead>CTR</th>
-              <th hlmTableHead>Status</th>
-              <th hlmTableHead class="text-right pe-4">Actions</th>
-            </tr>
-          </thead>
-          <tbody hlmTableBody>
-            @for (c of filteredCampaigns(); track c.id) {
-              <tr hlmTableRow class="hover:bg-muted/40 transition-colors">
-                <td hlmTableCell class="ps-4 py-3">
-                  <div class="font-bold text-foreground">{{ c.name }}</div>
-                  <div class="text-[11px] text-muted-foreground">Schedule: {{ c.scheduleDate }}</div>
-                </td>
-                <td hlmTableCell>
-                  <span hlmBadge variant="outline" class="font-medium text-[11px]">{{ c.channel }}</span>
-                </td>
-                <td hlmTableCell class="font-mono font-semibold text-foreground">
-                  {{ c.sentCount | number }}
-                </td>
-                <td hlmTableCell>
-                  <div class="font-bold text-foreground">{{ c.openRate }}%</div>
-                  <div class="h-1 w-20 bg-muted rounded-full overflow-hidden mt-0.5">
-                    <div class="h-full bg-emerald-500 rounded-full" [style.width.%]="c.openRate"></div>
-                  </div>
-                </td>
-                <td hlmTableCell>
-                  <div class="font-bold text-foreground">{{ c.clickRate }}%</div>
-                  <div class="h-1 w-20 bg-muted rounded-full overflow-hidden mt-0.5">
-                    <div class="h-full bg-sky-500 rounded-full" [style.width.%]="c.clickRate * 3"></div>
-                  </div>
-                </td>
-                <td hlmTableCell>
-                  <span
-                    class="rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase border"
-                    [ngClass]="getStatusBadgeClass(c.status)"
-                  >
-                    {{ c.status }}
-                  </span>
-                </td>
-                <td hlmTableCell class="text-right pe-4">
-                  <button hlmBtn variant="outline" size="sm" (click)="openDetail(c)" class="h-7 text-xs cursor-pointer">
-                    Inspect
-                  </button>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+      <!-- Coupons Table -->
+      <app-campaigns-table
+        [items]="facade.items()"
+        [isLoading]="facade.isLoading()"
+        (toggleActive)="onToggleActive($event)"
+        (editClick)="facade.openEditDrawer($event)"
+        (deleteClick)="facade.requestDelete($event)"
+      />
     </app-main>
 
-    <!-- Create Campaign Sheet (size="md" = 1/2 screen width) -->
-    <hlm-sheet [isOpen]="createDrawerOpen()" position="right" [size]="'md'" (closed)="createDrawerOpen.set(false)">
-      <div hlmSheetHeader>
-        <h3 hlmSheetTitle>Launch Multi-Channel Campaign</h3>
-        <p hlmSheetDescription class="text-xs">Configure message parameters, audience segment, and dispatch schedule.</p>
-      </div>
+    <!-- Create / Edit Slide-over Drawer -->
+    <hlm-sheet [isOpen]="facade.drawerMode() === 'add' || facade.drawerMode() === 'edit'" (closed)="facade.closeDrawer()" sheetSize="md" side="right">
+      <div class="h-full flex flex-col justify-between p-6 overflow-y-auto">
+        <div>
+          <div class="pb-3 border-b border-border/40 mb-4">
+            <h3 class="text-base font-bold text-foreground">
+              {{ facade.drawerMode() === 'add' ? 'Create Promo Coupon' : 'Edit Coupon Rules' }}
+            </h3>
+            <p class="text-xs text-muted-foreground mt-0.5">
+              Set discount rates, order qualification thresholds, redemptions limit, and cost funder.
+            </p>
+          </div>
 
-      <div class="space-y-4 py-4 flex-1 overflow-y-auto text-xs">
-        <div class="space-y-1.5">
-          <label class="font-semibold text-foreground">Campaign Title</label>
-          <input
-            type="text"
-            [(ngModel)]="newCampaign.name"
-            placeholder="e.g. Q3 Enterprise Security Upgrade Announcement"
-            class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          <app-campaigns-form
+            [initialValue]="facade.selected()"
+            [isEdit]="facade.drawerMode() === 'edit'"
+            (save)="onSaveCoupon($event)"
+            (cancel)="facade.closeDrawer()"
           />
         </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div class="space-y-1.5">
-            <label class="font-semibold text-foreground">Delivery Channel</label>
-            <hlm-custom-select
-              [options]="formChannelOptions"
-              [ngModel]="newCampaign.channel"
-              (valueChange)="newCampaign.channel = $event"
-              placeholder="Select Channel"
-            />
-          </div>
-          <div class="space-y-1.5">
-            <label class="font-semibold text-foreground">Target Audience</label>
-            <hlm-custom-select
-              [options]="audienceOptions"
-              [ngModel]="newCampaign.audience"
-              (valueChange)="newCampaign.audience = $event"
-              placeholder="Select Segment"
-            />
-          </div>
-        </div>
-
-        <div class="space-y-1.5">
-          <label class="font-semibold text-foreground">Subject / Push Headline</label>
-          <input
-            type="text"
-            [(ngModel)]="newCampaign.subject"
-            placeholder="Unlock new automation features today"
-            class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
-
-        <div class="space-y-1.5">
-          <label class="font-semibold text-foreground">Message Body Content</label>
-          <textarea
-            rows="5"
-            placeholder="Draft your promotional or transactional message..."
-            class="w-full rounded-md border border-input bg-background p-2.5 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-          ></textarea>
-        </div>
-      </div>
-
-      <div hlmSheetFooter class="mt-auto flex items-center justify-between gap-2 border-t pt-4">
-        <button hlmBtn variant="outline" (click)="createDrawerOpen.set(false)" class="cursor-pointer text-xs">
-          Cancel
-        </button>
-        <button hlmBtn (click)="saveCampaign()" class="cursor-pointer text-xs">
-          Schedule & Launch
-        </button>
       </div>
     </hlm-sheet>
+
+    <!-- Delete Confirmation Modal -->
+    <hlm-dialog [isOpen]="!!facade.deleteConfirmId()" (closed)="facade.cancelDelete()">
+      <div class="space-y-4 text-xs">
+        <div class="flex items-center gap-2 text-destructive">
+          <ng-icon name="lucideAlertTriangle" class="size-5" />
+          <h3 class="text-base font-bold">Delete Promo Coupon?</h3>
+        </div>
+        <p class="text-muted-foreground">
+          Are you sure you want to permanently revoke this voucher code? Travelers will no longer be able to apply it at checkout.
+        </p>
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button hlmBtn variant="outline" size="sm" (click)="facade.cancelDelete()" class="cursor-pointer">
+            Cancel
+          </button>
+          <button hlmBtn variant="destructive" size="sm" (click)="onConfirmDelete()" class="cursor-pointer">
+            Delete Coupon
+          </button>
+        </div>
+      </div>
+    </hlm-dialog>
   `,
 })
-export class CampaignsComponent {
-  readonly createDrawerOpen = signal<boolean>(false)
-  searchQuery = ''
-  readonly selectedChannel = signal<string>('all')
+export class CampaignsComponent implements OnInit {
+  readonly facade = inject(CampaignsFacade)
+  private readonly exportService = inject(ExportService)
 
-  newCampaign = {
-    name: '',
-    channel: 'Email' as CampaignItem['channel'],
-    audience: 'all_subscribers',
-    subject: '',
-  }
-
-  readonly channelOptions: readonly SelectOption[] = [
-    { label: 'All Channels', value: 'all' },
-    { label: 'Email', value: 'Email' },
-    { label: 'SMS', value: 'SMS' },
-    { label: 'Push Notification', value: 'Push Notification' },
+  readonly statusTabs = [
+    { label: 'All Coupons', value: 'all' },
+    { label: 'Active', value: 'active' },
+    { label: 'Inactive', value: 'inactive' },
+    { label: 'Expired', value: 'expired' },
   ]
 
-  readonly formChannelOptions: readonly SelectOption[] = [
-    { label: 'Email Broadcast', value: 'Email' },
-    { label: 'SMS Gateway', value: 'SMS' },
-    { label: 'Web Push Notification', value: 'Push Notification' },
-  ]
+  ngOnInit(): void {
+    this.facade.loadAll()
+  }
 
-  readonly audienceOptions: readonly SelectOption[] = [
-    { label: 'All Active Subscribers (48K)', value: 'all_subscribers' },
-    { label: 'Enterprise Paid Tier (3.2K)', value: 'enterprise' },
-    { label: 'Inactive 30+ Days (12K)', value: 'inactive' },
-  ]
-
-  readonly campaigns = signal<CampaignItem[]>([
-    {
-      id: 'cmp-1',
-      name: 'Spartan UI Angular 21 Architecture Launch',
-      channel: 'Email',
-      status: 'active',
-      sentCount: 68400,
-      openRate: 44.8,
-      clickRate: 18.2,
-      conversionRate: 6.4,
-      scheduleDate: 'Today, 08:00 AM',
-    },
-    {
-      id: 'cmp-2',
-      name: 'Security Patch Alert: WebAuthn MFA Enforcement',
-      channel: 'Push Notification',
-      status: 'completed',
-      sentCount: 142000,
-      openRate: 62.4,
-      clickRate: 24.1,
-      conversionRate: 12.0,
-      scheduleDate: 'Aug 04, 2026',
-    },
-    {
-      id: 'cmp-3',
-      name: 'Quarterly Renewal 20% Discount Code',
-      channel: 'Email',
-      status: 'scheduled',
-      sentCount: 24000,
-      openRate: 0,
-      clickRate: 0,
-      conversionRate: 0,
-      scheduleDate: 'Aug 10, 2026',
-    },
-    {
-      id: 'cmp-4',
-      name: 'SMS Two-Factor Setup Reminder',
-      channel: 'SMS',
-      status: 'active',
-      sentCount: 14520,
-      openRate: 88.0,
-      clickRate: 12.4,
-      conversionRate: 8.9,
-      scheduleDate: 'Yesterday',
-    },
-  ])
-
-  readonly filteredCampaigns = computed(() => {
-    const q = this.searchQuery.toLowerCase().trim()
-    const ch = this.selectedChannel()
-
-    return this.campaigns().filter((c) => {
-      const matchesQ = !q || c.name.toLowerCase().includes(q)
-      const matchesCh = ch === 'all' || c.channel === ch
-      return matchesQ && matchesCh
-    })
-  })
-
-  getStatusBadgeClass(status: string): string {
-    switch (status) {
-      case 'active': return 'bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-800'
-      case 'scheduled': return 'bg-sky-500/10 text-sky-600 border-sky-200 dark:border-sky-800'
-      case 'completed': return 'bg-muted text-muted-foreground'
-      default: return 'bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-800'
+  async onSaveCoupon(dto: any): Promise<void> {
+    if (this.facade.drawerMode() === 'add') {
+      const ok = await this.facade.create(dto)
+      if (ok) {
+        toast.success('Promo Code Created', {
+          description: `Voucher "${dto.code}" is ready for traveler checkout.`,
+        })
+      }
+    } else if (this.facade.drawerMode() === 'edit' && this.facade.selected()) {
+      const ok = await this.facade.update(this.facade.selected()!.id, dto)
+      if (ok) {
+        toast.success('Coupon Updated', {
+          description: `Rules for "${dto.code}" saved.`,
+        })
+      }
     }
   }
 
-  openCreateDrawer(): void {
-    this.newCampaign = {
-      name: '',
-      channel: 'Email',
-      audience: 'all_subscribers',
-      subject: '',
+  async onToggleActive(id: string): Promise<void> {
+    const ok = await this.facade.toggleStatus(id)
+    if (ok) {
+      toast.success('Coupon Status Toggled')
     }
-    this.createDrawerOpen.set(true)
   }
 
-  saveCampaign(): void {
-    if (!this.newCampaign.name) {
-      toast.error('Please enter a campaign name.')
-      return
+  async onConfirmDelete(): Promise<void> {
+    const id = this.facade.deleteConfirmId()
+    if (id) {
+      const ok = await this.facade.remove(id)
+      if (ok) {
+        toast.success('Coupon Revoked and Deleted')
+      }
     }
-
-    const item: CampaignItem = {
-      id: 'cmp-' + (this.campaigns().length + 1),
-      name: this.newCampaign.name,
-      channel: this.newCampaign.channel,
-      status: 'scheduled',
-      sentCount: 35000,
-      openRate: 0,
-      clickRate: 0,
-      conversionRate: 0,
-      scheduleDate: 'Tomorrow, 09:00 AM',
-    }
-
-    this.campaigns.update((list) => [item, ...list])
-    toast.success(`Campaign "${item.name}" scheduled.`)
-    this.createDrawerOpen.set(false)
   }
 
-  openDetail(c: CampaignItem): void {
-    toast.info(`Inspecting performance telemetry for ${c.name}.`)
+  exportCouponsCsv(): void {
+    this.exportService.exportToCsv('promo-coupons-campaigns', this.facade.items(), [
+      { header: 'Coupon Code', accessor: c => c.code },
+      { header: 'Description', accessor: c => c.description || '' },
+      { header: 'Discount Type', accessor: c => c.discountType },
+      { header: 'Discount Value', accessor: c => c.discountValue },
+      { header: 'Times Used', accessor: c => c.usedCount },
+      { header: 'Max Cap', accessor: c => c.maxUses || 'Unlimited' },
+      { header: 'Min Booking Value ($)', accessor: c => c.minBookingValue || 'None' },
+      { header: 'Max Discount ($)', accessor: c => c.maxDiscount || 'None' },
+      { header: 'Funder', accessor: c => c.funder },
+      { header: 'Status', accessor: c => c.status },
+      { header: 'Expiry Date', accessor: c => c.expiresAt || 'No Expiry' },
+    ])
+    toast.success('Coupons CSV exported')
   }
 }

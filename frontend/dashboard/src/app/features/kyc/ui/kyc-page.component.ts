@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core'
+import { Component, OnInit, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -6,12 +6,14 @@ import {
   lucideShieldCheck,
   lucideShieldAlert,
   lucideFileText,
-  lucideCheck,
-  lucideX,
-  lucideBuilding2,
-  lucideEye,
+  lucideSearch,
   lucideDownload,
+  lucideCheckCircle2,
+  lucideAlertTriangle,
 } from '@ng-icons/lucide'
+import { KycFacade } from '../data-access/kyc.facade'
+import { KycTableComponent } from './kyc-table.component'
+import { KycReviewModalComponent } from './kyc-review-modal.component'
 import { HeaderComponent } from '../../../layout/authenticated/header/header.component'
 import { MainComponent } from '../../../layout/authenticated/main/main.component'
 import { TopNavComponent } from '../../../layout/authenticated/top-nav/top-nav.component'
@@ -19,22 +21,12 @@ import { SearchComponent } from '../../../shared/components/search/search.compon
 import { ThemeSwitchComponent } from '../../../shared/components/theme-switch/theme-switch.component'
 import { NotificationCenterComponent } from '../../../shared/components/notification-center/notification-center.component'
 import { ProfileDropdownComponent } from '../../../shared/components/profile-dropdown/profile-dropdown.component'
-import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
+import { HlmSheetImports } from '../../../ui/sheet/hlm-sheet.components'
+import { HlmDialogImports } from '../../../ui/dialog/hlm-dialog.components'
 import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
-import { HlmCardImports } from '../../../ui/card/hlm-card.directives'
+import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
+import { ExportService } from '../../../core/services/export.service'
 import { toast } from 'ngx-sonner'
-
-export interface KycSubmission {
-  id: string
-  providerName: string
-  country: string
-  documentType: 'trade_license' | 'tax_certificate' | 'liability_insurance' | 'guide_certification'
-  documentNumber: string
-  submittedDate: string
-  status: 'under_review' | 'approved' | 'rejected'
-  fileSize: string
-  expiryDate: string
-}
 
 @Component({
   selector: 'app-kyc-page',
@@ -50,20 +42,22 @@ export interface KycSubmission {
     ThemeSwitchComponent,
     NotificationCenterComponent,
     ProfileDropdownComponent,
-    ...HlmBadgeImports,
+    KycTableComponent,
+    KycReviewModalComponent,
+    ...HlmSheetImports,
+    ...HlmDialogImports,
     ...HlmButtonImports,
-    ...HlmCardImports,
+    ...HlmBadgeImports,
   ],
   providers: [
     provideIcons({
       lucideShieldCheck,
       lucideShieldAlert,
       lucideFileText,
-      lucideCheck,
-      lucideX,
-      lucideBuilding2,
-      lucideEye,
+      lucideSearch,
       lucideDownload,
+      lucideCheckCircle2,
+      lucideAlertTriangle,
     }),
   ],
   template: `
@@ -79,186 +73,216 @@ export interface KycSubmission {
     </app-header>
 
     <!-- Main Content -->
-    <app-main>
+    <app-main [fixed]="true" class="space-y-6">
       <!-- Page Header -->
-      <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-2xl font-bold tracking-tight">KYC Business Verification</h1>
-            <span hlmBadge variant="outline" class="text-xs">
-              {{ pendingCount() }} Pending Review
-            </span>
+          <div class="flex items-center gap-2.5">
+            <div class="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <ng-icon name="lucideShieldCheck" class="size-4.5" />
+            </div>
+            <div>
+              <h1 class="text-2xl font-bold tracking-tight text-foreground">KYC & Compliance Verification</h1>
+              <p class="text-xs text-muted-foreground mt-0.5">
+                Audit trade licenses, commercial liability insurances, guide certifications, and official operator registries.
+              </p>
+            </div>
           </div>
-          <p class="text-xs text-muted-foreground mt-0.5">
-            Audit trade licenses, regulatory certifications, and liability insurance from travel providers.
-          </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button
+            hlmBtn
+            variant="outline"
+            size="sm"
+            (click)="exportComplianceCsv()"
+            class="gap-1.5 cursor-pointer shadow-xs text-xs"
+          >
+            <ng-icon name="lucideDownload" class="size-3.5" />
+            <span>Export Compliance CSV</span>
+          </button>
         </div>
       </div>
 
-      <!-- Compliance Submissions Table -->
-      <div class="rounded-xl border border-border/50 bg-card overflow-hidden shadow-xs">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead class="bg-muted/40 text-xs font-semibold uppercase text-muted-foreground tracking-wider border-b border-border/40">
-              <tr>
-                <th scope="col" class="py-3.5 px-4">Provider Agency</th>
-                <th scope="col" class="py-3.5 px-4">Document Type</th>
-                <th scope="col" class="py-3.5 px-4">Document / License #</th>
-                <th scope="col" class="py-3.5 px-4">Expiry Date</th>
-                <th scope="col" class="py-3.5 px-4">Status</th>
-                <th scope="col" class="py-3.5 px-4 text-right">Verification Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-border/30">
-              @for (sub of submissions(); track sub.id) {
-                <tr class="hover:bg-muted/20 transition-colors">
-                  <!-- Provider -->
-                  <td class="py-3.5 px-4">
-                    <div class="font-semibold text-foreground text-sm">
-                      {{ sub.providerName }}
-                    </div>
-                    <div class="text-xs text-muted-foreground">
-                      {{ sub.country }}
-                    </div>
-                  </td>
+      <!-- KPI Summary Cards -->
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="p-4 rounded-xl border border-border/50 bg-card shadow-xs space-y-1">
+          <div class="flex items-center justify-between text-muted-foreground text-xs">
+            <span class="font-medium">Pending Review</span>
+            <ng-icon name="lucideAlertTriangle" class="size-4 text-amber-500" />
+          </div>
+          <div class="text-2xl font-bold text-amber-600 dark:text-amber-400">
+            {{ facade.pendingReviewCount() }}
+          </div>
+          <p class="text-[10px] text-muted-foreground">Action required by compliance desk</p>
+        </div>
 
-                  <!-- Document Type -->
-                  <td class="py-3.5 px-4">
-                    <div class="flex items-center gap-1.5 text-xs font-medium text-foreground capitalize">
-                      <ng-icon name="lucideFileText" class="size-4 text-primary" />
-                      <span>{{ sub.documentType.replace('_', ' ') }}</span>
-                    </div>
-                    <span class="text-[10px] text-muted-foreground">{{ sub.fileSize }} PDF</span>
-                  </td>
+        <div class="p-4 rounded-xl border border-border/50 bg-card shadow-xs space-y-1">
+          <div class="flex items-center justify-between text-muted-foreground text-xs">
+            <span class="font-medium">Approved Documents</span>
+            <ng-icon name="lucideCheckCircle2" class="size-4 text-emerald-500" />
+          </div>
+          <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            {{ facade.approvedCount() }}
+          </div>
+          <p class="text-[10px] text-muted-foreground">Legally verified & active</p>
+        </div>
 
-                  <!-- Document # -->
-                  <td class="py-3.5 px-4 text-xs font-mono font-medium text-foreground">
-                    {{ sub.documentNumber }}
-                  </td>
+        <div class="p-4 rounded-xl border border-border/50 bg-card shadow-xs space-y-1">
+          <div class="flex items-center justify-between text-muted-foreground text-xs">
+            <span class="font-medium">Rejected</span>
+            <ng-icon name="lucideShieldAlert" class="size-4 text-rose-500" />
+          </div>
+          <div class="text-2xl font-bold text-rose-600 dark:text-rose-400">
+            {{ facade.rejectedCount() }}
+          </div>
+          <p class="text-[10px] text-muted-foreground">Requires operator re-submission</p>
+        </div>
 
-                  <!-- Expiry Date -->
-                  <td class="py-3.5 px-4 text-xs text-muted-foreground">
-                    {{ sub.expiryDate }}
-                  </td>
-
-                  <!-- Status -->
-                  <td class="py-3.5 px-4">
-                    @if (sub.status === 'approved') {
-                      <span hlmBadge variant="default" class="text-[11px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                        Approved
-                      </span>
-                    } @else if (sub.status === 'under_review') {
-                      <span hlmBadge variant="outline" class="text-[11px] text-amber-600 dark:text-amber-400 border-amber-500/30">
-                        Under Review
-                      </span>
-                    } @else {
-                      <span hlmBadge variant="destructive" class="text-[11px]">
-                        Rejected
-                      </span>
-                    }
-                  </td>
-
-                  <!-- Actions -->
-                  <td class="py-3.5 px-4 text-right">
-                    @if (sub.status === 'under_review') {
-                      <div class="flex items-center justify-end gap-1">
-                        <button
-                          hlmBtn
-                          variant="outline"
-                          size="sm"
-                          class="text-xs h-7 text-emerald-600 dark:text-emerald-400"
-                          (click)="approve(sub.id)"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          hlmBtn
-                          variant="ghost"
-                          size="sm"
-                          class="text-xs h-7 text-rose-500"
-                          (click)="reject(sub.id)"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    } @else {
-                      <span class="text-xs text-muted-foreground">Verified</span>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <div class="p-4 rounded-xl border border-border/50 bg-card shadow-xs space-y-1">
+          <div class="flex items-center justify-between text-muted-foreground text-xs">
+            <span class="font-medium">Total Documents</span>
+            <ng-icon name="lucideFileText" class="size-4 text-purple-500" />
+          </div>
+          <div class="text-2xl font-bold text-foreground">
+            {{ facade.allItems().length }}
+          </div>
+          <p class="text-[10px] text-muted-foreground">In legal audit repository</p>
         </div>
       </div>
+
+      <!-- Search & Status Filter Bar -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div class="relative flex-1 max-w-sm">
+          <ng-icon name="lucideSearch" class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            [ngModel]="facade.searchQuery()"
+            (ngModelChange)="facade.setSearchQuery($event)"
+            placeholder="Search provider, document type, license #, file name..."
+            class="w-full pl-9 pr-4 py-1.5 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs"
+          />
+        </div>
+
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          @for (tab of statusTabs; track tab.value) {
+            <button
+              hlmBtn
+              [variant]="facade.activeStatusFilter() === tab.value ? 'default' : 'ghost'"
+              size="sm"
+              class="h-7 text-xs px-2.5 rounded-lg cursor-pointer"
+              (click)="facade.setStatusFilter(tab.value)"
+            >
+              {{ tab.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- KYC Documents Table -->
+      <app-kyc-table
+        [items]="facade.items()"
+        [isLoading]="facade.isLoading()"
+        (reviewClick)="facade.openReviewDrawer($event)"
+        (deleteClick)="facade.requestDelete($event)"
+      />
     </app-main>
+
+    <!-- Document Review Slide-over Drawer -->
+    <hlm-sheet [isOpen]="facade.drawerMode() === 'review'" (closed)="facade.closeDrawer()" sheetSize="md" side="right">
+      <div class="h-full flex flex-col justify-between p-6 overflow-y-auto">
+        <div>
+          <div class="pb-3 border-b border-border/40 mb-4">
+            <h3 class="text-base font-bold text-foreground">Inspect Compliance Document</h3>
+            <p class="text-xs text-muted-foreground mt-0.5">
+              Verify legal credentials, check regulatory registries, and issue approval or rejection decisions.
+            </p>
+          </div>
+
+          <app-kyc-review-modal
+            [document]="facade.selected()"
+            (decide)="onReviewDecision($event)"
+            (cancel)="facade.closeDrawer()"
+          />
+        </div>
+      </div>
+    </hlm-sheet>
+
+    <!-- Delete Confirmation Modal -->
+    <hlm-dialog [isOpen]="!!facade.deleteConfirmId()" (closed)="facade.cancelDelete()">
+      <div class="space-y-4 text-xs">
+        <div class="flex items-center gap-2 text-destructive">
+          <ng-icon name="lucideAlertTriangle" class="size-5" />
+          <h3 class="text-base font-bold">Remove Compliance Document?</h3>
+        </div>
+        <p class="text-muted-foreground">
+          Are you sure you want to remove this document from the compliance archive?
+        </p>
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button hlmBtn variant="outline" size="sm" (click)="facade.cancelDelete()" class="cursor-pointer">
+            Cancel
+          </button>
+          <button hlmBtn variant="destructive" size="sm" (click)="onConfirmDelete()" class="cursor-pointer">
+            Delete Document
+          </button>
+        </div>
+      </div>
+    </hlm-dialog>
   `,
 })
-export class KycPageComponent {
-  readonly submissions = signal<KycSubmission[]>([
-    {
-      id: 'kyc-1',
-      providerName: 'Himalayan Sherpa Treks',
-      country: 'Nepal',
-      documentType: 'trade_license',
-      documentNumber: 'NP-TL-9948201',
-      submittedDate: 'Sep 10, 2026',
-      status: 'under_review',
-      fileSize: '3.4 MB',
-      expiryDate: 'Dec 31, 2028',
-    },
-    {
-      id: 'kyc-2',
-      providerName: 'Himalayan Sherpa Treks',
-      country: 'Nepal',
-      documentType: 'liability_insurance',
-      documentNumber: 'INS-ALLIANZ-88219',
-      submittedDate: 'Sep 10, 2026',
-      status: 'under_review',
-      fileSize: '1.8 MB',
-      expiryDate: 'Aug 30, 2027',
-    },
-    {
-      id: 'kyc-3',
-      providerName: 'Alpine Wonders AG',
-      country: 'Switzerland',
-      documentType: 'trade_license',
-      documentNumber: 'CHE-112.345.678',
-      submittedDate: 'Aug 14, 2025',
-      status: 'approved',
-      fileSize: '2.1 MB',
-      expiryDate: 'Permanent',
-    },
-    {
-      id: 'kyc-4',
-      providerName: 'PT Bali Paradise Adventures',
-      country: 'Indonesia',
-      documentType: 'liability_insurance',
-      documentNumber: 'INS-ID-44210',
-      submittedDate: 'Aug 14, 2025',
-      status: 'approved',
-      fileSize: '1.2 MB',
-      expiryDate: 'Dec 31, 2027',
-    },
-  ])
+export class KycPageComponent implements OnInit {
+  readonly facade = inject(KycFacade)
+  private readonly exportService = inject(ExportService)
 
-  readonly pendingCount = () => this.submissions().filter(s => s.status === 'under_review').length
+  readonly statusTabs = [
+    { label: 'All Documents', value: 'all' },
+    { label: 'Under Review', value: 'under_review' },
+    { label: 'Submitted', value: 'submitted' },
+    { label: 'Approved', value: 'approved' },
+    { label: 'Rejected', value: 'rejected' },
+  ]
 
-  approve(id: string): void {
-    this.submissions.update(prev =>
-      prev.map(s => (s.id === id ? { ...s, status: 'approved' } : s))
-    )
-    toast.success('KYC Document Approved', {
-      description: 'The verification credential has been validated.',
-    })
+  ngOnInit(): void {
+    this.facade.loadAll()
   }
 
-  reject(id: string): void {
-    this.submissions.update(prev =>
-      prev.map(s => (s.id === id ? { ...s, status: 'rejected' } : s))
-    )
-    toast.error('KYC Document Rejected', {
-      description: 'Provider has been requested to submit updated credentials.',
+  async onReviewDecision(evt: { id: string; status: 'approved' | 'rejected'; reviewNotes: string }): Promise<void> {
+    const ok = await this.facade.reviewDocument(evt.id, {
+      status: evt.status,
+      reviewNotes: evt.reviewNotes,
     })
+    if (ok) {
+      toast.success(`Document ${evt.status === 'approved' ? 'Approved' : 'Rejected'}`, {
+        description: `Compliance decision logged: ${evt.reviewNotes}`,
+      })
+    }
+  }
+
+  async onConfirmDelete(): Promise<void> {
+    const id = this.facade.deleteConfirmId()
+    if (id) {
+      const ok = await this.facade.remove(id)
+      if (ok) {
+        toast.success('Document Removed')
+      }
+    }
+  }
+
+  exportComplianceCsv(): void {
+    this.exportService.exportToCsv('kyc-compliance-audit', this.facade.items(), [
+      { header: 'Document ID', accessor: d => d.id },
+      { header: 'Provider Name', accessor: d => d.providerName || '' },
+      { header: 'Provider Email', accessor: d => d.providerEmail || '' },
+      { header: 'Document Type', accessor: d => d.documentType },
+      { header: 'Document Number', accessor: d => d.documentNumber || '' },
+      { header: 'File Name', accessor: d => d.fileName || '' },
+      { header: 'File URL', accessor: d => d.fileUrl },
+      { header: 'Expiry Date', accessor: d => d.expiryDate || 'N/A' },
+      { header: 'Status', accessor: d => d.status },
+      { header: 'Audited By', accessor: d => d.reviewedByName || '' },
+      { header: 'Review Notes', accessor: d => d.reviewNotes || '' },
+      { header: 'Date Uploaded', accessor: d => d.createdAt },
+    ])
+    toast.success('Compliance audit CSV exported')
   }
 }

@@ -228,9 +228,9 @@ export const routes: Routes = [
       },
       {
         path: 'affiliates',
-        loadComponent: () =>
-          import('./features/affiliates/affiliates.component').then(
-            (m) => m.AffiliatesComponent
+        loadChildren: () =>
+          import('./features/affiliates/affiliates.routes').then(
+            (m) => m.AFFILIATES_ROUTES
           ),
       },
       {

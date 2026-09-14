@@ -108,6 +108,11 @@ export const sidebarData: SidebarData = {
           url: '/staff',
           icon: 'lucideUsers',
         },
+        {
+          title: 'Affiliates & Creators',
+          url: '/affiliates',
+          icon: 'lucideShare2',
+        },
       ],
     },
     {
@@ -123,6 +128,11 @@ export const sidebarData: SidebarData = {
           url: '/withdrawals',
           badge: '18 Pending',
           icon: 'lucideCreditCard',
+        },
+        {
+          title: 'Campaigns & Coupons',
+          url: '/campaigns',
+          icon: 'lucideMegaphone',
         },
         {
           title: 'Ledger & Audit Trail',

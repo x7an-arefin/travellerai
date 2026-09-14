@@ -1,13 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core'
 import { CommonModule } from '@angular/common'
-import { NgIcon, provideIcons } from '@ng-icons/core'
-import {
-  lucideCreditCard,
-  lucideBuilding2,
-  lucideCheckCircle2,
-  lucideClock,
-  lucideAlertTriangle,
-} from '@ng-icons/lucide'
+import { FormsModule } from '@angular/forms'
 import { WithdrawalRequest } from '../data-access/models/withdrawals.model'
 import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
 import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
@@ -15,13 +8,13 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
 @Component({
   selector: 'app-withdrawals-detail',
   standalone: true,
-  imports: [CommonModule, ...HlmBadgeImports, ...HlmButtonImports],
+  imports: [CommonModule, FormsModule, ...HlmBadgeImports, ...HlmButtonImports],
   template: `
     @if (withdrawal) {
-      <div class="space-y-6 pt-2">
+      <div class="space-y-6 pt-2 text-xs">
         <!-- Amount Box -->
         <div class="p-5 rounded-xl bg-muted/40 border border-border/40 text-center space-y-1">
-          <span class="text-xs text-muted-foreground uppercase font-semibold">Net Settlement Amount</span>
+          <span class="text-[11px] text-muted-foreground uppercase font-semibold">Net Settlement Amount</span>
           <div class="text-3xl font-bold text-foreground tabular-nums">
             \${{ withdrawal.netAmount | number:'1.2-2' }}
           </div>
@@ -59,20 +52,53 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
           </div>
         </div>
 
-        <!-- Settlement Actions -->
+        <!-- Settlement Workflow Actions -->
         @if (withdrawal.status === 'pending') {
           <div class="p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-3">
-            <h5 class="text-xs font-bold text-foreground">Approve & Disburse Payout</h5>
-            <p class="text-xs text-muted-foreground">
-              Confirming will initiate automated wire transfer to the provider's verified payout account.
+            <h5 class="text-xs font-bold text-foreground">Complete Banking Wire / Stripe Payout</h5>
+            <p class="text-[11px] text-muted-foreground">
+              Enter the bank transaction reference or Stripe payout ID to mark funds as settled.
             </p>
+
+            <div class="space-y-1">
+              <label class="font-medium text-foreground">Transaction / Wire Reference #</label>
+              <input
+                type="text"
+                [(ngModel)]="wireReference"
+                placeholder="e.g. WIRE-CH-99201948"
+                class="w-full px-3 py-1.5 rounded-lg border border-border bg-background font-mono text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
             <button
               hlmBtn
               variant="default"
-              class="w-full text-xs"
-              (click)="approvePayout.emit(withdrawal.id)"
+              class="w-full text-xs cursor-pointer"
+              (click)="onApprove()"
             >
-              Approve & Wire Payout (\${{ withdrawal.netAmount | number:'1.2-2' }})
+              Confirm Settlement (\${{ withdrawal.netAmount | number:'1.2-2' }})
+            </button>
+          </div>
+
+          <div class="p-4 rounded-xl border border-destructive/20 bg-destructive/5 space-y-2">
+            <h5 class="text-xs font-bold text-destructive">Reject Payout Request</h5>
+            <p class="text-[11px] text-muted-foreground">
+              Rejecting will automatically unlock and reverse the reserved balance back to the operator's live ledger.
+            </p>
+            <input
+              type="text"
+              [(ngModel)]="rejectionReason"
+              placeholder="Reason for rejection (e.g. Bank IBAN mismatch)..."
+              class="w-full px-3 py-1.5 rounded-lg border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-destructive"
+            />
+            <button
+              hlmBtn
+              variant="destructive"
+              class="w-full text-xs cursor-pointer"
+              [disabled]="!rejectionReason.trim()"
+              (click)="onReject()"
+            >
+              Reject Payout & Return Funds
             </button>
           </div>
         }
@@ -82,5 +108,25 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
 })
 export class WithdrawalsDetailComponent {
   @Input() withdrawal: WithdrawalRequest | null = null
-  @Output() approvePayout = new EventEmitter<string>()
+  @Output() settlePayout = new EventEmitter<{ id: string; reference: string }>()
+  @Output() rejectPayout = new EventEmitter<{ id: string; reason: string }>()
+
+  wireReference = ''
+  rejectionReason = ''
+
+  onApprove(): void {
+    if (!this.withdrawal) return
+    this.settlePayout.emit({
+      id: this.withdrawal.id,
+      reference: this.wireReference.trim() || `WIRE-${Date.now().toString().slice(-6)}`,
+    })
+  }
+
+  onReject(): void {
+    if (!this.withdrawal || !this.rejectionReason.trim()) return
+    this.rejectPayout.emit({
+      id: this.withdrawal.id,
+      reason: this.rejectionReason.trim(),
+    })
+  }
 }
