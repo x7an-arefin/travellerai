@@ -18,13 +18,11 @@ import { toast } from 'ngx-sonner'
     CommonModule,
     ReactiveFormsModule,
     RouterModule,
-    NgIcon,
     ...HlmCardImports,
     ...HlmButtonImports,
     ...HlmInputImports,
     ...HlmSeparatorImports,
   ],
-  providers: [provideIcons({ simpleGithub, simpleGoogle })],
   template: `
     <div class="mx-auto w-full max-w-sm p-4">
       <div hlmCard class="gap-4 p-6 shadow-lg">
@@ -80,32 +78,26 @@ import { toast } from 'ngx-sonner'
               <div hlmSeparator></div>
             </div>
             <div class="relative flex justify-center text-xs uppercase">
-              <span class="bg-card px-2 text-muted-foreground">Or continue with</span>
+              <span class="bg-card px-2 text-muted-foreground font-semibold">Demo Role Accounts (Mock)</span>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-2">
-            <button
-              hlmBtn
-              variant="outline"
-              type="button"
-              (click)="socialLogin('GitHub')"
-              class="gap-2 cursor-pointer text-xs"
-            >
-              <ng-icon name="simpleGithub" class="size-4" />
-              <span>GitHub</span>
-            </button>
-
-            <button
-              hlmBtn
-              variant="outline"
-              type="button"
-              (click)="socialLogin('Google')"
-              class="gap-2 cursor-pointer text-xs"
-            >
-              <ng-icon name="simpleGoogle" class="size-4" />
-              <span>Google</span>
-            </button>
+          <div class="flex flex-col gap-1.5">
+            @for (demo of demoRoles; track demo.email) {
+              <button
+                type="button"
+                (click)="loginAsDemo(demo.email)"
+                class="flex items-center justify-between p-2 rounded-md border border-border/60 hover:bg-accent/40 text-left transition-colors cursor-pointer text-xs group"
+              >
+                <div>
+                  <p class="font-medium text-foreground">{{ demo.label }}</p>
+                  <p class="text-[10px] text-muted-foreground">{{ demo.email }}</p>
+                </div>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                  {{ demo.badge }}
+                </span>
+              </button>
+            }
           </div>
         </div>
 
@@ -113,10 +105,6 @@ import { toast } from 'ngx-sonner'
           <p>
             Don't have an account?
             <a routerLink="/sign-up" class="font-semibold text-primary underline ml-1">Sign up</a>
-          </p>
-          <p>
-            Prefer split layout?
-            <a routerLink="/sign-in-2" class="font-semibold text-primary underline ml-1">Sign in (2 Col)</a>
           </p>
         </div>
       </div>
@@ -128,8 +116,16 @@ export class SignInComponent {
   private readonly authService = inject(AuthService)
   private readonly router = inject(Router)
 
+  readonly demoRoles = [
+    { label: 'Sultanul Arefin', email: 'arefin@traveller.ai', badge: 'Super Admin' },
+    { label: 'Elena Rostova', email: 'elena@alpineadventures.com', badge: 'Tour Operator' },
+    { label: 'Marco Rossi', email: 'marco@swissguides.ch', badge: 'Guide / Staff' },
+    { label: 'Sarah Jenkins', email: 'finance@traveller.ai', badge: 'Finance Admin' },
+    { label: 'Emma Richardson', email: 'emma.richardson@gmail.com', badge: 'Traveler' },
+  ]
+
   readonly signInForm: FormGroup = this.fb.group({
-    email: ['satnaingdev@gmail.com', [Validators.required, Validators.email]],
+    email: ['arefin@traveller.ai', [Validators.required, Validators.email]],
     password: ['password123', [Validators.required, Validators.minLength(6)]],
   })
 
@@ -146,13 +142,12 @@ export class SignInComponent {
     this.router.navigate(['/'])
   }
 
-  async socialLogin(provider: string): Promise<void> {
-    const success = await this.authService.signInAsync('satnaingdev@gmail.com')
-    if (!success) {
-      toast.error(`Unable to authenticate with ${provider}`)
-      return
+  async loginAsDemo(email: string): Promise<void> {
+    this.signInForm.patchValue({ email, password: 'password123' })
+    const success = await this.authService.signInAsync(email, 'password123')
+    if (success) {
+      toast.success(`Logged in as ${email}`)
+      this.router.navigate(['/'])
     }
-    toast.success(`Logged in with ${provider}`)
-    this.router.navigate(['/'])
   }
 }

@@ -147,18 +147,38 @@ import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
           </div>
         }
 
-        <!-- Exclusions -->
-        @if (package.exclusions && package.exclusions.length) {
+        <!-- Amenities Badges -->
+        @if (package.amenities && package.amenities.length) {
           <div class="space-y-2">
-            <h4 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Exclusions</h4>
-            <ul class="space-y-1.5 text-xs">
-              @for (exc of package.exclusions; track exc) {
-                <li class="flex items-center gap-2 text-muted-foreground">
-                  <ng-icon name="lucideX" class="size-3.5 text-rose-500 shrink-0" />
-                  <span>{{ exc }}</span>
-                </li>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Amenities & Features</h4>
+            <div class="flex flex-wrap gap-1.5">
+              @for (am of package.amenities; track am) {
+                <span class="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium border border-primary/20">
+                  {{ am }}
+                </span>
               }
-            </ul>
+            </div>
+          </div>
+        }
+
+        <!-- Itinerary Timeline -->
+        @if (package.itinerary && package.itinerary.length) {
+          <div class="space-y-3">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Day-by-Day Itinerary</h4>
+            <div class="space-y-2 border-l-2 border-primary/30 pl-3 ml-1">
+              @for (step of package.itinerary; track step.day) {
+                <div class="relative pb-2">
+                  <div class="absolute -left-[19px] top-1 size-2 rounded-full bg-primary ring-2 ring-background"></div>
+                  <p class="text-xs font-bold text-foreground">Day {{ step.day }}: {{ step.title }}</p>
+                  @if (step.description) {
+                    <p class="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{{ step.description }}</p>
+                  }
+                  @if (step.accommodation) {
+                    <p class="text-[10px] text-primary/80 mt-0.5">Stay: {{ step.accommodation }}</p>
+                  }
+                </div>
+              }
+            </div>
           </div>
         }
       </div>

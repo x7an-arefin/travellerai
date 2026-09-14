@@ -47,12 +47,50 @@ const config = authConfig as AuthConfig
 const ACCESS_TOKEN_KEY = 'admin_access_token'
 const USER_KEY = 'admin_auth_user'
 
-const DEFAULT_MOCK_USER: AuthUser = {
-  name: 'satnaing',
-  email: 'satnaingdev@gmail.com',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-  role: ['Admin', 'Manager'],
+export const MOCK_USERS: Record<string, AuthUser> = {
+  'arefin@traveller.ai': {
+    id: 'usr-admin-1',
+    name: 'Sultanul Arefin',
+    email: 'arefin@traveller.ai',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+    role: ['SuperAdmin', 'Admin'],
+    permissions: ['all'],
+  },
+  'elena@alpineadventures.com': {
+    id: 'usr-provider-1',
+    name: 'Elena Rostova',
+    email: 'elena@alpineadventures.com',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
+    role: ['ProviderOwner', 'Provider'],
+    permissions: ['packages.manage', 'departures.manage', 'bookings.view', 'withdrawals.request'],
+  },
+  'marco@swissguides.ch': {
+    id: 'usr-guide-1',
+    name: 'Marco Rossi',
+    email: 'marco@swissguides.ch',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
+    role: ['Guide', 'Staff'],
+    permissions: ['departures.view', 'bookings.checkin'],
+  },
+  'finance@traveller.ai': {
+    id: 'usr-finance-1',
+    name: 'Sarah Jenkins',
+    email: 'finance@traveller.ai',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80',
+    role: ['FinanceAdmin'],
+    permissions: ['wallets.manage', 'withdrawals.approve', 'ledger.view'],
+  },
+  'emma.richardson@gmail.com': {
+    id: 'usr-traveler-1',
+    name: 'Emma Richardson',
+    email: 'emma.richardson@gmail.com',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
+    role: ['Traveler'],
+    permissions: ['bookings.create', 'reviews.write'],
+  },
 }
+
+const DEFAULT_MOCK_USER: AuthUser = MOCK_USERS['arefin@traveller.ai']
 
 @Injectable({
   providedIn: 'root',
@@ -107,8 +145,9 @@ export class AuthService {
       void this.signInAsync(email, password)
       return true
     }
-    const user: AuthUser = {
-      name: email.split('@')[0] || 'Admin User',
+    const matchedUser = MOCK_USERS[email.toLowerCase().trim()]
+    const user: AuthUser = matchedUser ?? {
+      name: email.split('@')[0] || 'User',
       email,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
       role: ['Admin'],
@@ -137,7 +176,7 @@ export class AuthService {
       name,
       email,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-      role: ['Admin'],
+      role: ['Traveler'],
     }
     this.setSession(user, 'mock_jwt_token_' + Date.now())
     return true

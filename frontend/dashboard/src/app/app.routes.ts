@@ -34,9 +34,34 @@ export const routes: Routes = [
           import('./features/departures/departures.routes').then((m) => m.DeparturesRoutes),
       },
       {
+        path: 'destinations',
+        loadChildren: () =>
+          import('./features/destinations/destinations.routes').then((m) => m.DestinationsRoutes),
+      },
+      {
+        path: 'categories',
+        loadChildren: () =>
+          import('./features/categories/categories.routes').then((m) => m.CategoriesRoutes),
+      },
+      {
+        path: 'inquiries',
+        loadChildren: () =>
+          import('./features/inquiries/inquiries.routes').then((m) => m.InquiriesRoutes),
+      },
+      {
         path: 'providers',
         loadChildren: () =>
           import('./features/providers/providers.routes').then((m) => m.ProvidersRoutes),
+      },
+      {
+        path: 'staff',
+        loadChildren: () =>
+          import('./features/staff/staff.routes').then((m) => m.StaffRoutes),
+      },
+      {
+        path: 'wallets',
+        loadChildren: () =>
+          import('./features/wallets/wallets.routes').then((m) => m.WalletsRoutes),
       },
       {
         path: 'withdrawals',
@@ -52,6 +77,11 @@ export const routes: Routes = [
         path: 'kyc',
         loadChildren: () =>
           import('./features/kyc/kyc.routes').then((m) => m.KycRoutes),
+      },
+      {
+        path: 'analytics',
+        loadComponent: () =>
+          import('./features/analytics/analytics-page.component').then((m) => m.AnalyticsPageComponent),
       },
       {
         path: 'tasks',

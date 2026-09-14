@@ -33,6 +33,14 @@ export class PackagesApiService {
       totalBookings: 248,
       status: 'published',
       isFeatured: true,
+      amenities: ['Wi-Fi in Transit', 'Hotel Pickup', 'Mountain Guide', 'First-Aid Kit', 'Breakfast Included'],
+      itinerary: [
+        { day: 1, title: 'Arrival in Zurich & Scenic Train to Interlaken', description: 'Meet your mountain guide at Zurich HB, board the GoldenPass Express, check in at chalet.', accommodation: 'Hotel Victoria-Jungfrau Chalet' },
+        { day: 2, title: 'Jungfraujoch - Top of Europe & Ice Palace', description: 'Ascend by 3S-cableway Eiger Express to 3,454m altitude. Walk through the Sphinx observatory and eternal ice tunnels.', accommodation: 'Hotel Victoria-Jungfrau Chalet' },
+        { day: 3, title: 'Aletsch Glacier Panoramic Trek', description: 'Hike along the UNESCO World Heritage Great Aletsch Glacier with crampons and professional safety ropes.', accommodation: 'Glacier Base Lodge' },
+        { day: 4, title: 'Lauterbrunnen Valley of 72 Waterfalls', description: 'Walk through the dramatic glacial Lauterbrunnen valley, visit Trummelbach subterranean waterfalls.', accommodation: 'Hotel Victoria-Jungfrau Chalet' },
+        { day: 5, title: 'Farewell Alpine Brunch & Departure', description: 'Enjoy traditional Swiss artisan cheese fondue brunch and return transfer to Zurich airport.' }
+      ],
       inclusions: ['Scenic Train Passes', '4-Star Chalet Stays', 'Certified Mountain Guide', 'Daily Breakfast & 3 Dinners'],
       exclusions: ['International Flights', 'Travel Insurance', 'Personal Souvenirs'],
       languages: ['English', 'German', 'French'],

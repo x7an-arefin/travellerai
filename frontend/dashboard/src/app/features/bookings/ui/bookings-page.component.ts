@@ -180,7 +180,11 @@ import { toast } from 'ngx-sonner'
               <p class="text-xs text-muted-foreground">Complete itinerary, participant details, and voucher access.</p>
             </div>
 
-            <app-bookings-detail [booking]="facade.selected()" />
+            <app-bookings-detail
+              [booking]="facade.selected()"
+              (checkin)="onCheckin($event)"
+              (requestRefund)="onRequestRefund($event)"
+            />
           </div>
 
           <div class="pt-4 mt-6 border-t border-border/40 flex justify-end gap-2">
@@ -261,6 +265,29 @@ export class BookingsPageComponent implements OnInit {
     toast.info('Downloading Voucher PDF', {
       description: `Generating voucher for ${this.facade.selected()?.bookingReference}...`,
     })
+  }
+
+  async onCheckin(id: string): Promise<void> {
+    const ok = await this.facade.update(id, {
+      checkinStatus: 'checked_in',
+      checkinTime: new Date().toISOString(),
+    })
+    if (ok) {
+      toast.success('Guest Checked In', {
+        description: 'Passenger verified and marked as boarded/checked-in.',
+      })
+    }
+  }
+
+  async onRequestRefund(id: string): Promise<void> {
+    const ok = await this.facade.update(id, {
+      bookingStatus: 'cancelled',
+    })
+    if (ok) {
+      toast.info('Cancellation Initiated', {
+        description: 'Booking cancelled and refund request sent to the finance ledger.',
+      })
+    }
   }
 
   async confirmDelete(): Promise<void> {

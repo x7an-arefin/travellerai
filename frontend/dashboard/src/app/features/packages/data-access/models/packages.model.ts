@@ -1,3 +1,18 @@
+export interface ItineraryDay {
+  day: number
+  title: string
+  description?: string
+  startLocation?: string
+  endLocation?: string
+  meals?: string[]
+  accommodation?: string
+}
+
+export interface PackageFaqItem {
+  question: string
+  answer: string
+}
+
 export interface Package {
   id: string
   providerId?: string
@@ -30,7 +45,11 @@ export interface Package {
   returnLocation?: string
   inclusions?: string[]
   exclusions?: string[]
+  amenities?: string[]
   languages?: string[]
+  itinerary?: ItineraryDay[]
+  faqs?: PackageFaqItem[]
   createdAt?: string
   updatedAt?: string
 }
+

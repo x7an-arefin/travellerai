@@ -27,9 +27,11 @@ export function validateBindings(env: Env): void {
   }
 
   if (missing.length > 0) {
-    throw new Error(
-      `Missing required Cloudflare bindings: ${missing.join(', ')}. ` +
-      `Check your wrangler.jsonc and Cloudflare dashboard configuration.`
-    );
+    const message = `Missing required Cloudflare bindings: ${missing.join(', ')}. Check your wrangler.jsonc and Cloudflare dashboard configuration.`;
+    if (env.ENVIRONMENT === 'development' || !env.ENVIRONMENT) {
+      console.warn(`[DEV MOCK MODE] ${message} Continuing in development mode.`);
+      return;
+    }
+    throw new Error(message);
   }
 }

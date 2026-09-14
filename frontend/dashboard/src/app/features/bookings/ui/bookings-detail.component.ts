@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core'
+import { Component, Input, Output, EventEmitter } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { NgIcon, provideIcons } from '@ng-icons/core'
 import {
@@ -136,9 +136,69 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
             <span>\${{ booking.paidAmount | number:'1.2-2' }}</span>
           </div>
           @if (booking.balanceDue && booking.balanceDue > 0) {
-            <div class="flex items-center justify-between text-xs text-rose-500 font-semibold">
+            <div class="flex items-center justify-between text-xs text-rose-500 font-medium">
               <span>Balance Due</span>
               <span>\${{ booking.balanceDue | number:'1.2-2' }}</span>
+            </div>
+          }
+        </div>
+
+        <!-- Actions & Voucher Controls -->
+        <div class="space-y-2 pt-4 border-t border-border/40">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-muted-foreground">Check-in Status:</span>
+            <span
+              hlmBadge
+              [variant]="booking.checkinStatus === 'checked_in' ? 'default' : 'secondary'"
+              class="text-[10px] capitalize font-medium"
+            >
+              {{ booking.checkinStatus === 'checked_in' ? 'Checked In' : 'Pending Check-in' }}
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-2">
+            @if (booking.checkinStatus !== 'checked_in') {
+              <button
+                hlmBtn
+                variant="default"
+                size="sm"
+                class="gap-1.5 cursor-pointer text-xs w-full shadow-xs"
+                (click)="checkin.emit(booking.id)"
+              >
+                <ng-icon name="lucideCheckCircle2" class="size-3.5" />
+                <span>Mark Checked In</span>
+              </button>
+            } @else {
+              <div class="flex items-center justify-center p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold gap-1">
+                <ng-icon name="lucideCheckCircle2" class="size-3.5" />
+                <span>Verified Check-in</span>
+              </div>
+            }
+
+            <a
+              [href]="booking.voucherUrl || 'https://traveller.ai/vouchers/' + booking.bookingReference + '.pdf'"
+              target="_blank"
+              hlmBtn
+              variant="outline"
+              size="sm"
+              class="gap-1.5 cursor-pointer text-xs w-full"
+            >
+              <ng-icon name="lucideDownload" class="size-3.5" />
+              <span>Travel Voucher</span>
+            </a>
+          </div>
+
+          @if (booking.bookingStatus === 'confirmed') {
+            <div class="pt-2">
+              <button
+                hlmBtn
+                variant="ghost"
+                size="sm"
+                class="w-full text-xs text-muted-foreground hover:text-rose-500 cursor-pointer"
+                (click)="requestRefund.emit(booking.id)"
+              >
+                Request Booking Cancellation & Refund
+              </button>
             </div>
           }
         </div>
@@ -148,4 +208,7 @@ import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
 })
 export class BookingsDetailComponent {
   @Input() booking: Booking | null = null
+  @Output() checkin = new EventEmitter<string>()
+  @Output() requestRefund = new EventEmitter<string>()
 }
+
