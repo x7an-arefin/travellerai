@@ -38,9 +38,10 @@ import { UniversalCartFacade } from '../checkout/data-access/universal-cart.faca
 import { CartItem, CartItemType } from '../checkout/data-access/models/cart.model'
 import { toast } from 'ngx-sonner'
 import { SearchExperienceItem, SearchApiService } from './data-access'
-
+import { ReferenceDataService } from '../../core/services/reference-data.service'
 
 @Component({
+
   selector: 'app-search-page',
   standalone: true,
   imports: [
@@ -135,15 +136,13 @@ import { SearchExperienceItem, SearchApiService } from './data-access'
             </label>
             <select
               [(ngModel)]="searchDestination"
+              (ngModelChange)="onFilterChange()"
               class="w-full rounded-lg border border-input bg-card px-3 py-2 text-xs font-medium text-foreground focus:ring-2 focus:ring-primary shadow-2xs"
             >
               <option value="">All Destinations (Global)</option>
-              <option value="Sylhet">Sylhet & Tea Highlands</option>
-              <option value="Cox's Bazar">Cox's Bazar Long Beach</option>
-              <option value="Sajek Valley">Sajek Valley Clouds</option>
-              <option value="Sundarbans">Sundarbans Mangrove Reserve</option>
-              <option value="Dhaka">Dhaka Metropolitan Hub</option>
-              <option value="Swiss Alps">Swiss Alps & Glaciers</option>
+              @for (dest of destinations(); track dest.id) {
+                <option [value]="dest.name">{{ dest.name }}{{ dest.country ? ' (' + dest.country + ')' : '' }}</option>
+              }
             </select>
           </div>
 
@@ -526,6 +525,9 @@ export class SearchPageComponent implements OnInit {
   readonly cart = inject(UniversalCartFacade)
   private readonly router = inject(Router)
   private readonly searchApi = inject(SearchApiService)
+  private readonly refData = inject(ReferenceDataService)
+
+  readonly destinations = this.refData.destinations
 
   readonly selectedServiceType = signal<string>('all')
   readonly filterMinRating = signal<number>(4.0)
@@ -544,6 +546,11 @@ export class SearchPageComponent implements OnInit {
   ngOnInit(): void {
     this.loadExperiences()
   }
+
+  onFilterChange(): void {
+    this.loadExperiences()
+  }
+
 
   async loadExperiences(): Promise<void> {
     const res = await this.searchApi.search()

@@ -30,6 +30,8 @@ import { HlmCardImports } from '../../../ui/card/hlm-card.directives'
 import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
 import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
 import { HlmInputImports } from '../../../ui/input/hlm-input.directive'
+import { HlmSheetImports } from '../../../ui/sheet/hlm-sheet.components'
+import { ReferenceDataService } from '../../../core/services/reference-data.service'
 import { toast } from 'ngx-sonner'
 
 export interface DriverDossier {
@@ -83,6 +85,7 @@ export interface DriverDossier {
     ...HlmButtonImports,
     ...HlmBadgeImports,
     ...HlmInputImports,
+    ...HlmSheetImports,
   ],
   providers: [
     provideIcons({
@@ -290,11 +293,55 @@ export interface DriverDossier {
           </div>
         </div>
       </div>
+
+      <!-- Vehicle Assignment Drawer -->
+      <hlm-sheet [isOpen]="vehicleAssignSheetOpen()" (closed)="vehicleAssignSheetOpen.set(false)">
+        <div hlmSheetHeader class="space-y-1">
+          <h3 hlmSheetTitle>Reassign Vehicle</h3>
+          <p hlmSheetDescription>
+            Select a fleet asset to pair with chauffeur {{ driver().fullName }}.
+          </p>
+        </div>
+
+        <div class="py-5 space-y-4 text-xs">
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Available Fleet Vehicles</label>
+            <select
+              [(ngModel)]="selectedVehicleId"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">Select a vehicle...</option>
+              @for (v of vehicleOptions(); track v.value) {
+                <option [value]="v.value">{{ v.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-1 text-muted-foreground text-[11px]">
+            <p><strong>Current Pairing:</strong> {{ driver().assignedVehicle }}</p>
+            <p>Reassigning pairs this driver's digital key and telematics logging to the newly selected asset.</p>
+          </div>
+        </div>
+
+        <div hlmSheetFooter class="mt-auto flex items-center justify-between gap-2 border-t pt-4">
+          <button hlmBtn variant="outline" (click)="vehicleAssignSheetOpen.set(false)" class="cursor-pointer text-xs">
+            Cancel
+          </button>
+          <button hlmBtn (click)="confirmVehicleAssignment()" class="cursor-pointer text-xs" [disabled]="!selectedVehicleId">
+            Confirm Assignment
+          </button>
+        </div>
+      </hlm-sheet>
     </app-main>
   `,
 })
 export class DriverDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)
+  private readonly refData = inject(ReferenceDataService)
+
+  readonly vehicleOptions = this.refData.vehicleOptions
+  readonly vehicleAssignSheetOpen = signal<boolean>(false)
+  selectedVehicleId = ''
 
   readonly driver = signal<DriverDossier>({
     id: 'drv-1',
@@ -358,9 +405,22 @@ export class DriverDetailComponent implements OnInit {
   ngOnInit(): void {}
 
   reassignVehicle(): void {
-    toast.info('Vehicle Assignment', {
-      description: 'Opening fleet vehicle pairing selector for Marco Rossi.',
-    })
+    this.selectedVehicleId = ''
+    this.vehicleAssignSheetOpen.set(true)
+  }
+
+  confirmVehicleAssignment(): void {
+    const selected = this.vehicleOptions().find((v) => v.value === this.selectedVehicleId)
+    if (selected) {
+      this.driver.update((d) => ({
+        ...d,
+        assignedVehicle: selected.label,
+      }))
+      toast.success('Vehicle Assigned', {
+        description: `Paired ${selected.label} with ${this.driver().fullName}.`,
+      })
+    }
+    this.vehicleAssignSheetOpen.set(false)
   }
 
   approveExpense(exp: any): void {

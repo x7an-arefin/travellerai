@@ -27,6 +27,7 @@ import { HlmCardImports } from '../../../ui/card/hlm-card.directives'
 import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
 import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
 import { HlmInputImports } from '../../../ui/input/hlm-input.directive'
+import { HlmSheetImports } from '../../../ui/sheet/hlm-sheet.components'
 import { toast } from 'ngx-sonner'
 
 export interface TransferRouteItem {
@@ -65,6 +66,7 @@ export interface TransferRouteItem {
     ...HlmButtonImports,
     ...HlmBadgeImports,
     ...HlmInputImports,
+    ...HlmSheetImports,
   ],
   providers: [
     provideIcons({
@@ -336,11 +338,86 @@ export interface TransferRouteItem {
           </div>
         </div>
       }
+
+      <!-- Fare Edit Sheet -->
+      <hlm-sheet [isOpen]="fareEditSheetOpen()" (closed)="fareEditSheetOpen.set(false)">
+        <div hlmSheetHeader class="space-y-1">
+          <h3 hlmSheetTitle>Adjust Route Fares</h3>
+          <p hlmSheetDescription>
+            Configure vehicle category pricing for {{ activeRouteForFare()?.originName }} ➔ {{ activeRouteForFare()?.destinationName }}.
+          </p>
+        </div>
+
+        @if (activeRouteForFare(); as route) {
+          <div class="py-5 space-y-4 text-xs">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="space-y-1.5">
+                <label class="font-semibold text-foreground">Economy Sedan ($)</label>
+                <input
+                  type="number"
+                  [(ngModel)]="route.fares.economySedan"
+                  class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono"
+                />
+              </div>
+              <div class="space-y-1.5">
+                <label class="font-semibold text-foreground">Executive Sedan ($)</label>
+                <input
+                  type="number"
+                  [(ngModel)]="route.fares.executiveSedan"
+                  class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="space-y-1.5">
+                <label class="font-semibold text-foreground">Luxury SUV ($)</label>
+                <input
+                  type="number"
+                  [(ngModel)]="route.fares.luxurySuv"
+                  class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono"
+                />
+              </div>
+              <div class="space-y-1.5">
+                <label class="font-semibold text-foreground">Passenger Van ($)</label>
+                <input
+                  type="number"
+                  [(ngModel)]="route.fares.passengerVan"
+                  class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono"
+                />
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 pt-2">
+              <input
+                type="checkbox"
+                id="routeTollIncluded"
+                [(ngModel)]="route.tollIncluded"
+                class="size-4 rounded border-input text-primary focus:ring-primary"
+              />
+              <label for="routeTollIncluded" class="text-xs text-foreground cursor-pointer">
+                Include Highway & Tunnel Tolls in Flat Fare
+              </label>
+            </div>
+          </div>
+
+          <div hlmSheetFooter class="mt-auto flex items-center justify-between gap-2 border-t pt-4">
+            <button hlmBtn variant="outline" (click)="fareEditSheetOpen.set(false)" class="cursor-pointer text-xs">
+              Cancel
+            </button>
+            <button hlmBtn (click)="saveFareAdjustment()" class="cursor-pointer text-xs">
+              Update Rate Table
+            </button>
+          </div>
+        }
+      </hlm-sheet>
     </app-main>
   `,
 })
 export class VehicleRoutesComponent implements OnInit {
   readonly isCreateDrawerOpen = signal(false)
+  readonly fareEditSheetOpen = signal(false)
+  readonly activeRouteForFare = signal<TransferRouteItem | null>(null)
   readonly searchQuery = signal('')
   readonly selectedCategory = signal<'all' | 'airport' | 'intercity'>('all')
 
@@ -451,8 +528,23 @@ export class VehicleRoutesComponent implements OnInit {
   ngOnInit(): void {}
 
   editFares(route: TransferRouteItem): void {
-    toast.info('Adjust Fares', {
-      description: `Editing rate table for ${route.originName} ➔ ${route.destinationName}.`,
+    this.activeRouteForFare.set({
+      ...route,
+      fares: { ...route.fares },
+    })
+    this.fareEditSheetOpen.set(true)
+  }
+
+  saveFareAdjustment(): void {
+    const updated = this.activeRouteForFare()
+    if (!updated) return
+
+    this.routes.update((list) =>
+      list.map((r) => (r.id === updated.id ? updated : r))
+    )
+    this.fareEditSheetOpen.set(false)
+    toast.success('Rate Table Updated', {
+      description: `New fares saved for ${updated.originName} ➔ ${updated.destinationName}.`,
     })
   }
 

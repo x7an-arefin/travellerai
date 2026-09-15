@@ -192,25 +192,31 @@ export class PackagesApiService {
       const data = await firstValueFrom(this.http.get<PackageListResponse>(this.baseUrl, { params }))
       return { ok: true, data }
     } catch {
-      // Return rich seed data on connection failure
-      return {
-        ok: true,
-        data: {
-          items: [...this.mockPackages],
-          total: this.mockPackages.length,
-          hasMore: false,
-        },
+      // Return rich seed data on connection failure (DEV only)
+      if (!this.apiConfig.isProduction) {
+        return {
+          ok: true,
+          data: {
+            items: [...this.mockPackages],
+            total: this.mockPackages.length,
+            hasMore: false,
+          },
+        }
       }
+      return { ok: false, error: 'Could not connect to Packages service.' }
     }
   }
+
 
   async getById(id: string): Promise<{ ok: true; data: Package } | { ok: false; error: string }> {
     try {
       const data = await firstValueFrom(this.http.get<Package>(`${this.baseUrl}/${id}`))
       return { ok: true, data }
     } catch {
-      const found = this.mockPackages.find(p => p.id === id)
-      if (found) return { ok: true, data: found }
+      if (!this.apiConfig.isProduction) {
+        const found = this.mockPackages.find(p => p.id === id)
+        if (found) return { ok: true, data: found }
+      }
       return { ok: false, error: 'Package not found' }
     }
   }
@@ -220,16 +226,19 @@ export class PackagesApiService {
       const data = await firstValueFrom(this.http.post<Package>(this.baseUrl, dto))
       return { ok: true, data }
     } catch {
-      const newPkg: Package = {
-        ...dto,
-        id: `pkg-${Date.now()}`,
-        rating: 5.0,
-        reviewCount: 0,
-        totalBookings: 0,
-        createdAt: new Date().toISOString(),
+      if (!this.apiConfig.isProduction) {
+        const newPkg: Package = {
+          ...dto,
+          id: `pkg-${Date.now()}`,
+          rating: 5.0,
+          reviewCount: 0,
+          totalBookings: 0,
+          createdAt: new Date().toISOString(),
+        }
+        this.mockPackages.unshift(newPkg)
+        return { ok: true, data: newPkg }
       }
-      this.mockPackages.unshift(newPkg)
-      return { ok: true, data: newPkg }
+      return { ok: false, error: 'Failed to create package on server.' }
     }
   }
 
@@ -238,10 +247,12 @@ export class PackagesApiService {
       const data = await firstValueFrom(this.http.patch<Package>(`${this.baseUrl}/${id}`, dto))
       return { ok: true, data }
     } catch {
-      const idx = this.mockPackages.findIndex(p => p.id === id)
-      if (idx !== -1) {
-        this.mockPackages[idx] = { ...this.mockPackages[idx], ...dto, updatedAt: new Date().toISOString() }
-        return { ok: true, data: this.mockPackages[idx] }
+      if (!this.apiConfig.isProduction) {
+        const idx = this.mockPackages.findIndex(p => p.id === id)
+        if (idx !== -1) {
+          this.mockPackages[idx] = { ...this.mockPackages[idx], ...dto, updatedAt: new Date().toISOString() }
+          return { ok: true, data: this.mockPackages[idx] }
+        }
       }
       return { ok: false, error: 'Package not found' }
     }
@@ -252,8 +263,11 @@ export class PackagesApiService {
       await firstValueFrom(this.http.delete(`${this.baseUrl}/${id}`))
       return { ok: true }
     } catch {
-      this.mockPackages = this.mockPackages.filter(p => p.id !== id)
-      return { ok: true }
+      if (!this.apiConfig.isProduction) {
+        this.mockPackages = this.mockPackages.filter(p => p.id !== id)
+        return { ok: true }
+      }
+      return { ok: false, error: 'Failed to delete package.' }
     }
   }
 }

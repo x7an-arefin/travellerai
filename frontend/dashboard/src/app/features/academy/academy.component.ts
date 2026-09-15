@@ -217,11 +217,81 @@ export interface CourseCard {
         </div>
       }
     </hlm-sheet>
+
+    <!-- Create Course Sheet -->
+    <hlm-sheet [isOpen]="createCourseSheetOpen()" position="right" [size]="'sm'" (closed)="createCourseSheetOpen.set(false)">
+      <div hlmSheetHeader>
+        <h3 hlmSheetTitle>Create Academy Curriculum</h3>
+        <p hlmSheetDescription class="text-xs">Publish operator training modules, compliance lessons, or guide certification courses.</p>
+      </div>
+
+      <div class="space-y-4 py-4 flex-1 overflow-y-auto text-xs">
+        <div class="space-y-1.5">
+          <label class="font-semibold text-foreground">Course Title *</label>
+          <input
+            type="text"
+            [(ngModel)]="newCourse.title"
+            placeholder="e.g. Wilderness First Aid & Alpine Evacuation"
+            class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Category</label>
+            <select
+              [(ngModel)]="newCourse.category"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="Hospitality Operations">Hospitality Operations</option>
+              <option value="Fleet Safety & Logistics">Fleet Safety & Logistics</option>
+              <option value="Tour Guiding Certification">Tour Guiding Certification</option>
+              <option value="Frontend Engineering">Frontend Engineering</option>
+            </select>
+          </div>
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Duration</label>
+            <input
+              type="text"
+              [(ngModel)]="newCourse.duration"
+              placeholder="3.5 Hours"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="font-semibold text-foreground">Lessons Count</label>
+          <input
+            type="number"
+            [(ngModel)]="newCourse.lessonsCount"
+            class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </div>
+      </div>
+
+      <div hlmSheetFooter class="mt-auto flex items-center justify-between gap-2 border-t pt-4">
+        <button hlmBtn variant="outline" (click)="createCourseSheetOpen.set(false)" class="cursor-pointer text-xs">
+          Cancel
+        </button>
+        <button hlmBtn (click)="saveCourse()" class="cursor-pointer text-xs">
+          <span>Publish Course</span>
+        </button>
+      </div>
+    </hlm-sheet>
   `,
 })
 export class AcademyComponent {
   readonly courseSheetOpen = signal<boolean>(false)
+  readonly createCourseSheetOpen = signal<boolean>(false)
   readonly selectedCourse = signal<CourseCard | null>(null)
+
+  newCourse = {
+    title: '',
+    category: 'Hospitality Operations',
+    duration: '2.5 Hours',
+    lessonsCount: 8,
+  }
 
   readonly courses = signal<CourseCard[]>([
     {
@@ -236,7 +306,7 @@ export class AcademyComponent {
     },
     {
       id: 'crs-2',
-      title: 'Zero-Trust Cloud Security & SOC2 Compliance Masterclass',
+      title: 'Production Zero-Trust Security & Vault Hardening',
       category: 'DevSecOps',
       lessonsCount: 12,
       duration: '3.0 Hours',
@@ -262,6 +332,32 @@ export class AcademyComponent {
   }
 
   openCreateCourse(): void {
-    toast.info('Course curriculum editor opened.')
+    this.newCourse = {
+      title: '',
+      category: 'Hospitality Operations',
+      duration: '2.5 Hours',
+      lessonsCount: 8,
+    }
+    this.createCourseSheetOpen.set(true)
+  }
+
+  saveCourse(): void {
+    if (!this.newCourse.title.trim()) {
+      toast.error('Course title is required.')
+      return
+    }
+    const created: CourseCard = {
+      id: `crs-${Date.now()}`,
+      title: this.newCourse.title,
+      category: this.newCourse.category,
+      duration: this.newCourse.duration,
+      lessonsCount: this.newCourse.lessonsCount || 5,
+      enrolledStudents: 1,
+      completionRate: 0,
+      imageUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=60',
+    }
+    this.courses.update((list) => [created, ...list])
+    this.createCourseSheetOpen.set(false)
+    toast.success(`Course "${created.title}" published to Academy catalog!`)
   }
 }

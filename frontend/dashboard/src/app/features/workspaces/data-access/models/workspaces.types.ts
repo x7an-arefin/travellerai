@@ -9,6 +9,8 @@ export interface WorkspaceItem {
   isCurrent: boolean
   providerType?: string
   status?: string
+  contactEmail?: string
+  contactPhone?: string
 }
 
 export interface NewWorkspaceDto {
@@ -16,4 +18,6 @@ export interface NewWorkspaceDto {
   slug: string
   region: string
   providerType?: string
+  contactEmail?: string
+  contactPhone?: string
 }

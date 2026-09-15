@@ -798,6 +798,144 @@ import { DamageMarker, Driver, Vehicle, VehicleBooking } from '../data-access/mo
           </div>
         }
       </div>
+
+      <!-- Register Vehicle Sheet -->
+      <hlm-sheet [isOpen]="vehicleSheetOpen()" position="right" [size]="'sm'" (closed)="vehicleSheetOpen.set(false)">
+        <div hlmSheetHeader>
+          <h3 hlmSheetTitle>Register Fleet Vehicle</h3>
+          <p hlmSheetDescription class="text-xs">Add a new car, SUV, scooter, or auto-rickshaw to the active dispatch fleet.</p>
+        </div>
+
+        <div class="space-y-4 py-4 flex-1 overflow-y-auto text-xs">
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">Make *</label>
+              <input
+                type="text"
+                [(ngModel)]="newVehicle.make"
+                placeholder="e.g. Toyota"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">Model *</label>
+              <input
+                type="text"
+                [(ngModel)]="newVehicle.model"
+                placeholder="e.g. Prado Land Cruiser"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Registration Number *</label>
+            <input
+              type="text"
+              [(ngModel)]="newVehicle.registrationNumber"
+              placeholder="e.g. DHK-MET-GA-14-8890"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">Category</label>
+              <select
+                [(ngModel)]="newVehicle.category"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="four_wheeler">4-Wheeler Car / SUV</option>
+                <option value="two_wheeler">2-Wheeler Motorcycle / Scooter</option>
+                <option value="three_wheeler_cng">3-Wheeler CNG Auto-Rickshaw</option>
+              </select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">Seating Capacity</label>
+              <input
+                type="number"
+                [(ngModel)]="newVehicle.seatingCapacity"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">Daily Rental Rate (USD) *</label>
+              <input
+                type="number"
+                [(ngModel)]="newVehicle.dailyRate"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">Security Deposit (USD)</label>
+              <input
+                type="number"
+                [(ngModel)]="newVehicle.depositAmount"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div hlmSheetFooter class="mt-auto flex items-center justify-between gap-2 border-t pt-4">
+          <button hlmBtn variant="outline" (click)="vehicleSheetOpen.set(false)" class="cursor-pointer text-xs" [disabled]="isSubmittingVehicle()">
+            Cancel
+          </button>
+          <button hlmBtn (click)="saveVehicle()" class="cursor-pointer text-xs gap-1.5" [disabled]="isSubmittingVehicle()">
+            @if (isSubmittingVehicle()) {
+              <span>Adding...</span>
+            } @else {
+              <span>Register Vehicle</span>
+            }
+          </button>
+        </div>
+      </hlm-sheet>
+
+      <!-- Assign Driver Sheet -->
+      <hlm-sheet [isOpen]="driverAssignSheetOpen()" position="right" [size]="'sm'" (closed)="driverAssignSheetOpen.set(false)">
+        <div hlmSheetHeader>
+          <h3 hlmSheetTitle>Assign Chauffeur / Driver</h3>
+          @if (activeBookingForDriver()) {
+            <p hlmSheetDescription class="text-xs">Select a licensed driver for trip {{ activeBookingForDriver()?.bookingReference }}.</p>
+          }
+        </div>
+
+        <div class="space-y-4 py-4 flex-1 overflow-y-auto text-xs">
+          <label class="font-semibold text-foreground">Available Drivers</label>
+          <div class="space-y-2">
+            @for (drv of facade.availableDrivers(); track drv.id) {
+              <div
+                (click)="selectedDriverId = drv.id"
+                [class]="selectedDriverId === drv.id ? 'border-primary bg-primary/10' : 'border-border bg-muted/20 hover:border-primary/50'"
+                class="cursor-pointer rounded-lg border p-3 flex items-center justify-between transition-colors"
+              >
+                <div>
+                  <div class="font-bold text-sm text-foreground">{{ drv.fullName }}</div>
+                  <div class="text-[11px] text-muted-foreground">{{ drv.licenseCategory }} · Rating {{ drv.overallRating }} ★</div>
+                  <div class="text-[11px] text-muted-foreground">{{ drv.phone }}</div>
+                </div>
+                <span class="rounded bg-emerald-500/10 text-emerald-500 px-2 py-0.5 text-xs font-bold uppercase">
+                  {{ drv.dutyStatus }}
+                </span>
+              </div>
+            } @empty {
+              <div class="p-6 text-center text-xs text-muted-foreground">No available drivers currently on duty.</div>
+            }
+          </div>
+        </div>
+
+        <div hlmSheetFooter class="mt-auto flex items-center justify-between gap-2 border-t pt-4">
+          <button hlmBtn variant="outline" (click)="driverAssignSheetOpen.set(false)" class="cursor-pointer text-xs">
+            Cancel
+          </button>
+          <button hlmBtn [disabled]="!selectedDriverId" (click)="confirmDriverAssignment()" class="cursor-pointer text-xs">
+            <span>Confirm Driver</span>
+          </button>
+        </div>
+      </hlm-sheet>
     </app-main>
   `,
 })
@@ -860,16 +998,77 @@ export class VehiclesPageComponent implements OnInit {
     this.damageMarkers.set([])
   }
 
+  readonly vehicleSheetOpen = signal<boolean>(false)
+  readonly driverAssignSheetOpen = signal<boolean>(false)
+  readonly isSubmittingVehicle = signal<boolean>(false)
+  readonly activeBookingForDriver = signal<VehicleBooking | null>(null)
+  selectedDriverId: string | null = null
+
+  newVehicle: Partial<Vehicle> = {
+    make: '',
+    model: '',
+    registrationNumber: '',
+    category: 'four_wheeler',
+    seatingCapacity: 5,
+    dailyRate: 75,
+    depositAmount: 200,
+  }
+
   generateHandoverCertificate(): void {
     toast.success('Generated Pre-Rental Condition Custody Certificate (PDF) with signatures!')
   }
 
   openRegisterVehicle(): void {
-    toast.info('Vehicle asset registration drawer ready.')
+    this.newVehicle = {
+      make: '',
+      model: '',
+      registrationNumber: '',
+      category: 'four_wheeler',
+      seatingCapacity: 5,
+      dailyRate: 75,
+      depositAmount: 200,
+    }
+    this.vehicleSheetOpen.set(true)
+  }
+
+  async saveVehicle(): Promise<void> {
+    if (!this.newVehicle.make?.trim() || !this.newVehicle.model?.trim()) {
+      toast.error('Vehicle make and model are required.')
+      return
+    }
+    if (!this.newVehicle.registrationNumber?.trim()) {
+      toast.error('Registration number is required.')
+      return
+    }
+
+    this.isSubmittingVehicle.set(true)
+    try {
+      const created = await this.facade.createVehicle(this.newVehicle)
+      toast.success(`Vehicle "${created.make} ${created.model}" registered!`)
+      this.vehicleSheetOpen.set(false)
+    } finally {
+      this.isSubmittingVehicle.set(false)
+    }
   }
 
   openAssignDriver(bk: VehicleBooking): void {
-    toast.info(`Select driver for booking ${bk.bookingReference}`)
+    this.selectedDriverId = null
+    this.activeBookingForDriver.set(bk)
+    this.driverAssignSheetOpen.set(true)
+  }
+
+  async confirmDriverAssignment(): Promise<void> {
+    const bk = this.activeBookingForDriver()
+    if (!bk || !this.selectedDriverId) return
+
+    const success = await this.facade.assignDriver(bk.id, this.selectedDriverId)
+    if (success) {
+      toast.success(`Driver successfully assigned to booking ${bk.bookingReference}!`)
+      this.driverAssignSheetOpen.set(false)
+      this.activeBookingForDriver.set(null)
+    } else {
+      toast.error('Failed to assign driver. Please try again.')
+    }
   }
 
   verifyOtpAndStartTrip(): void {
@@ -880,3 +1079,4 @@ export class VehiclesPageComponent implements OnInit {
     }
   }
 }
+

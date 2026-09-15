@@ -156,6 +156,7 @@ export class TeamSwitcherComponent implements OnInit, OnChanges {
   }
 
   openAddTeamModal(): void {
-    toast.info('Workspace onboarding form: Contact admin for operator agency provisioning.')
+    this.router.navigate(['/workspaces'], { queryParams: { action: 'create' } })
   }
 }
+

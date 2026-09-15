@@ -198,10 +198,9 @@ export class ProvidersPageComponent implements OnInit {
   }
 
   onAddProviderClick(): void {
-    toast.info('Provider Invitation Sent', {
-      description: 'The automated onboarding invitation link has been dispatched.',
-    })
+    this.facade.openAddDrawer()
   }
+
 
   async onApproveKyc(id: string): Promise<void> {
     const ok = await this.facade.update(id, {

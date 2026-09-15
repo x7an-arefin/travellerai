@@ -1104,6 +1104,171 @@ import { YieldCalendarMatrixComponent } from './yield-calendar-matrix.component'
           </div>
         </div>
       }
+
+      <!-- Register Property Sheet -->
+      <hlm-sheet [isOpen]="propertySheetOpen()" position="right" [size]="'sm'" (closed)="propertySheetOpen.set(false)">
+        <div hlmSheetHeader>
+          <h3 hlmSheetTitle>Register Hotel Property</h3>
+          <p hlmSheetDescription class="text-xs">Add a new hotel resort or lodge to the multi-property management system.</p>
+        </div>
+
+        <div class="space-y-4 py-4 flex-1 overflow-y-auto text-xs">
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Property Name *</label>
+            <input
+              type="text"
+              [(ngModel)]="newProperty.name"
+              placeholder="e.g. Grand Heritage Palace"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">City *</label>
+              <input
+                type="text"
+                [(ngModel)]="newProperty.city"
+                placeholder="e.g. Sylhet"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">Country *</label>
+              <input
+                type="text"
+                [(ngModel)]="newProperty.country"
+                placeholder="e.g. Bangladesh"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Address</label>
+            <input
+              type="text"
+              [(ngModel)]="newProperty.address"
+              placeholder="e.g. Airport Road, Boroshola"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">Star Rating</label>
+              <select
+                [(ngModel)]="newProperty.starRating"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option [ngValue]="3">3 Stars</option>
+                <option [ngValue]="4">4 Stars</option>
+                <option [ngValue]="5">5 Stars Luxury</option>
+              </select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">Total Rooms</label>
+              <input
+                type="number"
+                [(ngModel)]="newProperty.totalRooms"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Starting Nightly Rate (USD)</label>
+            <input
+              type="number"
+              [(ngModel)]="newProperty.startingPrice"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+        </div>
+
+        <div hlmSheetFooter class="mt-auto flex items-center justify-between gap-2 border-t pt-4">
+          <button hlmBtn variant="outline" (click)="propertySheetOpen.set(false)" class="cursor-pointer text-xs" [disabled]="isSubmittingProperty()">
+            Cancel
+          </button>
+          <button hlmBtn (click)="saveProperty()" class="cursor-pointer text-xs gap-1.5" [disabled]="isSubmittingProperty()">
+            @if (isSubmittingProperty()) {
+              <span>Saving...</span>
+            } @else {
+              <span>Register Property</span>
+            }
+          </button>
+        </div>
+      </hlm-sheet>
+
+      <!-- Create Maintenance Ticket Sheet -->
+      <hlm-sheet [isOpen]="maintenanceSheetOpen()" position="right" [size]="'sm'" (closed)="maintenanceSheetOpen.set(false)">
+        <div hlmSheetHeader>
+          <h3 hlmSheetTitle>Log Maintenance Ticket</h3>
+          <p hlmSheetDescription class="text-xs">Dispatch facility technicians for room HVAC, plumbing, or electrical repairs.</p>
+        </div>
+
+        <div class="space-y-4 py-4 flex-1 overflow-y-auto text-xs">
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Room Number *</label>
+            <input
+              type="text"
+              [(ngModel)]="newTicket.roomNumber"
+              placeholder="e.g. 204"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Issue Category</label>
+            <select
+              [(ngModel)]="newTicket.issueCategory"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="hvac_aircon">HVAC & Climate Control</option>
+              <option value="plumbing_water">Plumbing & Water Supply</option>
+              <option value="electrical_lighting">Electrical & Lighting</option>
+              <option value="furniture_fixtures">Furniture & Fixtures</option>
+              <option value="door_keycard">Electronic Keycard / Lock</option>
+            </select>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Priority</label>
+            <select
+              [(ngModel)]="newTicket.priority"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="low">Low (Next Shift)</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent (Occupied Room)</option>
+            </select>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Description *</label>
+            <textarea
+              [(ngModel)]="newTicket.description"
+              rows="3"
+              placeholder="Details of the fault reported by housekeeping or guest..."
+              class="w-full rounded-md border border-input bg-background p-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            ></textarea>
+          </div>
+        </div>
+
+        <div hlmSheetFooter class="mt-auto flex items-center justify-between gap-2 border-t pt-4">
+          <button hlmBtn variant="outline" (click)="maintenanceSheetOpen.set(false)" class="cursor-pointer text-xs" [disabled]="isSubmittingTicket()">
+            Cancel
+          </button>
+          <button hlmBtn (click)="saveMaintenanceTicket()" class="cursor-pointer text-xs gap-1.5" [disabled]="isSubmittingTicket()">
+            @if (isSubmittingTicket()) {
+              <span>Dispatching...</span>
+            } @else {
+              <span>Dispatch Ticket</span>
+            }
+          </button>
+        </div>
+      </hlm-sheet>
     </app-main>
   `,
 })
@@ -1199,11 +1364,97 @@ export class HotelsPageComponent implements OnInit {
     toast.success(`Room ${unit.roomNumber} updated to ${status.replace('_', ' ')}!`)
   }
 
+  readonly propertySheetOpen = signal<boolean>(false)
+  readonly maintenanceSheetOpen = signal<boolean>(false)
+  readonly isSubmittingProperty = signal<boolean>(false)
+  readonly isSubmittingTicket = signal<boolean>(false)
+
+  newProperty: Partial<HotelProperty> = {
+    name: '',
+    city: '',
+    country: '',
+    address: '',
+    starRating: 4,
+    totalRooms: 20,
+    startingPrice: 95,
+  }
+
+  newTicket = {
+    roomNumber: '',
+    issueCategory: 'hvac_aircon',
+    priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
+    description: '',
+  }
+
   openPropertyDrawer(): void {
-    toast.info('Property registration drawer ready.')
+    this.newProperty = {
+      name: '',
+      city: '',
+      country: '',
+      address: '',
+      starRating: 4,
+      totalRooms: 20,
+      startingPrice: 95,
+    }
+    this.propertySheetOpen.set(true)
+  }
+
+  async saveProperty(): Promise<void> {
+    if (!this.newProperty.name?.trim()) {
+      toast.error('Property name is required.')
+      return
+    }
+    if (!this.newProperty.city?.trim()) {
+      toast.error('City is required.')
+      return
+    }
+
+    this.isSubmittingProperty.set(true)
+    try {
+      const created = await this.facade.createProperty(this.newProperty)
+      toast.success(`Property "${created.name}" registered successfully!`)
+      this.propertySheetOpen.set(false)
+    } finally {
+      this.isSubmittingProperty.set(false)
+    }
   }
 
   openMaintenanceModal(): void {
-    toast.info('Opening maintenance ticket creation form...')
+    this.newTicket = {
+      roomNumber: '',
+      issueCategory: 'hvac_aircon',
+      priority: 'normal',
+      description: '',
+    }
+    this.maintenanceSheetOpen.set(true)
+  }
+
+  async saveMaintenanceTicket(): Promise<void> {
+    if (!this.newTicket.roomNumber.trim()) {
+      toast.error('Room number is required.')
+      return
+    }
+    if (!this.newTicket.description.trim()) {
+      toast.error('Ticket description is required.')
+      return
+    }
+
+    this.isSubmittingTicket.set(true)
+    try {
+      await this.facade.reportMaintenance({
+        roomNumber: this.newTicket.roomNumber,
+        issueCategory: this.newTicket.issueCategory,
+        priority: this.newTicket.priority,
+        description: this.newTicket.description,
+        propertyId: this.facade.selectedPropertyId(),
+        reportedAt: new Date().toISOString(),
+        status: 'open',
+      })
+      toast.success(`Maintenance ticket for Room ${this.newTicket.roomNumber} dispatched!`)
+      this.maintenanceSheetOpen.set(false)
+    } finally {
+      this.isSubmittingTicket.set(false)
+    }
   }
 }
+

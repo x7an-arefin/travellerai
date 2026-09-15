@@ -496,7 +496,8 @@ export class HotelReservationsComponent implements OnInit {
   }
 
   printRegCard(booking: HotelBooking): void {
-    toast.info('Registration Card Printed', {
+    window.print()
+    toast.success('Registration Card Printed', {
       description: `Official registration dossier printed for ${booking.contactName} (Ref: ${booking.bookingReference}).`,
     })
   }

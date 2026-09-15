@@ -31,6 +31,7 @@ import { HlmCardImports } from '../../../ui/card/hlm-card.directives'
 import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
 import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
 import { HlmInputImports } from '../../../ui/input/hlm-input.directive'
+import { HlmSheetImports } from '../../../ui/sheet/hlm-sheet.components'
 import { toast } from 'ngx-sonner'
 
 @Component({
@@ -52,7 +53,9 @@ import { toast } from 'ngx-sonner'
     ...HlmButtonImports,
     ...HlmBadgeImports,
     ...HlmInputImports,
+    ...HlmSheetImports,
   ],
+
   providers: [
     provideIcons({
       lucideArrowLeft,
@@ -427,6 +430,120 @@ import { toast } from 'ngx-sonner'
           }
         </div>
       }
+
+      <!-- Add Room Type Sheet -->
+      <hlm-sheet [isOpen]="roomTypeSheetOpen()" position="right" [size]="'sm'" (closed)="roomTypeSheetOpen.set(false)">
+        <div hlmSheetHeader>
+          <h3 hlmSheetTitle>Add Room Category</h3>
+          <p hlmSheetDescription class="text-xs">Define room inventory specs, bed configuration, and pricing.</p>
+        </div>
+
+        <div class="space-y-4 py-4 flex-1 overflow-y-auto text-xs">
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Room Type Name *</label>
+            <input
+              type="text"
+              [(ngModel)]="newRoomType.name"
+              placeholder="e.g. Deluxe Ocean View Suite"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">Base Bed Type</label>
+              <select
+                [(ngModel)]="newRoomType.baseBedType"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="King">1 King Bed</option>
+                <option value="Queen">1 Queen Bed</option>
+                <option value="Twin">2 Twin Beds</option>
+                <option value="Family">Family Suite</option>
+              </select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">View Type</label>
+              <select
+                [(ngModel)]="newRoomType.viewType"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="Valley View">Valley / Mountain View</option>
+                <option value="Ocean View">Ocean / Sea View</option>
+                <option value="Garden View">Garden View</option>
+                <option value="City View">City View</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">Max Guests</label>
+              <input
+                type="number"
+                [(ngModel)]="newRoomType.maxTotalGuests"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">Units Available</label>
+              <input
+                type="number"
+                [(ngModel)]="newRoomType.totalUnitsCount"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Base Nightly Price (USD) *</label>
+            <input
+              type="number"
+              [(ngModel)]="newRoomType.basePriceNightly"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+        </div>
+
+        <div hlmSheetFooter class="mt-auto flex items-center justify-between gap-2 border-t pt-4">
+          <button hlmBtn variant="outline" (click)="roomTypeSheetOpen.set(false)" class="cursor-pointer text-xs" [disabled]="isSubmittingRoom()">
+            Cancel
+          </button>
+          <button hlmBtn (click)="saveRoomType()" class="cursor-pointer text-xs" [disabled]="isSubmittingRoom()">
+            <span>Create Room Type</span>
+          </button>
+        </div>
+      </hlm-sheet>
+
+      <!-- Media Upload Sheet -->
+      <hlm-sheet [isOpen]="mediaUploadSheetOpen()" position="right" [size]="'sm'" (closed)="mediaUploadSheetOpen.set(false)">
+        <div hlmSheetHeader>
+          <h3 hlmSheetTitle>Upload Property Photos</h3>
+          <p hlmSheetDescription class="text-xs">Add high-resolution image URLs to synchronize across distribution channels.</p>
+        </div>
+
+        <div class="space-y-4 py-4 flex-1 overflow-y-auto text-xs">
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Photo URL *</label>
+            <input
+              type="url"
+              [(ngModel)]="newPhotoUrl"
+              placeholder="https://images.unsplash.com/..."
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+          <p class="text-[11px] text-muted-foreground">Supported formats: WEBP, JPG, PNG up to 25MB.</p>
+        </div>
+
+        <div hlmSheetFooter class="mt-auto flex items-center justify-between gap-2 border-t pt-4">
+          <button hlmBtn variant="outline" (click)="mediaUploadSheetOpen.set(false)" class="cursor-pointer text-xs">
+            Cancel
+          </button>
+          <button hlmBtn (click)="savePhoto()" class="cursor-pointer text-xs">
+            <span>Add to Gallery</span>
+          </button>
+        </div>
+      </hlm-sheet>
     </app-main>
   `,
 })
@@ -447,6 +564,21 @@ export class HotelPropertyDetailComponent implements OnInit {
     }
   }
 
+  readonly roomTypeSheetOpen = signal<boolean>(false)
+  readonly mediaUploadSheetOpen = signal<boolean>(false)
+  readonly isSubmittingRoom = signal<boolean>(false)
+
+  newRoomType = {
+    name: '',
+    baseBedType: 'King',
+    viewType: 'Valley View',
+    maxTotalGuests: 2,
+    totalUnitsCount: 5,
+    basePriceNightly: 120,
+  }
+
+  newPhotoUrl = ''
+
   saveChanges(): void {
     toast.success('Property Profile Saved', {
       description: 'Changes synchronized with OTA channel distribution.',
@@ -454,14 +586,67 @@ export class HotelPropertyDetailComponent implements OnInit {
   }
 
   addRoomType(): void {
-    toast.info('Room Type Creator', {
-      description: 'Opening room category specification drawer.',
-    })
+    this.newRoomType = {
+      name: '',
+      baseBedType: 'King',
+      viewType: 'Valley View',
+      maxTotalGuests: 2,
+      totalUnitsCount: 5,
+      basePriceNightly: 120,
+    }
+    this.roomTypeSheetOpen.set(true)
+  }
+
+  saveRoomType(): void {
+    if (!this.newRoomType.name.trim()) {
+      toast.error('Room type name is required.')
+      return
+    }
+    this.isSubmittingRoom.set(true)
+    const newRt: RoomType = {
+      id: `rt-${Date.now()}`,
+      propertyId: this.property()?.id || 'prop-101',
+      name: this.newRoomType.name,
+      slug: this.newRoomType.name.toLowerCase().replace(/\s+/g, '-'),
+      category: 'suite',
+      baseBedType: this.newRoomType.baseBedType,
+      viewType: this.newRoomType.viewType,
+      maxOccupancyAdults: this.newRoomType.maxTotalGuests,
+      maxOccupancyChildren: 1,
+      maxTotalGuests: this.newRoomType.maxTotalGuests,
+      extraBedAvailable: false,
+      smokingAllowed: false,
+      bathroomType: 'private_ensuite',
+      roomSizeSqm: 42,
+      totalUnitsCount: this.newRoomType.totalUnitsCount,
+      basePricePerNight: this.newRoomType.basePriceNightly,
+      amenities: ['Wi-Fi', 'Air Conditioning', 'En-Suite Bathroom'],
+      photos: ['https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&auto=format&fit=crop&q=80'],
+      isActive: true,
+    }
+    this.facade.roomTypes.update((list) => [...list, newRt])
+    this.isSubmittingRoom.set(false)
+    this.roomTypeSheetOpen.set(false)
+    toast.success(`Room category "${newRt.name}" created!`)
   }
 
   addPhoto(): void {
-    toast.info('Media Upload Triggered', {
-      description: 'Select photos to upload to Backblaze B2 bucket.',
-    })
+    this.newPhotoUrl = ''
+    this.mediaUploadSheetOpen.set(true)
+  }
+
+  savePhoto(): void {
+    if (!this.newPhotoUrl.trim()) {
+      toast.error('Please provide an image URL.')
+      return
+    }
+    const current = this.property()
+    if (current) {
+      const urls = current.galleryUrls ? [...current.galleryUrls, this.newPhotoUrl] : [this.newPhotoUrl]
+      current.galleryUrls = urls
+      toast.success('Photo added to gallery!')
+    }
+    this.mediaUploadSheetOpen.set(false)
   }
 }
+

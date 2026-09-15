@@ -150,27 +150,33 @@ export class DeparturesApiService {
       const res = await firstValueFrom(this.http.get<DepartureListResponse>(`${this.baseUrl}${query}`))
       return { ok: true, data: res }
     } catch {
-      let filtered = [...this.mockDepartures]
-      if (status && status !== 'all') {
-        filtered = filtered.filter(d => d.status === status)
+      if (!this.apiConfig.isProduction) {
+        let filtered = [...this.mockDepartures]
+        if (status && status !== 'all') {
+          filtered = filtered.filter(d => d.status === status)
+        }
+        return {
+          ok: true,
+          data: {
+            items: filtered,
+            total: filtered.length,
+          },
+        }
       }
-      return {
-        ok: true,
-        data: {
-          items: filtered,
-          total: filtered.length,
-        },
-      }
+      return { ok: false, error: 'Could not connect to Departures service.' }
     }
   }
+
 
   async get(id: string): Promise<{ ok: true; data: Departure } | { ok: false; error: string }> {
     try {
       const res = await firstValueFrom(this.http.get<Departure>(`${this.baseUrl}/${id}`))
       return { ok: true, data: res }
     } catch {
-      const found = this.mockDepartures.find(d => d.id === id)
-      if (found) return { ok: true, data: found }
+      if (!this.apiConfig.isProduction) {
+        const found = this.mockDepartures.find(d => d.id === id)
+        if (found) return { ok: true, data: found }
+      }
       return { ok: false, error: 'Departure not found' }
     }
   }
@@ -180,16 +186,19 @@ export class DeparturesApiService {
       const res = await firstValueFrom(this.http.post<Departure>(this.baseUrl, dto))
       return { ok: true, data: res }
     } catch {
-      const newDep: Departure = {
-        ...dto,
-        id: `dep-${Date.now()}`,
-        bookedCount: 0,
-        availableCount: dto.capacity,
-        passengers: [],
-        createdAt: new Date().toISOString(),
+      if (!this.apiConfig.isProduction) {
+        const newDep: Departure = {
+          ...dto,
+          id: `dep-${Date.now()}`,
+          bookedCount: 0,
+          availableCount: dto.capacity,
+          passengers: [],
+          createdAt: new Date().toISOString(),
+        }
+        this.mockDepartures.unshift(newDep)
+        return { ok: true, data: newDep }
       }
-      this.mockDepartures.unshift(newDep)
-      return { ok: true, data: newDep }
+      return { ok: false, error: 'Failed to create departure schedule.' }
     }
   }
 
@@ -198,15 +207,17 @@ export class DeparturesApiService {
       const res = await firstValueFrom(this.http.patch<Departure>(`${this.baseUrl}/${id}`, dto))
       return { ok: true, data: res }
     } catch {
-      const idx = this.mockDepartures.findIndex(d => d.id === id)
-      if (idx !== -1) {
-        const current = this.mockDepartures[idx]
-        const updated = { ...current, ...dto }
-        if (dto.capacity !== undefined) {
-          updated.availableCount = Math.max(0, dto.capacity - (updated.bookedCount || 0))
+      if (!this.apiConfig.isProduction) {
+        const idx = this.mockDepartures.findIndex(d => d.id === id)
+        if (idx !== -1) {
+          const current = this.mockDepartures[idx]
+          const updated = { ...current, ...dto }
+          if (dto.capacity !== undefined) {
+            updated.availableCount = Math.max(0, dto.capacity - (updated.bookedCount || 0))
+          }
+          this.mockDepartures[idx] = updated
+          return { ok: true, data: updated }
         }
-        this.mockDepartures[idx] = updated
-        return { ok: true, data: updated }
       }
       return { ok: false, error: 'Departure not found' }
     }
@@ -217,8 +228,11 @@ export class DeparturesApiService {
       await firstValueFrom(this.http.delete(`${this.baseUrl}/${id}`))
       return { ok: true }
     } catch {
-      this.mockDepartures = this.mockDepartures.filter(d => d.id !== id)
-      return { ok: true }
+      if (!this.apiConfig.isProduction) {
+        this.mockDepartures = this.mockDepartures.filter(d => d.id !== id)
+        return { ok: true }
+      }
+      return { ok: false, error: 'Failed to delete departure.' }
     }
   }
 }

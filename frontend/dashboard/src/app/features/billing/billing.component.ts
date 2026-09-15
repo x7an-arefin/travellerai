@@ -18,10 +18,12 @@ import { ThemeSwitchComponent } from '../../shared/components/theme-switch/theme
 import { ConfigDrawerComponent } from '../../shared/components/config-drawer/config-drawer.component'
 import { NotificationCenterComponent } from '../../shared/components/notification-center/notification-center.component'
 import { ProfileDropdownComponent } from '../../shared/components/profile-dropdown/profile-dropdown.component'
+import { FormsModule } from '@angular/forms'
 import { HlmCardImports } from '../../ui/card/hlm-card.directives'
 import { HlmButtonImports } from '../../ui/button/hlm-button.directive'
 import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
 import { HlmTableImports } from '../../ui/table/hlm-table.components'
+import { HlmSheetImports } from '../../ui/sheet/hlm-sheet.components'
 import { BillingApiService } from './data-access/services/billing-api.service'
 import {
   BillingInvoiceReceipt,
@@ -38,6 +40,7 @@ export type Invoice = BillingInvoiceReceipt
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     NgIcon,
     HeaderComponent,
     MainComponent,
@@ -50,6 +53,7 @@ export type Invoice = BillingInvoiceReceipt
     ...HlmButtonImports,
     ...HlmBadgeImports,
     ...HlmTableImports,
+    ...HlmSheetImports,
   ],
   providers: [
     provideIcons({
@@ -263,6 +267,129 @@ export type Invoice = BillingInvoiceReceipt
           </table>
         </div>
       </div>
+
+      <!-- Plan Settings Sheet -->
+      <hlm-sheet [isOpen]="planSheetOpen()" position="right" [size]="'sm'" (closed)="planSheetOpen.set(false)">
+        <div hlmSheetHeader>
+          <h3 hlmSheetTitle>Subscription Plan Settings</h3>
+          <p hlmSheetDescription class="text-xs">Configure billing cycle, license seats, and SLA support levels.</p>
+        </div>
+
+        <div class="space-y-4 py-4 flex-1 overflow-y-auto text-xs">
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Active Subscription Tier</label>
+            <select
+              [(ngModel)]="selectedPlanTier"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="Team Starter">Team Starter — $390 / quarter</option>
+              <option value="Enterprise Pro">Enterprise Pro — $1,250 / quarter</option>
+              <option value="Custom SLA">Global Carrier Custom SLA — $3,800 / quarter</option>
+            </select>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Billing Interval</label>
+            <div class="flex gap-2">
+              <button
+                hlmBtn
+                [variant]="selectedInterval === 'monthly' ? 'default' : 'outline'"
+                size="sm"
+                (click)="selectedInterval = 'monthly'"
+                class="flex-1 text-xs cursor-pointer"
+              >
+                Monthly
+              </button>
+              <button
+                hlmBtn
+                [variant]="selectedInterval === 'quarterly' ? 'default' : 'outline'"
+                size="sm"
+                (click)="selectedInterval = 'quarterly'"
+                class="flex-1 text-xs cursor-pointer"
+              >
+                Quarterly (Save 15%)
+              </button>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-1.5 text-xs text-muted-foreground">
+            <div class="font-semibold text-foreground">Included in this tier:</div>
+            <div>• Up to 5,000 monthly transactions</div>
+            <div>• Real-time Stripe Connect multi-party escrow</div>
+            <div>• 99.95% API SLA & 24/7 incident response</div>
+          </div>
+        </div>
+
+        <div hlmSheetFooter class="mt-auto flex items-center justify-between gap-2 border-t pt-4">
+          <button hlmBtn variant="outline" (click)="planSheetOpen.set(false)" class="cursor-pointer text-xs">
+            Cancel
+          </button>
+          <button hlmBtn (click)="savePlanSettings()" class="cursor-pointer text-xs">
+            <span>Update Subscription</span>
+          </button>
+        </div>
+      </hlm-sheet>
+
+      <!-- Payment Method Editor Sheet -->
+      <hlm-sheet [isOpen]="paymentMethodSheetOpen()" position="right" [size]="'sm'" (closed)="paymentMethodSheetOpen.set(false)">
+        <div hlmSheetHeader>
+          <h3 hlmSheetTitle>Update Payment Method</h3>
+          <p hlmSheetDescription class="text-xs">Add or change the primary card used for recurring SaaS charges.</p>
+        </div>
+
+        <div class="space-y-4 py-4 flex-1 overflow-y-auto text-xs">
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Cardholder Full Name</label>
+            <input
+              type="text"
+              [(ngModel)]="newCard.name"
+              placeholder="e.g. Sultanul Arefin"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="font-semibold text-foreground">Card Number</label>
+            <input
+              type="text"
+              [(ngModel)]="newCard.number"
+              placeholder="•••• •••• •••• 4242"
+              class="h-9 w-full rounded-md border border-input bg-background px-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">Expiry (MM/YY)</label>
+              <input
+                type="text"
+                [(ngModel)]="newCard.expiry"
+                placeholder="12/28"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <label class="font-semibold text-foreground">CVC</label>
+              <input
+                type="password"
+                maxlength="4"
+                [(ngModel)]="newCard.cvc"
+                placeholder="•••"
+                class="h-9 w-full rounded-md border border-input bg-background px-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div hlmSheetFooter class="mt-auto flex items-center justify-between gap-2 border-t pt-4">
+          <button hlmBtn variant="outline" (click)="paymentMethodSheetOpen.set(false)" class="cursor-pointer text-xs">
+            Cancel
+          </button>
+          <button hlmBtn (click)="savePaymentMethod()" class="cursor-pointer text-xs">
+            <span>Save Payment Method</span>
+          </button>
+        </div>
+      </hlm-sheet>
     </app-main>
   `,
 })
@@ -315,16 +442,67 @@ export class BillingComponent implements OnInit {
     }
   }
 
+  readonly planSheetOpen = signal<boolean>(false)
+  readonly paymentMethodSheetOpen = signal<boolean>(false)
+
+  selectedPlanTier = 'Enterprise Pro'
+  selectedInterval = 'quarterly'
+
+  newCard = {
+    name: '',
+    number: '',
+    expiry: '',
+    cvc: '',
+  }
+
   managePlan(): void {
-    toast.info('Plan settings opened.')
+    this.selectedPlanTier = this.plan().name
+    this.selectedInterval = this.plan().billingCycle
+    this.planSheetOpen.set(true)
+  }
+
+  savePlanSettings(): void {
+    const current = this.plan()
+    this.plan.set({
+      ...current,
+      name: this.selectedPlanTier,
+      billingCycle: this.selectedInterval as any,
+      priceFormatted: this.selectedPlanTier === 'Team Starter' ? '$390' : this.selectedPlanTier === 'Custom SLA' ? '$3,800' : '$1,250',
+    })
+    this.planSheetOpen.set(false)
+    toast.success(`Subscription updated to ${this.selectedPlanTier} (${this.selectedInterval})!`)
   }
 
   upgradePlan(): void {
-    toast.success('Redirecting to Enterprise tier upgrade...')
+    this.selectedPlanTier = 'Custom SLA'
+    this.planSheetOpen.set(true)
   }
 
   updatePaymentMethod(): void {
-    toast.info('Payment method editor opened.')
+    this.newCard = {
+      name: '',
+      number: '',
+      expiry: '',
+      cvc: '',
+    }
+    this.paymentMethodSheetOpen.set(true)
+  }
+
+  savePaymentMethod(): void {
+    if (!this.newCard.number.trim()) {
+      toast.error('Card number is required.')
+      return
+    }
+    const cleanNum = this.newCard.number.replace(/\s+/g, '')
+    const last4 = cleanNum.length >= 4 ? cleanNum.slice(-4) : '8890'
+    this.paymentMethod.set({
+      brand: 'Visa',
+      last4,
+      expiry: this.newCard.expiry || '09/29',
+      billingEmail: this.paymentMethod().billingEmail || 'billing@operator.com',
+    })
+    this.paymentMethodSheetOpen.set(false)
+    toast.success(`Payment card ending in ${last4} updated!`)
   }
 
   downloadInvoicePdf(inv: Invoice): void {

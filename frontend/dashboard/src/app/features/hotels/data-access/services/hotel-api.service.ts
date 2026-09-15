@@ -390,13 +390,18 @@ export class HotelApiService {
   async getProperties(): Promise<HotelProperty[]> {
     try {
       const res = await firstValueFrom(
-        this.http.get<{ data: { items: HotelProperty[] } }>(`${this.baseUrl}/hotel-properties`).pipe(
+        this.http.get<{ data?: { items?: HotelProperty[] }; items?: HotelProperty[] }>(`${this.baseUrl}/hotel-properties`).pipe(
           catchError(() => of(null))
         )
       )
-      if (res?.data?.items?.length) return res.data.items
+      if (res !== null) {
+        return res?.data?.items ?? res?.items ?? []
+      }
     } catch (_) {}
-    return MOCK_PROPERTIES
+    if (!environment.production) {
+      return MOCK_PROPERTIES
+    }
+    return []
   }
 
   async createProperty(property: Partial<HotelProperty>): Promise<HotelProperty> {
@@ -420,10 +425,14 @@ export class HotelApiService {
       createdAt: new Date().toISOString(),
     }
     try {
-      await firstValueFrom(this.http.post(`${this.baseUrl}/hotel-properties`, newProp).pipe(catchError(() => of(null))))
+      const res = await firstValueFrom(this.http.post<any>(`${this.baseUrl}/hotel-properties`, newProp).pipe(catchError(() => of(null))))
+      if (res) return res?.data ?? res
     } catch (_) {}
-    MOCK_PROPERTIES.unshift(newProp)
-    return newProp
+    if (!environment.production) {
+      MOCK_PROPERTIES.unshift(newProp)
+      return newProp
+    }
+    throw new Error('Failed to create hotel property.')
   }
 
   // 2. Room Types & Units

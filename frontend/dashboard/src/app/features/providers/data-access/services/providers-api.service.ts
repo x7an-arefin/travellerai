@@ -128,24 +128,30 @@ export class ProvidersApiService {
       const data = await firstValueFrom(this.http.get<ProviderListResponse>(this.baseUrl, { params }))
       return { ok: true, data }
     } catch {
-      return {
-        ok: true,
-        data: {
-          items: [...this.mockProviders],
-          total: this.mockProviders.length,
-          hasMore: false,
-        },
+      if (!this.apiConfig.isProduction) {
+        return {
+          ok: true,
+          data: {
+            items: [...this.mockProviders],
+            total: this.mockProviders.length,
+            hasMore: false,
+          },
+        }
       }
+      return { ok: false, error: 'Could not connect to Providers service.' }
     }
   }
+
 
   async getById(id: string): Promise<{ ok: true; data: Provider } | { ok: false; error: string }> {
     try {
       const data = await firstValueFrom(this.http.get<Provider>(`${this.baseUrl}/${id}`))
       return { ok: true, data }
     } catch {
-      const found = this.mockProviders.find(p => p.id === id)
-      if (found) return { ok: true, data: found }
+      if (!this.apiConfig.isProduction) {
+        const found = this.mockProviders.find(p => p.id === id)
+        if (found) return { ok: true, data: found }
+      }
       return { ok: false, error: 'Provider not found' }
     }
   }
@@ -155,15 +161,18 @@ export class ProvidersApiService {
       const data = await firstValueFrom(this.http.post<Provider>(this.baseUrl, dto))
       return { ok: true, data }
     } catch {
-      const newProvider: Provider = {
-        ...dto,
-        id: `prov-${Date.now()}`,
-        rating: 5.0,
-        totalBookings: 0,
-        createdAt: new Date().toISOString(),
+      if (!this.apiConfig.isProduction) {
+        const newProvider: Provider = {
+          ...dto,
+          id: `prov-${Date.now()}`,
+          rating: 5.0,
+          totalBookings: 0,
+          createdAt: new Date().toISOString(),
+        }
+        this.mockProviders.unshift(newProvider)
+        return { ok: true, data: newProvider }
       }
-      this.mockProviders.unshift(newProvider)
-      return { ok: true, data: newProvider }
+      return { ok: false, error: 'Failed to onboard provider.' }
     }
   }
 
@@ -172,10 +181,12 @@ export class ProvidersApiService {
       const data = await firstValueFrom(this.http.patch<Provider>(`${this.baseUrl}/${id}`, dto))
       return { ok: true, data }
     } catch {
-      const idx = this.mockProviders.findIndex(p => p.id === id)
-      if (idx !== -1) {
-        this.mockProviders[idx] = { ...this.mockProviders[idx], ...dto }
-        return { ok: true, data: this.mockProviders[idx] }
+      if (!this.apiConfig.isProduction) {
+        const idx = this.mockProviders.findIndex(p => p.id === id)
+        if (idx !== -1) {
+          this.mockProviders[idx] = { ...this.mockProviders[idx], ...dto }
+          return { ok: true, data: this.mockProviders[idx] }
+        }
       }
       return { ok: false, error: 'Provider not found' }
     }
@@ -186,8 +197,11 @@ export class ProvidersApiService {
       await firstValueFrom(this.http.delete(`${this.baseUrl}/${id}`))
       return { ok: true }
     } catch {
-      this.mockProviders = this.mockProviders.filter(p => p.id !== id)
-      return { ok: true }
+      if (!this.apiConfig.isProduction) {
+        this.mockProviders = this.mockProviders.filter(p => p.id !== id)
+        return { ok: true }
+      }
+      return { ok: false, error: 'Failed to remove provider.' }
     }
   }
 }

@@ -183,24 +183,30 @@ export class DestinationsApiService {
       const data = await firstValueFrom(this.http.get<DestinationListResponse>(this.baseUrl, { params }))
       return { ok: true, data }
     } catch {
-      return {
-        ok: true,
-        data: {
-          items: [...this.mockDestinations],
-          total: this.mockDestinations.length,
-          hasMore: false,
-        },
+      if (!this.apiConfig.isProduction) {
+        return {
+          ok: true,
+          data: {
+            items: [...this.mockDestinations],
+            total: this.mockDestinations.length,
+            hasMore: false,
+          },
+        }
       }
+      return { ok: false, error: 'Could not connect to Destinations service.' }
     }
   }
+
 
   async getById(id: string): Promise<{ ok: true; data: Destination } | { ok: false; error: string }> {
     try {
       const data = await firstValueFrom(this.http.get<Destination>(`${this.baseUrl}/${id}`))
       return { ok: true, data }
     } catch {
-      const found = this.mockDestinations.find(d => d.id === id)
-      if (found) return { ok: true, data: found }
+      if (!this.apiConfig.isProduction) {
+        const found = this.mockDestinations.find(d => d.id === id)
+        if (found) return { ok: true, data: found }
+      }
       return { ok: false, error: 'Destination not found' }
     }
   }
@@ -210,14 +216,17 @@ export class DestinationsApiService {
       const data = await firstValueFrom(this.http.post<Destination>(this.baseUrl, dto))
       return { ok: true, data }
     } catch {
-      const newDest: Destination = {
-        ...dto,
-        id: `dest-${Date.now()}`,
-        activePackagesCount: 0,
-        createdAt: new Date().toISOString(),
+      if (!this.apiConfig.isProduction) {
+        const newDest: Destination = {
+          ...dto,
+          id: `dest-${Date.now()}`,
+          activePackagesCount: 0,
+          createdAt: new Date().toISOString(),
+        }
+        this.mockDestinations.unshift(newDest)
+        return { ok: true, data: newDest }
       }
-      this.mockDestinations.unshift(newDest)
-      return { ok: true, data: newDest }
+      return { ok: false, error: 'Failed to create destination on server.' }
     }
   }
 
@@ -226,10 +235,12 @@ export class DestinationsApiService {
       const data = await firstValueFrom(this.http.patch<Destination>(`${this.baseUrl}/${id}`, dto))
       return { ok: true, data }
     } catch {
-      const idx = this.mockDestinations.findIndex(d => d.id === id)
-      if (idx !== -1) {
-        this.mockDestinations[idx] = { ...this.mockDestinations[idx], ...dto }
-        return { ok: true, data: this.mockDestinations[idx] }
+      if (!this.apiConfig.isProduction) {
+        const idx = this.mockDestinations.findIndex(d => d.id === id)
+        if (idx !== -1) {
+          this.mockDestinations[idx] = { ...this.mockDestinations[idx], ...dto }
+          return { ok: true, data: this.mockDestinations[idx] }
+        }
       }
       return { ok: false, error: 'Destination not found' }
     }
@@ -240,8 +251,11 @@ export class DestinationsApiService {
       await firstValueFrom(this.http.delete(`${this.baseUrl}/${id}`))
       return { ok: true }
     } catch {
-      this.mockDestinations = this.mockDestinations.filter(d => d.id !== id)
-      return { ok: true }
+      if (!this.apiConfig.isProduction) {
+        this.mockDestinations = this.mockDestinations.filter(d => d.id !== id)
+        return { ok: true }
+      }
+      return { ok: false, error: 'Failed to delete destination.' }
     }
   }
 }

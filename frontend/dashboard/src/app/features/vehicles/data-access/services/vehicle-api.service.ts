@@ -275,11 +275,16 @@ export class VehicleApiService {
   async getVehicles(): Promise<Vehicle[]> {
     try {
       const res = await firstValueFrom(
-        this.http.get<{ data: { items: Vehicle[] } }>(`${this.baseUrl}/vehicles`).pipe(catchError(() => of(null)))
+        this.http.get<{ data?: { items?: Vehicle[] }; items?: Vehicle[] }>(`${this.baseUrl}/vehicles`).pipe(catchError(() => of(null)))
       )
-      if (res?.data?.items?.length) return res.data.items
+      if (res !== null) {
+        return res?.data?.items ?? res?.items ?? []
+      }
     } catch (_) {}
-    return MOCK_VEHICLES
+    if (!environment.production) {
+      return MOCK_VEHICLES
+    }
+    return []
   }
 
   async createVehicle(veh: Partial<Vehicle>): Promise<Vehicle> {
@@ -309,8 +314,15 @@ export class VehicleApiService {
       photos: veh.photos || ['https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&auto=format&fit=crop&q=80'],
       createdAt: new Date().toISOString(),
     }
-    MOCK_VEHICLES.unshift(newVeh)
-    return newVeh
+    try {
+      const res = await firstValueFrom(this.http.post<any>(`${this.baseUrl}/vehicles`, newVeh).pipe(catchError(() => of(null))))
+      if (res) return res?.data ?? res
+    } catch (_) {}
+    if (!environment.production) {
+      MOCK_VEHICLES.unshift(newVeh)
+      return newVeh
+    }
+    throw new Error('Failed to register vehicle.')
   }
 
   // 2. Compliance

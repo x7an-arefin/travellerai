@@ -195,14 +195,17 @@ export class BookingsApiService {
       const data = await firstValueFrom(this.http.get<BookingListResponse>(this.baseUrl, { params }))
       return { ok: true, data }
     } catch {
-      return {
-        ok: true,
-        data: {
-          items: [...this.mockBookings],
-          total: this.mockBookings.length,
-          hasMore: false,
-        },
+      if (!this.apiConfig.isProduction) {
+        return {
+          ok: true,
+          data: {
+            items: [...this.mockBookings],
+            total: this.mockBookings.length,
+            hasMore: false,
+          },
+        }
       }
+      return { ok: false, error: 'Could not connect to Bookings service.' }
     }
   }
 
@@ -211,8 +214,10 @@ export class BookingsApiService {
       const data = await firstValueFrom(this.http.get<Booking>(`${this.baseUrl}/${id}`))
       return { ok: true, data }
     } catch {
-      const found = this.mockBookings.find(b => b.id === id)
-      if (found) return { ok: true, data: found }
+      if (!this.apiConfig.isProduction) {
+        const found = this.mockBookings.find(b => b.id === id)
+        if (found) return { ok: true, data: found }
+      }
       return { ok: false, error: 'Booking not found' }
     }
   }
@@ -222,14 +227,17 @@ export class BookingsApiService {
       const data = await firstValueFrom(this.http.post<Booking>(this.baseUrl, dto))
       return { ok: true, data }
     } catch {
-      const newBooking: Booking = {
-        ...dto,
-        id: `bk-${Date.now()}`,
-        bookingReference: `TRV-${Math.floor(10000 + Math.random() * 90000)}`,
-        createdAt: new Date().toISOString(),
+      if (!this.apiConfig.isProduction) {
+        const newBooking: Booking = {
+          ...dto,
+          id: `bk-${Date.now()}`,
+          bookingReference: `TRV-${Math.floor(10000 + Math.random() * 90000)}`,
+          createdAt: new Date().toISOString(),
+        }
+        this.mockBookings.unshift(newBooking)
+        return { ok: true, data: newBooking }
       }
-      this.mockBookings.unshift(newBooking)
-      return { ok: true, data: newBooking }
+      return { ok: false, error: 'Failed to create booking on server.' }
     }
   }
 
@@ -238,10 +246,12 @@ export class BookingsApiService {
       const data = await firstValueFrom(this.http.patch<Booking>(`${this.baseUrl}/${id}`, dto))
       return { ok: true, data }
     } catch {
-      const idx = this.mockBookings.findIndex(b => b.id === id)
-      if (idx !== -1) {
-        this.mockBookings[idx] = { ...this.mockBookings[idx], ...dto }
-        return { ok: true, data: this.mockBookings[idx] }
+      if (!this.apiConfig.isProduction) {
+        const idx = this.mockBookings.findIndex(b => b.id === id)
+        if (idx !== -1) {
+          this.mockBookings[idx] = { ...this.mockBookings[idx], ...dto }
+          return { ok: true, data: this.mockBookings[idx] }
+        }
       }
       return { ok: false, error: 'Booking not found' }
     }
@@ -252,8 +262,11 @@ export class BookingsApiService {
       await firstValueFrom(this.http.delete(`${this.baseUrl}/${id}`))
       return { ok: true }
     } catch {
-      this.mockBookings = this.mockBookings.filter(b => b.id !== id)
-      return { ok: true }
+      if (!this.apiConfig.isProduction) {
+        this.mockBookings = this.mockBookings.filter(b => b.id !== id)
+        return { ok: true }
+      }
+      return { ok: false, error: 'Failed to cancel booking.' }
     }
   }
 }

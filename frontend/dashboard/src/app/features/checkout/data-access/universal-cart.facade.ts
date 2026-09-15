@@ -1,4 +1,5 @@
 import { Injectable, signal, computed, inject } from '@angular/core'
+import { toast } from 'ngx-sonner'
 import { CartItem, SplitSettlementAllocation } from './models/cart.model'
 import { CheckoutApiService } from './services/checkout-api.service'
 import { CheckoutCustomerInfo, CheckoutPaymentInfo, CheckoutPayload } from './models/checkout-api.types'
@@ -19,79 +20,16 @@ export const SUPPORTED_CURRENCIES: Record<CurrencyCode, CurrencyRate> = {
   AED: { code: 'AED', symbol: 'AED ', rate: 3.67 },
 }
 
+const STORAGE_KEY = 'travellerai_cart_v2'
+
 @Injectable({
   providedIn: 'root',
 })
 export class UniversalCartFacade {
   private readonly checkoutApi = inject(CheckoutApiService)
 
-  // Sample multi-vendor bundle representing an all-in-one trip
-  readonly items = signal<CartItem[]>([
-    {
-      id: 'cart-1',
-      type: 'hotel_stay',
-      providerId: 'prov-hotel-101',
-      providerName: 'Grand Sylhet 5-Star Resort & Spa',
-      title: 'Deluxe King Suite (Bed & Breakfast)',
-      subtitle: '3 Nights • Sep 18 - Sep 21 • 2 Adults',
-      imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500',
-      startDate: '2026-09-18',
-      endDate: '2026-09-21',
-      quantityOrGuests: 2,
-      unitPrice: 180,
-      totalPrice: 540,
-      cancellationPolicy: 'flexible_24h',
-      metadata: { roomUnitType: 'Deluxe King', floor: 4 },
-    },
-    {
-      id: 'cart-2',
-      type: 'airport_transfer',
-      providerId: 'prov-fleet-202',
-      providerName: 'Apex Chauffeur Fleet Services',
-      title: 'Airport Meet & Greet Transfer',
-      subtitle: 'Sylhet Osmani Airport (ZYL) ➔ Grand Sylhet Resort',
-      imageUrl: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=500',
-      startDate: '2026-09-18',
-      quantityOrGuests: 2,
-      unitPrice: 65,
-      totalPrice: 65,
-      securityDeposit: 0,
-      cancellationPolicy: 'flexible_24h',
-      metadata: { vehicleCategory: 'VIP Chauffeur Sedan', flightNumber: 'BG-601' },
-    },
-    {
-      id: 'cart-3',
-      type: 'tour_package',
-      providerId: 'prov-tour-303',
-      providerName: 'Bengal Trailblazers Tour Operations',
-      title: 'Ratargul Freshwater Swamp Forest & Tea Highlands Trek',
-      subtitle: 'Full-Day Guided Eco-Expedition • All Gear Included',
-      imageUrl: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500',
-      startDate: '2026-09-19',
-      quantityOrGuests: 2,
-      unitPrice: 120,
-      totalPrice: 240,
-      cancellationPolicy: 'moderate_5d',
-      metadata: { guideIncluded: true, lunchIncluded: true },
-    },
-    {
-      id: 'cart-4',
-      type: 'vehicle_rental',
-      providerId: 'prov-fleet-202',
-      providerName: 'Apex Chauffeur Fleet Services',
-      title: 'Self-Drive 4x4 Expedition SUV (Mahindra Thar / Pajero)',
-      subtitle: '1 Day Day-Trip Rental • CDW Collision Protection Included',
-      imageUrl: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=500',
-      startDate: '2026-09-20',
-      endDate: '2026-09-21',
-      quantityOrGuests: 1,
-      unitPrice: 110,
-      totalPrice: 110,
-      securityDeposit: 150, // Refundable hold
-      cancellationPolicy: 'flexible_24h',
-      metadata: { freeKm: 200, fuelPolicy: 'full_to_full' },
-    },
-  ])
+  readonly items = signal<CartItem[]>(this.loadFromStorage())
+  readonly totalItems = computed(() => this.items().length)
 
   readonly selectedCurrency = signal<CurrencyCode>('USD')
   readonly isCheckingOut = signal<boolean>(false)
@@ -173,15 +111,25 @@ export class UniversalCartFacade {
 
   // Cart operations
   addItem(item: CartItem): void {
-    this.items.update((list) => [...list, item])
+    if (this.items().some((i) => i.id === item.id)) {
+      toast.info(`"${item.title}" is already in your cart.`)
+      return
+    }
+    const updated = [...this.items(), item]
+    this.items.set(updated)
+    this.persist(updated)
+    toast.success(`"${item.title}" added to cart!`)
   }
 
   removeItem(itemId: string): void {
-    this.items.update((list) => list.filter((i) => i.id !== itemId))
+    const updated = this.items().filter((i) => i.id !== itemId)
+    this.items.set(updated)
+    this.persist(updated)
   }
 
   clearCart(): void {
     this.items.set([])
+    this.persist([])
   }
 
   setCurrency(code: CurrencyCode): void {
@@ -217,6 +165,7 @@ export class UniversalCartFacade {
         this.lastBookingReference.set(res.data.bookingReference)
         this.lastBookingId.set(res.data.bookingId)
         this.checkoutSuccess.set(true)
+        this.clearCart()
         return res.data.bookingReference
       }
       throw new Error(res.error)
@@ -230,5 +179,19 @@ export class UniversalCartFacade {
     this.lastBookingReference.set('')
     this.lastBookingId.set('')
   }
-}
 
+  private loadFromStorage(): CartItem[] {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      return raw ? JSON.parse(raw) : []
+    } catch {
+      return []
+    }
+  }
+
+  private persist(items: CartItem[]): void {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+    } catch {}
+  }
+}

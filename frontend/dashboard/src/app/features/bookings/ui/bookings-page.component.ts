@@ -262,8 +262,14 @@ export class BookingsPageComponent implements OnInit {
   }
 
   printVoucher(): void {
-    toast.info('Downloading Voucher PDF', {
-      description: `Generating voucher for ${this.facade.selected()?.bookingReference}...`,
+    const selected = this.facade.selected()
+    if (selected?.voucherUrl) {
+      window.open(selected.voucherUrl, '_blank')
+    } else {
+      window.print()
+    }
+    toast.success('Voucher Dossier Generated', {
+      description: `Dispatched voucher document for ${selected?.bookingReference || 'reservation'}.`,
     })
   }
 
@@ -280,14 +286,7 @@ export class BookingsPageComponent implements OnInit {
   }
 
   async onRequestRefund(id: string): Promise<void> {
-    const ok = await this.facade.update(id, {
-      bookingStatus: 'cancelled',
-    })
-    if (ok) {
-      toast.info('Cancellation Initiated', {
-        description: 'Booking cancelled and refund request sent to the finance ledger.',
-      })
-    }
+    this.facade.requestDeleteConfirm(id)
   }
 
   async confirmDelete(): Promise<void> {
