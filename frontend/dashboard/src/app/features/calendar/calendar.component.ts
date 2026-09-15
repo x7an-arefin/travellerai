@@ -1,4 +1,4 @@
-import { Component, signal, computed } from '@angular/core'
+import { Component, signal, computed, inject, OnInit } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -13,6 +13,8 @@ import {
   lucideCheck,
   lucideMoreVertical,
   lucideTrash2,
+  lucideRefreshCw,
+  lucideMapPin,
 } from '@ng-icons/lucide'
 import { HeaderComponent } from '../../layout/authenticated/header/header.component'
 import { MainComponent } from '../../layout/authenticated/main/main.component'
@@ -30,16 +32,7 @@ import { HlmSelectImports, SelectOption } from '../../ui/select/hlm-select.compo
 import { HlmAvatarImports } from '../../ui/avatar/hlm-avatar.components'
 import { getDisplayNameInitials } from '../../core/utils/initials'
 import { toast } from 'ngx-sonner'
-
-export interface CalendarEvent {
-  id: string
-  title: string
-  date: number // day of current month (1..31)
-  time: string
-  type: 'meeting' | 'launch' | 'demo' | 'review'
-  attendees: { name: string; avatar?: string }[]
-  location?: string
-}
+import { CalendarEvent, CalendarEventType, CalendarApiService } from './data-access'
 
 @Component({
   selector: 'app-calendar',
@@ -75,6 +68,8 @@ export interface CalendarEvent {
       lucideCheck,
       lucideMoreVertical,
       lucideTrash2,
+      lucideRefreshCw,
+      lucideMapPin,
     }),
   ],
   template: `
@@ -94,8 +89,8 @@ export interface CalendarEvent {
       <!-- Title & Calendar Header -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight">Calendar & Schedule</h1>
-          <p class="text-xs text-muted-foreground">Manage organization events, sprint meetings, and client demos.</p>
+          <h1 class="text-2xl font-bold tracking-tight">Departures & Operations Calendar</h1>
+          <p class="text-xs text-muted-foreground">Coordinate tour departures, guide briefings, fleet handovers, and guest arrivals.</p>
         </div>
 
         <div class="flex items-center gap-2">
@@ -111,7 +106,7 @@ export interface CalendarEvent {
             >
               <ng-icon name="lucideChevronLeft" class="size-4" />
             </button>
-            <span class="text-xs font-semibold px-2">August 2026</span>
+            <span class="text-xs font-semibold px-2">September 2026</span>
             <button
               hlmBtn
               variant="ghost"
@@ -124,9 +119,14 @@ export interface CalendarEvent {
             </button>
           </div>
 
+          <button hlmBtn variant="outline" size="sm" (click)="loadEvents()" [disabled]="isLoading()" class="gap-1.5 cursor-pointer h-9 shadow-xs">
+            <ng-icon name="lucideRefreshCw" class="size-3.5 text-muted-foreground" [class.animate-spin]="isLoading()" />
+            <span>Sync</span>
+          </button>
+
           <button hlmBtn size="sm" (click)="openAddEvent()" class="gap-1.5 cursor-pointer h-9 shadow-xs">
             <ng-icon name="lucidePlus" class="size-3.5" />
-            <span>Schedule Event</span>
+            <span>Schedule Departure</span>
           </button>
         </div>
       </div>
@@ -155,8 +155,8 @@ export interface CalendarEvent {
                   <span
                     class="font-semibold size-6 rounded-full flex items-center justify-center"
                     [class.text-muted-foreground]="!day.isCurrentMonth"
-                    [class.bg-primary]="day.day === 6 && day.isCurrentMonth"
-                    [class.text-primary-foreground]="day.day === 6 && day.isCurrentMonth"
+                    [class.bg-primary]="day.day === 15 && day.isCurrentMonth"
+                    [class.text-primary-foreground]="day.day === 15 && day.isCurrentMonth"
                   >
                     {{ day.day }}
                   </span>
@@ -183,7 +183,7 @@ export interface CalendarEvent {
         <div hlmCard class="p-4 space-y-4 shadow-sm justify-between">
           <div>
             <div class="flex items-center justify-between pb-3 border-b border-border">
-              <h3 class="text-sm font-bold text-foreground">Agenda for Day {{ selectedDay() }}</h3>
+              <h3 class="text-sm font-bold text-foreground">Schedule for Day {{ selectedDay() }}</h3>
               <span hlmBadge variant="secondary" class="text-[10px]">
                 {{ getEventsForDay(selectedDay(), true).length }} events
               </span>
@@ -192,7 +192,7 @@ export interface CalendarEvent {
             <div class="space-y-3 mt-3">
               @if (getEventsForDay(selectedDay(), true).length === 0) {
                 <div class="py-8 text-center text-xs text-muted-foreground">
-                  No scheduled events for this date.
+                  No scheduled departures or meetings for this date.
                 </div>
               }
 
@@ -212,8 +212,8 @@ export interface CalendarEvent {
 
                   @if (evt.location) {
                     <div class="flex items-center gap-1.5 text-xs text-primary font-medium">
-                      <ng-icon name="lucideVideo" class="size-3.5" />
-                      <span>{{ evt.location }}</span>
+                      <ng-icon name="lucideMapPin" class="size-3.5" />
+                      <span class="truncate">{{ evt.location }}</span>
                     </div>
                   }
 
@@ -245,27 +245,27 @@ export interface CalendarEvent {
 
           <button hlmBtn variant="outline" size="sm" (click)="openAddEvent()" class="w-full text-xs gap-1.5 cursor-pointer">
             <ng-icon name="lucidePlus" class="size-3.5" />
-            <span>Schedule on this day</span>
+            <span>Schedule on day {{ selectedDay() }}</span>
           </button>
         </div>
       </div>
     </app-main>
 
-    <!-- Schedule Event Side Sheet (size="sm") -->
+    <!-- Schedule Event Side Sheet -->
     <hlm-sheet [isOpen]="addSheetOpen()" position="right" [size]="'sm'" (closed)="addSheetOpen.set(false)">
       <div hlmSheetHeader>
-        <h3 hlmSheetTitle>Schedule Event</h3>
-        <p hlmSheetDescription>Book a meeting, client presentation, or team demo.</p>
+        <h3 hlmSheetTitle>Schedule Departure / Operation</h3>
+        <p hlmSheetDescription>Book a tour departure, guide briefing, or equipment transfer.</p>
       </div>
 
       <div class="space-y-4 py-4 flex-1 text-xs">
         <div class="space-y-1.5">
-          <label class="font-semibold text-foreground">Event Title</label>
-          <input hlmInput [(ngModel)]="newTitle" placeholder="e.g. Q3 Roadmap Review" />
+          <label class="font-semibold text-foreground">Event / Tour Title</label>
+          <input hlmInput [(ngModel)]="newTitle" placeholder="e.g. Swiss Alps Panoramic Rail Departure" />
         </div>
 
         <div class="space-y-1.5">
-          <label class="font-semibold text-foreground">Event Category</label>
+          <label class="font-semibold text-foreground">Operational Category</label>
           <hlm-custom-select
             [options]="typeOptions"
             [(ngModel)]="newType"
@@ -280,14 +280,14 @@ export interface CalendarEvent {
           </div>
 
           <div class="space-y-1.5">
-            <label class="font-semibold text-foreground">Time Slot</label>
-            <input hlmInput [(ngModel)]="newTime" placeholder="10:00 AM" />
+            <label class="font-semibold text-foreground">Departure / Meeting Time</label>
+            <input hlmInput [(ngModel)]="newTime" placeholder="09:00 AM" />
           </div>
         </div>
 
         <div class="space-y-1.5">
-          <label class="font-semibold text-foreground">Meeting Link / Location</label>
-          <input hlmInput [(ngModel)]="newLocation" placeholder="https://meet.google.com/xyz-abc" />
+          <label class="font-semibold text-foreground">Meeting Point / Station</label>
+          <input hlmInput [(ngModel)]="newLocation" placeholder="e.g. Zurich Airport Terminal 1, Gate B" />
         </div>
       </div>
 
@@ -298,75 +298,50 @@ export interface CalendarEvent {
     </hlm-sheet>
   `,
 })
-export class CalendarComponent {
-  readonly selectedDay = signal<number>(6)
+export class CalendarComponent implements OnInit {
+  private readonly calendarApi = inject(CalendarApiService)
+
+  readonly selectedDay = signal<number>(15)
   readonly addSheetOpen = signal<boolean>(false)
+  readonly isLoading = signal<boolean>(false)
 
   newTitle = ''
-  newType: any = 'meeting'
-  newDay = 6
-  newTime = '10:00 AM'
-  newLocation = 'Google Meet'
+  newType: CalendarEventType = 'departure'
+  newDay = 15
+  newTime = '09:00 AM'
+  newLocation = 'Main Terminal Desk'
 
   readonly typeOptions: SelectOption[] = [
-    { label: 'Team Meeting', value: 'meeting' },
-    { label: 'Product Launch', value: 'launch' },
-    { label: 'Client Demo', value: 'demo' },
-    { label: 'Sprint Review', value: 'review' },
+    { label: 'Tour Departure', value: 'departure' },
+    { label: 'Operational Review', value: 'review' },
+    { label: 'Experience Demo / Tasting', value: 'demo' },
+    { label: 'Guide & Crew Briefing', value: 'meeting' },
+    { label: 'Season / Route Launch', value: 'launch' },
   ]
 
-  readonly events = signal<CalendarEvent[]>([
-    {
-      id: 'e1',
-      title: 'Daily Standup & Sprint Sync',
-      date: 6,
-      time: '09:30 AM',
-      type: 'meeting',
-      attendees: [
-        { name: 'Sat Naing', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80' },
-        { name: 'Sarah Miller', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80' },
-      ],
-      location: 'meet.google.com/sync-team',
-    },
-    {
-      id: 'e2',
-      title: 'Spartan UI v2 Design Review',
-      date: 6,
-      time: '02:00 PM',
-      type: 'review',
-      attendees: [
-        { name: 'Alex John', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80' },
-      ],
-      location: 'zoom.us/j/889214',
-    },
-    {
-      id: 'e3',
-      title: 'Enterprise Client Architecture Demo',
-      date: 12,
-      time: '11:00 AM',
-      type: 'demo',
-      attendees: [
-        { name: 'Olivia Martin', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&auto=format&fit=crop&q=80' },
-      ],
-      location: 'meet.google.com/demo-enterprise',
-    },
-    {
-      id: 'e4',
-      title: 'Production v2.4 Release Deployment',
-      date: 20,
-      time: '04:30 PM',
-      type: 'launch',
-      attendees: [
-        { name: 'David Kim', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80' },
-      ],
-    },
-  ])
+  readonly events = signal<CalendarEvent[]>([])
+
+  ngOnInit(): void {
+    this.loadEvents()
+  }
+
+  async loadEvents(): Promise<void> {
+    this.isLoading.set(true)
+    try {
+      const data = await this.calendarApi.loadEvents()
+      this.events.set(data)
+    } catch {
+      toast.error('Could not sync departures; loaded cached events.')
+    } finally {
+      this.isLoading.set(false)
+    }
+  }
 
   calendarDays(): { day: number; isCurrentMonth: boolean }[] {
     const days = []
-    for (let i = 27; i <= 31; i++) days.push({ day: i, isCurrentMonth: false })
-    for (let i = 1; i <= 31; i++) days.push({ day: i, isCurrentMonth: true })
-    for (let i = 1; i <= 6; i++) days.push({ day: i, isCurrentMonth: false })
+    for (let i = 30; i <= 31; i++) days.push({ day: i, isCurrentMonth: false })
+    for (let i = 1; i <= 30; i++) days.push({ day: i, isCurrentMonth: true })
+    for (let i = 1; i <= 10; i++) days.push({ day: i, isCurrentMonth: false })
     return days
   }
 
@@ -377,8 +352,9 @@ export class CalendarComponent {
 
   getEventChipStyle(type: string): string {
     switch (type) {
+      case 'departure': return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900'
       case 'launch': return 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900'
-      case 'demo': return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900'
+      case 'demo': return 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900'
       case 'review': return 'bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-900'
       default: return 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-900'
     }
@@ -391,37 +367,42 @@ export class CalendarComponent {
 
   openAddEvent(): void {
     this.newTitle = ''
+    this.newDay = this.selectedDay()
     this.addSheetOpen.set(true)
   }
 
-  saveEvent(): void {
+  async saveEvent(): Promise<void> {
     if (!this.newTitle.trim()) return
-    const newEvt: CalendarEvent = {
-      id: 'evt-' + Date.now(),
-      title: this.newTitle,
-      date: Number(this.newDay),
-      time: this.newTime,
-      type: this.newType,
-      attendees: [{ name: 'Sat Naing' }],
-      location: this.newLocation,
-    }
 
-    this.events.update((list) => [...list, newEvt])
-    this.addSheetOpen.set(false)
-    toast.success(`Event "${newEvt.title}" scheduled!`)
+    try {
+      const created = await this.calendarApi.createEvent({
+        title: this.newTitle,
+        date: Number(this.newDay),
+        time: this.newTime,
+        type: this.newType,
+        location: this.newLocation,
+      })
+
+      this.events.update((list) => [...list, created])
+      this.addSheetOpen.set(false)
+      toast.success(`Scheduled departure "${created.title}"!`)
+    } catch {
+      toast.error('Failed to schedule event.')
+    }
   }
 
-  deleteEvent(id: string): void {
+  async deleteEvent(id: string): Promise<void> {
+    await this.calendarApi.deleteEvent(id)
     this.events.update((list) => list.filter((e) => e.id !== id))
-    toast.success('Event deleted from schedule.')
+    toast.success('Event removed from schedule.')
   }
 
   prevMonth(): void {
-    toast.info('Viewing July 2026')
+    toast.info('Viewing August 2026')
   }
 
   nextMonth(): void {
-    toast.info('Viewing September 2026')
+    toast.info('Viewing October 2026')
   }
 
   initials(name: string): string {

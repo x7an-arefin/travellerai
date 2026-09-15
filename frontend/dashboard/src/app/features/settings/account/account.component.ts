@@ -1,10 +1,11 @@
-import { Component, inject } from '@angular/core'
+import { Component, OnInit, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms'
 import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
 import { HlmInputImports } from '../../../ui/input/hlm-input.directive'
 import { HlmSelectImports, SelectOption } from '../../../ui/select/hlm-select.components'
 import { HlmSeparatorImports } from '../../../ui/separator/hlm-separator.directive'
+import { SettingsApiService } from '../data-access/services/settings-api.service'
 import { toast } from 'ngx-sonner'
 
 @Component({
@@ -59,8 +60,9 @@ import { toast } from 'ngx-sonner'
     </div>
   `,
 })
-export class AccountComponent {
+export class AccountComponent implements OnInit {
   private readonly fb = inject(FormBuilder)
+  private readonly settingsApi = inject(SettingsApiService)
 
   readonly languageOptions: SelectOption[] = [
     { label: 'English', value: 'en' },
@@ -71,13 +73,24 @@ export class AccountComponent {
   ]
 
   readonly accountForm: FormGroup = this.fb.group({
-    name: ['Sat Naing', [Validators.required]],
+    name: ['', [Validators.required]],
     language: ['en', [Validators.required]],
     dob: ['1996-05-18'],
   })
 
-  onSubmit(): void {
+  ngOnInit(): void {
+    const account = this.settingsApi.getAccount()
+    this.accountForm.patchValue({
+      name: account.name,
+      language: account.language,
+      dob: account.dob,
+    })
+  }
+
+  async onSubmit(): Promise<void> {
     if (this.accountForm.invalid) return
+    await this.settingsApi.updateAccount(this.accountForm.value)
     toast.success('Account settings updated!')
   }
 }
+

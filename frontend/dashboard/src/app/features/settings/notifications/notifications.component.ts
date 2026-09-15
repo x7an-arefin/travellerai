@@ -1,9 +1,10 @@
-import { Component, inject } from '@angular/core'
+import { Component, OnInit, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms'
 import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
 import { HlmSwitchImports } from '../../../ui/switch/hlm-switch.component'
 import { HlmSeparatorImports } from '../../../ui/separator/hlm-separator.directive'
+import { SettingsApiService } from '../data-access/services/settings-api.service'
 import { toast } from 'ngx-sonner'
 
 @Component({
@@ -70,13 +71,30 @@ import { toast } from 'ngx-sonner'
     </div>
   `,
 })
-export class NotificationsComponent {
+export class NotificationsComponent implements OnInit {
+  private readonly settingsApi = inject(SettingsApiService)
+
   commEmails = true
   marketingEmails = false
   socialEmails = true
   securityEmails = true
 
-  saveNotifications(): void {
+  ngOnInit(): void {
+    const notifs = this.settingsApi.getNotifications()
+    this.commEmails = notifs.commEmails
+    this.marketingEmails = notifs.marketingEmails
+    this.socialEmails = notifs.socialEmails
+    this.securityEmails = notifs.securityEmails
+  }
+
+  async saveNotifications(): Promise<void> {
+    await this.settingsApi.updateNotifications({
+      commEmails: this.commEmails,
+      marketingEmails: this.marketingEmails,
+      socialEmails: this.socialEmails,
+      securityEmails: this.securityEmails,
+    })
     toast.success('Notification preferences updated!')
   }
 }
+

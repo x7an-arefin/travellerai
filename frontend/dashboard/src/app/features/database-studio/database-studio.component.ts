@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core'
+import { Component, signal, inject, OnInit } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -27,12 +27,7 @@ import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
 import { HlmSheetImports } from '../../ui/sheet/hlm-sheet.components'
 import { HlmTableImports } from '../../ui/table/hlm-table.components'
 import { toast } from 'ngx-sonner'
-
-export interface DbTableSchema {
-  name: string
-  rowCount: number
-  sizeMb: number
-}
+import { DatabaseStudioApiService, DbTableSchema, ExecutionPlan } from './data-access'
 
 @Component({
   selector: 'app-database-studio',
@@ -92,10 +87,14 @@ export interface DbTableSchema {
               POSTGRES 16 PROD
             </span>
           </div>
-          <p class="text-xs text-muted-foreground">Run SQL queries, inspect table relations, and analyze execution plans.</p>
+          <p class="text-xs text-muted-foreground">Run live SQL queries, inspect table relations, and analyze execution plans across marketplace schemas.</p>
         </div>
 
         <div class="flex items-center gap-2">
+          <button hlmBtn variant="outline" size="sm" (click)="exportCsv()" class="gap-1.5 cursor-pointer h-9 shadow-xs">
+            <ng-icon name="lucideDownload" class="size-3.5 text-muted-foreground" />
+            <span>Export CSV</span>
+          </button>
           <button hlmBtn variant="outline" size="sm" (click)="openPlanDrawer()" class="gap-1.5 cursor-pointer h-9 shadow-xs">
             <ng-icon name="lucideLayers" class="size-3.5 text-muted-foreground" />
             <span>Execution Plan (XL View)</span>
@@ -109,7 +108,7 @@ export interface DbTableSchema {
         <div hlmCard class="lg:col-span-3 p-4 space-y-3 shadow-2xs">
           <div class="flex items-center justify-between">
             <h3 class="font-bold text-xs uppercase tracking-wider text-foreground">Tables & Views</h3>
-            <span class="text-[10px] text-muted-foreground">{{ tables.length }} schemas</span>
+            <span class="text-[10px] text-muted-foreground font-mono">{{ tables.length }} schemas</span>
           </div>
 
           <div class="space-y-1">
@@ -122,11 +121,11 @@ export interface DbTableSchema {
                 [class.text-primary]="selectedTable() === tbl.name"
                 [class.hover:bg-muted]="selectedTable() !== tbl.name"
               >
-                <div class="flex items-center gap-2">
-                  <ng-icon name="lucideTable" class="size-3.5" />
-                  <span class="font-mono">{{ tbl.name }}</span>
+                <div class="flex items-center gap-2 truncate">
+                  <ng-icon name="lucideTable" class="size-3.5 shrink-0" />
+                  <span class="font-mono truncate">{{ tbl.name }}</span>
                 </div>
-                <span class="text-[10px] text-muted-foreground font-mono">{{ tbl.rowCount }}</span>
+                <span class="text-[10px] text-muted-foreground font-mono shrink-0">{{ tbl.rowCount | number }}</span>
               </button>
             }
           </div>
@@ -156,37 +155,42 @@ export interface DbTableSchema {
             ></textarea>
 
             <div class="flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>Executed in <span class="font-bold text-emerald-600">{{ executionTimeMs }}ms</span></span>
-              <span>{{ queryResults.length }} rows returned</span>
+              <span>Executed in <span class="font-bold text-emerald-600">{{ executionTimeMs() }}ms</span></span>
+              <span>{{ queryResults().length }} rows returned</span>
             </div>
           </div>
 
           <!-- Dynamic Results Table -->
           <div hlmCard class="p-0 overflow-hidden shadow-2xs">
-            <table hlmTable class="w-full text-xs font-mono">
-              <thead hlmTableHeader>
-                <tr hlmTableRow>
-                  <th hlmTableHead class="ps-4">ID</th>
-                  <th hlmTableHead>User Email</th>
-                  <th hlmTableHead>Plan</th>
-                  <th hlmTableHead>Status</th>
-                  <th hlmTableHead class="text-right pe-4">Spend</th>
-                </tr>
-              </thead>
-              <tbody hlmTableBody>
-                @for (row of queryResults; track row.id) {
-                  <tr hlmTableRow class="hover:bg-muted/40 transition-colors">
-                    <td hlmTableCell class="ps-4 font-bold text-foreground">{{ row.id }}</td>
-                    <td hlmTableCell class="text-muted-foreground">{{ row.email }}</td>
-                    <td hlmTableCell>
-                      <span hlmBadge variant="outline" class="text-[10px]">{{ row.plan }}</span>
-                    </td>
-                    <td hlmTableCell class="text-emerald-600 font-semibold">{{ row.status }}</td>
-                    <td hlmTableCell class="text-right pe-4 font-bold text-foreground">{{ row.spend }}</td>
+            <div class="overflow-x-auto">
+              <table hlmTable class="w-full text-xs font-mono">
+                <thead hlmTableHeader>
+                  <tr hlmTableRow>
+                    @for (col of queryColumns(); track col) {
+                      <th hlmTableHead class="first:ps-4 uppercase tracking-wider text-[11px]">{{ col }}</th>
+                    }
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody hlmTableBody>
+                  @for (row of queryResults(); track $index) {
+                    <tr hlmTableRow class="hover:bg-muted/40 transition-colors">
+                      @for (col of queryColumns(); track col) {
+                        <td hlmTableCell class="first:ps-4 font-medium text-foreground max-w-[200px] truncate">
+                          {{ formatCellValue(row[col]) }}
+                        </td>
+                      }
+                    </tr>
+                  }
+                  @if (queryResults().length === 0) {
+                    <tr hlmTableRow>
+                      <td [attr.colspan]="queryColumns().length || 1" class="text-center py-6 text-muted-foreground">
+                        No rows returned for this query.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -199,16 +203,14 @@ export interface DbTableSchema {
           <h3 hlmSheetTitle>Query Execution Optimizer Plan</h3>
           <span hlmBadge variant="outline" class="font-mono text-[10px]">EXPLAIN ANALYZE</span>
         </div>
-        <p hlmSheetDescription class="text-xs">PostgreSQL Cost Analysis: Total Cost = 14.82 units, Index Scan hit 100%.</p>
+        <p hlmSheetDescription class="text-xs">
+          PostgreSQL Cost Analysis: Index {{ currentPlan()?.indexName }} hit {{ currentPlan()?.cacheHitRatio }}.
+        </p>
       </div>
 
       <div class="space-y-4 py-4 flex-1 overflow-y-auto text-xs">
-        <div class="rounded-xl border border-border bg-zinc-950 text-zinc-100 p-4 font-mono text-xs space-y-2 shadow-inner">
-          <div class="text-sky-400 font-bold">Index Scan using idx_users_email on public.users (cost=0.28..8.30 rows=1 width=128)</div>
-          <div class="text-zinc-400 pl-4">Filter: (status = 'active'::text)</div>
-          <div class="text-zinc-400 pl-4">Rows Removed by Filter: 0</div>
-          <div class="text-emerald-400 font-bold pt-2">Planning Time: 0.114 ms</div>
-          <div class="text-emerald-400 font-bold">Execution Time: 0.082 ms</div>
+        <div class="rounded-xl border border-border bg-zinc-950 text-zinc-100 p-4 font-mono text-xs space-y-2 shadow-inner whitespace-pre-wrap">
+          <div class="text-sky-400 font-bold">{{ currentPlan()?.planText }}</div>
         </div>
       </div>
 
@@ -220,32 +222,23 @@ export interface DbTableSchema {
     </hlm-sheet>
   `,
 })
-export class DatabaseStudioComponent {
+export class DatabaseStudioComponent implements OnInit {
+  private readonly dbService = inject(DatabaseStudioApiService)
+
   readonly planSheetOpen = signal<boolean>(false)
   readonly selectedTable = signal<string>('users')
   readonly running = signal<boolean>(false)
-  executionTimeMs = 12
+  readonly executionTimeMs = signal<number>(14)
+  readonly queryColumns = signal<string[]>(['id', 'email', 'name', 'role', 'status'])
+  readonly queryResults = signal<Record<string, any>[]>([])
+  readonly currentPlan = signal<ExecutionPlan | null>(null)
 
-  querySql = `SELECT id, email, plan, status, spend 
-FROM public.users 
-WHERE status = 'active' 
-ORDER BY spend DESC 
-LIMIT 5;`
+  querySql = `SELECT id, email, name, role, status FROM public.users LIMIT 10;`
+  readonly tables: DbTableSchema[] = this.dbService.tables
 
-  readonly tables: DbTableSchema[] = [
-    { name: 'users', rowCount: 14200, sizeMb: 24.5 },
-    { name: 'organizations', rowCount: 412, sizeMb: 3.2 },
-    { name: 'subscriptions', rowCount: 3890, sizeMb: 8.4 },
-    { name: 'audit_events', rowCount: 94000, sizeMb: 112.0 },
-    { name: 'api_tokens', rowCount: 1200, sizeMb: 1.8 },
-  ]
-
-  queryResults = [
-    { id: 'usr_981', email: 'alex.rivera@enterprise.io', plan: 'Enterprise', status: 'active', spend: '$2,400.00' },
-    { id: 'usr_980', email: 'sarah.jenkins@biotech.co', plan: 'Enterprise', status: 'active', spend: '$1,800.00' },
-    { id: 'usr_979', email: 'marcus.brody@fintech.com', plan: 'Pro Team', status: 'active', spend: '$588.00' },
-    { id: 'usr_978', email: 'elena.rostova@designhub.ch', plan: 'Pro Team', status: 'active', spend: '$588.00' },
-  ]
+  ngOnInit(): void {
+    this.executeQuery()
+  }
 
   selectTable(name: string): void {
     this.selectedTable.set(name)
@@ -254,19 +247,66 @@ LIMIT 5;`
   }
 
   formatSql(): void {
+    this.querySql = this.querySql.replace(/\s+/g, ' ').trim()
+    this.querySql = this.querySql
+      .replace(/SELECT /i, 'SELECT\n  ')
+      .replace(/ FROM /i, '\nFROM ')
+      .replace(/ WHERE /i, '\nWHERE ')
+      .replace(/ ORDER BY /i, '\nORDER BY ')
+      .replace(/ LIMIT /i, '\nLIMIT ')
     toast.success('SQL query formatted.')
   }
 
   executeQuery(): void {
     this.running.set(true)
-    setTimeout(() => {
-      this.running.set(false)
-      this.executionTimeMs = Math.floor(8 + Math.random() * 12)
-      toast.success('Query executed successfully.')
-    }, 300)
+    this.dbService.executeQuery(this.selectedTable(), this.querySql).subscribe({
+      next: (res) => {
+        this.queryColumns.set(res.columns)
+        this.queryResults.set(res.rows)
+        this.executionTimeMs.set(res.executionTimeMs)
+        this.running.set(false)
+        toast.success(`Query returned ${res.rowCount} rows from public.${this.selectedTable()}`)
+      },
+      error: () => {
+        this.running.set(false)
+      },
+    })
   }
 
   openPlanDrawer(): void {
-    this.planSheetOpen.set(true)
+    this.dbService.explainQuery(this.selectedTable(), this.querySql).subscribe((plan) => {
+      this.currentPlan.set(plan)
+      this.planSheetOpen.set(true)
+    })
+  }
+
+  formatCellValue(value: any): string {
+    if (value === null || value === undefined) return 'null'
+    if (typeof value === 'object') return JSON.stringify(value)
+    return String(value)
+  }
+
+  exportCsv(): void {
+    const cols = this.queryColumns()
+    const rows = this.queryResults()
+    if (rows.length === 0) {
+      toast.error('No data available to export.')
+      return
+    }
+    const csvContent = [
+      cols.join(','),
+      ...rows.map((row) =>
+        cols.map((col) => `"${String(row[col] ?? '').replace(/"/g, '""')}"`).join(',')
+      ),
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${this.selectedTable()}_export.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+    toast.success(`Exported ${rows.length} rows to ${this.selectedTable()}_export.csv`)
   }
 }

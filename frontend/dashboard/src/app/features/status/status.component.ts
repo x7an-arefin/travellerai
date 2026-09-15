@@ -1,4 +1,4 @@
-import { Component } from '@angular/core'
+import { Component, OnInit, signal, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { NgIcon, provideIcons } from '@ng-icons/core'
 import {
@@ -9,6 +9,7 @@ import {
   lucideGlobe,
   lucideShieldCheck,
   lucideAlertTriangle,
+  lucideRefreshCw,
 } from '@ng-icons/lucide'
 import { HeaderComponent } from '../../layout/authenticated/header/header.component'
 import { MainComponent } from '../../layout/authenticated/main/main.component'
@@ -20,6 +21,8 @@ import { ProfileDropdownComponent } from '../../shared/components/profile-dropdo
 import { HlmCardImports } from '../../ui/card/hlm-card.directives'
 import { HlmButtonImports } from '../../ui/button/hlm-button.directive'
 import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
+import { StatusApiService, ServiceHealth } from './data-access'
+import { toast } from 'ngx-sonner'
 
 @Component({
   selector: 'app-status',
@@ -47,6 +50,7 @@ import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
       lucideGlobe,
       lucideShieldCheck,
       lucideAlertTriangle,
+      lucideRefreshCw,
     }),
   ],
   template: `
@@ -64,21 +68,42 @@ import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
     <!-- Main Content -->
     <app-main [fixed]="true" class="space-y-8 max-w-4xl mx-auto py-6">
       <!-- Operational Hero Banner -->
-      <div class="p-6 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-between shadow-xs">
+      <div
+        class="p-6 rounded-2xl border-2 flex items-center justify-between shadow-xs transition-colors"
+        [ngClass]="overallStatus() === 'healthy' ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-amber-500/10 border-amber-500/30'"
+      >
         <div class="flex items-center gap-3.5">
           <div class="relative flex size-4">
-            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-            <span class="relative inline-flex size-4 rounded-full bg-emerald-500"></span>
+            <span
+              class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+              [ngClass]="overallStatus() === 'healthy' ? 'bg-emerald-400' : 'bg-amber-400'"
+            ></span>
+            <span
+              class="relative inline-flex size-4 rounded-full"
+              [ngClass]="overallStatus() === 'healthy' ? 'bg-emerald-500' : 'bg-amber-500'"
+            ></span>
           </div>
           <div>
-            <h1 class="text-xl font-bold text-emerald-800 dark:text-emerald-300">All Systems Operational</h1>
-            <p class="text-xs text-muted-foreground mt-0.5">Updated 1 minute ago • 99.98% uptime in the last 90 days</p>
+            <h1
+              class="text-xl font-bold"
+              [ngClass]="overallStatus() === 'healthy' ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'"
+            >
+              {{ overallStatus() === 'healthy' ? 'All Systems Operational' : 'Degraded System Performance' }}
+            </h1>
+            <p class="text-xs text-muted-foreground mt-0.5">
+              Live Cloudflare Worker & Hyperdrive database health • 99.98% uptime in the last 90 days
+            </p>
           </div>
         </div>
 
-        <span hlmBadge variant="outline" class="hidden sm:inline-flex bg-background text-xs font-mono font-bold">
-          99.98%
-        </span>
+        <div class="flex items-center gap-3">
+          <button hlmBtn variant="ghost" size="icon" (click)="checkHealth()" [disabled]="isLoading()" class="size-8 cursor-pointer">
+            <ng-icon name="lucideRefreshCw" class="size-4 text-muted-foreground" [class.animate-spin]="isLoading()" />
+          </button>
+          <span hlmBadge variant="outline" class="hidden sm:inline-flex bg-background text-xs font-mono font-bold">
+            99.98%
+          </span>
+        </div>
       </div>
 
       <!-- 90-Day Uptime Micro-Bar Matrix -->
@@ -86,12 +111,15 @@ import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
         <h3 class="text-sm font-bold uppercase tracking-wider text-muted-foreground">Service Health Matrix</h3>
 
         <div class="space-y-6">
-          @for (service of services; track service.name) {
+          @for (service of services(); track service.name) {
             <div class="space-y-2">
               <div class="flex items-center justify-between text-xs">
                 <div class="flex items-center gap-2 font-semibold text-foreground">
                   <ng-icon [name]="service.icon" class="size-4 text-muted-foreground" />
                   <span>{{ service.name }}</span>
+                  @if (service.latencyMs) {
+                    <span class="text-[10px] text-muted-foreground font-mono">({{ service.latencyMs }}ms)</span>
+                  }
                 </div>
                 <span class="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{{ service.uptime }}</span>
               </div>
@@ -149,11 +177,27 @@ import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
     </app-main>
   `,
 })
-export class StatusComponent {
-  readonly services = [
-    { name: 'API Gateway & GraphQL Endpoints', icon: 'lucideServer', uptime: '99.99%', bars: Array(45).fill(1) },
-    { name: 'Authentication & Session Cluster', icon: 'lucideShieldCheck', uptime: '100.0%', bars: Array(45).fill(1) },
-    { name: 'Primary Database & Read Replicas', icon: 'lucideDatabase', uptime: '99.95%', bars: [...Array(38).fill(1), 2, ...Array(6).fill(1)] },
-    { name: 'Global CDN & Edge Assets Network', icon: 'lucideGlobe', uptime: '100.0%', bars: Array(45).fill(1) },
-  ]
+export class StatusComponent implements OnInit {
+  private readonly statusApi = inject(StatusApiService)
+
+  readonly overallStatus = signal<string>('healthy')
+  readonly services = signal<ServiceHealth[]>([])
+  readonly isLoading = signal<boolean>(false)
+
+  ngOnInit(): void {
+    this.checkHealth()
+  }
+
+  async checkHealth(): Promise<void> {
+    this.isLoading.set(true)
+    try {
+      const data = await this.statusApi.getHealth()
+      this.overallStatus.set(data.overallStatus)
+      this.services.set(data.services)
+    } catch {
+      toast.error('Could not fetch live telemetry; displayed cached health.')
+    } finally {
+      this.isLoading.set(false)
+    }
+  }
 }

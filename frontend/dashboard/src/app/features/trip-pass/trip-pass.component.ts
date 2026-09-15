@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core'
+import { Component, OnInit, inject, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -31,14 +31,13 @@ import { ProfileDropdownComponent } from '../../shared/components/profile-dropdo
 import { HlmCardImports } from '../../ui/card/hlm-card.directives'
 import { HlmButtonImports } from '../../ui/button/hlm-button.directive'
 import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
+import { TripPassApiService } from './data-access/services/trip-pass-api.service'
+import { TripPassInfo, ConciergeMessage } from './data-access/models/trip-pass.model'
+import { UniversalCartFacade } from '../checkout/data-access/universal-cart.facade'
 import { toast } from 'ngx-sonner'
 
-export interface ChatMessage {
-  sender: 'ai' | 'user'
-  text: string
-  timestamp: string
-  actionPill?: string
-}
+export type ChatMessage = ConciergeMessage
+
 
 @Component({
   selector: 'app-trip-pass',
@@ -101,20 +100,20 @@ export interface ChatMessage {
               <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500 text-white uppercase tracking-wider">
                 Active Master Trip Pass
               </span>
-              <span class="text-xs text-muted-foreground font-mono">Ref: TRV-SYL-9082X</span>
+              <span class="text-xs text-muted-foreground font-mono">Ref: {{ passInfo().reference }}</span>
             </div>
             <h1 class="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
-              Sylhet Rain Forest & Luxury Highlands Expedition
+              {{ passInfo().title }}
             </h1>
             <p class="text-xs text-muted-foreground flex items-center gap-2">
               <span class="flex items-center gap-1">
                 <ng-icon name="lucideCalendar" class="size-3.5 text-primary" />
-                Sep 18 - Sep 22, 2026 (5 Days / 4 Nights)
+                {{ passInfo().dates }}
               </span>
               <span>•</span>
               <span class="flex items-center gap-1">
                 <ng-icon name="lucideMapPin" class="size-3.5 text-primary" />
-                Sylhet, Bangladesh
+                {{ passInfo().destination }}
               </span>
             </p>
           </div>
@@ -133,7 +132,7 @@ export interface ChatMessage {
 
         <!-- Day Tabs Selector -->
         <div class="flex overflow-x-auto gap-2 border-t border-border/50 pt-4 no-scrollbar">
-          @for (d of tripDays; track d.day) {
+          @for (d of passInfo().days; track d.day) {
             <button
               type="button"
               (click)="selectedDay.set(d.day)"
@@ -146,6 +145,7 @@ export interface ChatMessage {
             </button>
           }
         </div>
+
       </div>
 
       <!-- Split Layout: Day Pass Details & 24/7 AI Concierge -->
@@ -385,57 +385,79 @@ export interface ChatMessage {
     </app-main>
   `,
 })
-export class TripPassComponent {
+export class TripPassComponent implements OnInit {
+  private readonly tripPassApi = inject(TripPassApiService)
+  private readonly cartFacade = inject(UniversalCartFacade)
+
   readonly selectedDay = signal<number>(1)
   userMessageInput = ''
 
-  readonly tripDays = [
-    { day: 1, date: 'Sep 18', theme: 'Arrival & Chauffeur' },
-    { day: 2, date: 'Sep 19', theme: 'Swamp & Tea Trek' },
-    { day: 3, date: 'Sep 20', theme: 'Self-Drive 4x4' },
-    { day: 4, date: 'Sep 21', theme: 'Resort Wellness' },
-    { day: 5, date: 'Sep 22', theme: 'Airport Departure' },
-  ]
+  readonly passInfo = signal<TripPassInfo>({
+    bookingId: 'bk-sylhet-101',
+    reference: 'TRV-SYL-9082X',
+    title: 'Sylhet Rain Forest & Luxury Highlands Expedition',
+    destination: 'Sylhet, Bangladesh',
+    dates: 'Sep 18 - Sep 22, 2026 (5 Days / 4 Nights)',
+    status: 'active',
+    guestName: 'Sultanul Arefin',
+    guestEmail: 'arefin@traveller.ai',
+    totalAmount: 955,
+    currency: 'USD',
+    qrCodeData: 'TRV-SYL-9082X-VERIFIED-OPERATOR',
+    days: [
+      { day: 1, date: 'Sep 18', theme: 'Arrival & Chauffeur' },
+      { day: 2, date: 'Sep 19', theme: 'Swamp & Tea Trek' },
+      { day: 3, date: 'Sep 20', theme: 'Self-Drive 4x4' },
+      { day: 4, date: 'Sep 21', theme: 'Resort Wellness' },
+      { day: 5, date: 'Sep 22', theme: 'Airport Departure' },
+    ],
+  })
 
   readonly chatMessages = signal<ChatMessage[]>([
     {
       sender: 'ai',
-      text: 'Hello Sultanul! Welcome to your digital Trip Pass. I am monitoring your flight BG-601 and have dispatched chauffeur Rafiqul. How can I assist you today?',
+      text: 'Hello! Welcome to your digital Trip Pass. I am monitoring your travel itinerary and have dispatched your concierge services. How can I assist you today?',
       timestamp: '14:00',
     },
   ])
 
-  sendMessage(): void {
+  async ngOnInit(): Promise<void> {
+    const bookingRef = this.cartFacade.lastBookingReference() || undefined
+    const res = await this.tripPassApi.getTripPass(bookingRef)
+    if (res.ok && res.data) {
+      this.passInfo.set(res.data)
+    }
+  }
+
+  async sendMessage(): Promise<void> {
     if (!this.userMessageInput.trim()) return
     const userText = this.userMessageInput.trim()
     this.userMessageInput = ''
 
+    const now = new Date()
+    const timestamp = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+
     this.chatMessages.update((msgs) => [
       ...msgs,
-      { sender: 'user', text: userText, timestamp: 'Now' },
+      { sender: 'user', text: userText, timestamp },
     ])
 
-    // AI Concierge response simulation
-    setTimeout(() => {
-      let reply = 'I have received your request and logged it into the hotel PMS / fleet FMS console.'
-      let pill = 'Request Logged'
-
-      if (userText.toLowerCase().includes('late checkout')) {
-        reply = 'I have notified the Front Desk at Grand Sylhet. Your checkout has been extended to 2:00 PM without additional charge.'
-        pill = 'Late Checkout Approved (2:00 PM)'
-      } else if (userText.toLowerCase().includes('driver') || userText.toLowerCase().includes('chauffeur')) {
-        reply = 'Chauffeur Rafiqul is currently 4.2 km away from Osmani Airport terminal in a Toyota HiAce (Plate: DHK-11-4092). Boarding PIN is 8419.'
-        pill = 'Driver En Route • ETA 6 mins'
-      } else if (userText.toLowerCase().includes('room service') || userText.toLowerCase().includes('towels')) {
-        reply = 'Housekeeping ticket #HK-109 has been issued for Room 408. Attendant will deliver amenities within 15 minutes.'
-        pill = 'Housekeeping Dispatched'
+    try {
+      const res = await this.tripPassApi.sendConciergeMessage(this.passInfo().reference, userText)
+      if (res.ok && res.reply) {
+        this.chatMessages.update((msgs) => [...msgs, res.reply])
       }
-
+    } catch {
       this.chatMessages.update((msgs) => [
         ...msgs,
-        { sender: 'ai', text: reply, timestamp: 'Now', actionPill: pill },
+        {
+          sender: 'ai',
+          text: 'I have logged your request into the operational console. Our support desk has been notified.',
+          timestamp: 'Now',
+          actionPill: 'Request Logged',
+        },
       ])
-    }, 600)
+    }
   }
 
   sendQuickRequest(text: string): void {
@@ -447,3 +469,4 @@ export class TripPassComponent {
     window.print()
   }
 }
+

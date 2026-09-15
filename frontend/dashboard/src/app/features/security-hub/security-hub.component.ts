@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core'
+import { Component, signal, inject, OnInit } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -12,6 +12,7 @@ import {
   lucideDownload,
   lucideSearch,
   lucideLayers,
+  lucideActivity,
 } from '@ng-icons/lucide'
 import { HeaderComponent } from '../../layout/authenticated/header/header.component'
 import { MainComponent } from '../../layout/authenticated/main/main.component'
@@ -26,16 +27,7 @@ import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
 import { HlmSheetImports } from '../../ui/sheet/hlm-sheet.components'
 import { HlmTableImports } from '../../ui/table/hlm-table.components'
 import { toast } from 'ngx-sonner'
-
-export interface CveItem {
-  id: string
-  cveCode: string
-  packageName: string
-  severity: 'Critical' | 'High' | 'Medium' | 'Low'
-  cvssScore: number
-  remediation: string
-  status: 'open' | 'patched'
-}
+import { SecurityHubApiService, CveItem, SecurityAuditLog } from './data-access'
 
 @Component({
   selector: 'app-security-hub',
@@ -68,6 +60,7 @@ export interface CveItem {
       lucideDownload,
       lucideSearch,
       lucideLayers,
+      lucideActivity,
     }),
   ],
   template: `
@@ -94,7 +87,7 @@ export interface CveItem {
               SOC2 COMPLIANT
             </span>
           </div>
-          <p class="text-xs text-muted-foreground">Monitor automated dependency scans, inspect CVE alerts, and patch security advisories.</p>
+          <p class="text-xs text-muted-foreground">Monitor automated dependency scans, inspect CVE alerts, and review immutable audit logs.</p>
         </div>
 
         <div class="flex items-center gap-2">
@@ -179,17 +172,73 @@ export interface CveItem {
           </tbody>
         </table>
       </div>
+
+      <!-- Real-time Audit Log Activity Deck -->
+      <div hlmCard class="p-0 overflow-hidden shadow-2xs">
+        <div class="p-4 border-b border-border flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-sm text-foreground">SOC2 Immutable Audit Trail</h3>
+            <p class="text-xs text-muted-foreground">Recent cryptographic event logs from /api/v1/audit-logs.</p>
+          </div>
+          <button hlmBtn variant="outline" size="sm" (click)="refreshAuditLogs()" class="h-7 text-xs cursor-pointer gap-1.5">
+            <ng-icon name="lucideRefreshCw" class="size-3" />
+            <span>Sync Trail</span>
+          </button>
+        </div>
+
+        <table hlmTable class="w-full text-xs font-mono">
+          <thead hlmTableHeader>
+            <tr hlmTableRow>
+              <th hlmTableHead class="ps-4">Timestamp</th>
+              <th hlmTableHead>Action</th>
+              <th hlmTableHead>Actor Role</th>
+              <th hlmTableHead>Entity Scope</th>
+              <th hlmTableHead>Origin IP</th>
+              <th hlmTableHead class="text-right pe-4">Severity</th>
+            </tr>
+          </thead>
+          <tbody hlmTableBody>
+            @for (log of auditLogs(); track log.id) {
+              <tr hlmTableRow class="hover:bg-muted/40 transition-colors">
+                <td hlmTableCell class="ps-4 text-muted-foreground">{{ log.timestamp }}</td>
+                <td hlmTableCell class="font-bold text-foreground">{{ log.action }}</td>
+                <td hlmTableCell>
+                  <span hlmBadge variant="outline" class="text-[10px] uppercase">{{ log.actorRole }}</span>
+                </td>
+                <td hlmTableCell class="text-muted-foreground">{{ log.entityType }}</td>
+                <td hlmTableCell class="text-muted-foreground">{{ log.ipAddress }}</td>
+                <td hlmTableCell class="text-right pe-4">
+                  <span
+                    class="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase border"
+                    [ngClass]="getLogSeverityClass(log.severity)"
+                  >
+                    {{ log.severity }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </app-main>
   `,
 })
-export class SecurityHubComponent {
-  readonly scanning = signal<boolean>(false)
+export class SecurityHubComponent implements OnInit {
+  private readonly securityApi = inject(SecurityHubApiService)
 
-  readonly cves = signal<CveItem[]>([
-    { id: 'cve-1', cveCode: 'CVE-2026-2189', packageName: 'node-tar (npm)', severity: 'Medium', cvssScore: 6.2, remediation: 'Upgrade to node-tar@6.2.2', status: 'open' },
-    { id: 'cve-2', cveCode: 'CVE-2026-1944', packageName: 'axios (npm)', severity: 'Low', cvssScore: 3.8, remediation: 'Upgrade to axios@1.8.0', status: 'open' },
-    { id: 'cve-3', cveCode: 'CVE-2026-0812', packageName: 'nginx (docker)', severity: 'High', cvssScore: 7.8, remediation: 'Base image bumped to alpine-3.20', status: 'patched' },
-  ])
+  readonly scanning = signal<boolean>(false)
+  readonly cves = signal<CveItem[]>(this.securityApi.defaultCves)
+  readonly auditLogs = signal<SecurityAuditLog[]>([])
+
+  ngOnInit(): void {
+    this.refreshAuditLogs()
+  }
+
+  refreshAuditLogs(): void {
+    this.securityApi.listAuditLogs().subscribe((logs) => {
+      this.auditLogs.set(logs)
+    })
+  }
 
   getSeverityClass(sev: string): string {
     switch (sev) {
@@ -197,6 +246,14 @@ export class SecurityHubComponent {
       case 'High': return 'bg-rose-500/10 text-rose-600 border-rose-200'
       case 'Medium': return 'bg-amber-500/10 text-amber-600 border-amber-200'
       default: return 'bg-sky-500/10 text-sky-600 border-sky-200'
+    }
+  }
+
+  getLogSeverityClass(sev: string): string {
+    switch (sev) {
+      case 'critical': return 'bg-rose-500/10 text-rose-600 border-rose-200'
+      case 'warning': return 'bg-amber-500/10 text-amber-600 border-amber-200'
+      default: return 'bg-emerald-500/10 text-emerald-600 border-emerald-200'
     }
   }
 

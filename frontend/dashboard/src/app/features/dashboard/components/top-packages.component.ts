@@ -1,4 +1,4 @@
-import { Component } from '@angular/core'
+import { Component, OnInit, inject, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { NgIcon, provideIcons } from '@ng-icons/core'
 import {
@@ -11,6 +11,7 @@ import {
 import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
 import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
 import { RouterModule } from '@angular/router'
+import { PackagesApiService } from '../../packages/data-access/services/packages-api.service'
 
 export interface TopPackageItem {
   id: string
@@ -43,7 +44,7 @@ export interface TopPackageItem {
   ],
   template: `
     <div class="divide-y divide-border/40">
-      @for (pkg of packages; track pkg.id) {
+      @for (pkg of packages(); track pkg.id) {
         <div class="py-3.5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group">
           <div class="flex items-center gap-3 min-w-0">
             <div class="relative size-12 rounded-lg overflow-hidden shrink-0 border border-border/60">
@@ -113,8 +114,10 @@ export interface TopPackageItem {
     </div>
   `,
 })
-export class TopPackagesComponent {
-  readonly packages: TopPackageItem[] = [
+export class TopPackagesComponent implements OnInit {
+  private readonly packagesApi = inject(PackagesApiService)
+
+  readonly packages = signal<TopPackageItem[]>([
     {
       id: 'pkg-1',
       title: 'Swiss Alps Grand Panorama Express & Glacier Hike',
@@ -190,5 +193,33 @@ export class TopPackagesComponent {
       status: 'published',
       image: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=200&auto=format&fit=crop&q=80',
     },
-  ]
+  ])
+
+  async ngOnInit(): Promise<void> {
+    try {
+      const res = await this.packagesApi.list(undefined, 5)
+      if (res.ok && res.data.items.length > 0) {
+        this.packages.set(
+          res.data.items.map(p => ({
+            id: p.id,
+            title: p.title,
+            destination: p.destinationId || 'Global Destination',
+            category: p.productType.replace(/_/g, ' '),
+            duration: p.durationDays ? `${p.durationDays} Days` : 'Day Tour',
+            price: p.basePrice,
+            currency: p.currency,
+            rating: p.rating || 4.9,
+            reviewCount: p.reviewCount || 100,
+            totalBookings: p.totalBookings || 50,
+            revenue: (p.basePrice || 100) * (p.totalBookings || 50),
+            status: p.isFeatured ? 'featured' : 'published',
+            image: p.featuredImage || 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?w=200&auto=format&fit=crop&q=80',
+          }))
+        )
+      }
+    } catch {
+      // Retain signal default fallback
+    }
+  }
 }
+

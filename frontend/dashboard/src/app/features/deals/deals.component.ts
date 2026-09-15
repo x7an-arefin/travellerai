@@ -1,4 +1,4 @@
-import { Component, signal, computed } from '@angular/core'
+import { Component, signal, computed, inject, OnInit } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -19,6 +19,7 @@ import {
   lucideTrendingUp,
   lucideBriefcase,
   lucideDownload,
+  lucideRefreshCw,
 } from '@ng-icons/lucide'
 import { HeaderComponent } from '../../layout/authenticated/header/header.component'
 import { MainComponent } from '../../layout/authenticated/main/main.component'
@@ -34,20 +35,7 @@ import { HlmSheetImports } from '../../ui/sheet/hlm-sheet.components'
 import { HlmSelectImports, SelectOption } from '../../ui/select/hlm-select.components'
 import { HlmAvatarImports } from '../../ui/avatar/hlm-avatar.components'
 import { toast } from 'ngx-sonner'
-
-export type DealStage = 'discovery' | 'qualified' | 'proposal' | 'negotiation' | 'won'
-
-export interface DealItem {
-  id: string
-  title: string
-  company: string
-  value: number
-  probability: number
-  stage: DealStage
-  owner: { name: string; avatar: string }
-  closeDate: string
-  activities: { date: string; type: 'call' | 'email' | 'meeting' | 'note'; note: string }[]
-}
+import { DealItem, DealStage, DealsApiService } from './data-access'
 
 @Component({
   selector: 'app-deals',
@@ -88,6 +76,7 @@ export interface DealItem {
       lucideTrendingUp,
       lucideBriefcase,
       lucideDownload,
+      lucideRefreshCw,
     }),
   ],
   template: `
@@ -107,18 +96,22 @@ export interface DealItem {
       <!-- Title & Actions Bar -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight text-foreground">CRM Deals & Revenue Pipeline</h1>
-          <p class="text-xs text-muted-foreground">Track deal stages, calculate weighted win-rate forecast, and log customer touchpoints.</p>
+          <h1 class="text-2xl font-bold tracking-tight text-foreground">CRM Proposals & Revenue Pipeline</h1>
+          <p class="text-xs text-muted-foreground">Track custom tour quotations, corporate travel contracts, and provider negotiated rates.</p>
         </div>
 
         <div class="flex items-center gap-2">
+          <button hlmBtn variant="outline" size="sm" (click)="loadDeals()" [disabled]="isLoading()" class="gap-1.5 cursor-pointer h-9 shadow-xs">
+            <ng-icon name="lucideRefreshCw" class="size-3.5 text-muted-foreground" [class.animate-spin]="isLoading()" />
+            <span>Refresh</span>
+          </button>
           <button hlmBtn variant="outline" size="sm" (click)="exportPipeline()" class="gap-1.5 cursor-pointer h-9 shadow-xs">
             <ng-icon name="lucideDownload" class="size-3.5 text-muted-foreground" />
             <span>Export Deals</span>
           </button>
           <button hlmBtn size="sm" (click)="openCreateDrawer()" class="gap-1.5 cursor-pointer h-9 shadow-xs">
             <ng-icon name="lucidePlus" class="size-3.5" />
-            <span>Create Deal</span>
+            <span>Create Proposal</span>
           </button>
         </div>
       </div>
@@ -138,15 +131,17 @@ export interface DealItem {
         </div>
 
         <div hlmCard class="p-4 space-y-1 hover:border-primary/40 transition-colors shadow-2xs">
-          <span class="text-xs font-semibold text-muted-foreground">Active Deals</span>
+          <span class="text-xs font-semibold text-muted-foreground">Active Opportunities</span>
           <div class="text-2xl font-bold text-foreground">{{ deals().length }} Opportunities</div>
-          <p class="text-[11px] text-sky-500 font-semibold">Avg 21 days cycle</p>
+          <p class="text-[11px] text-sky-500 font-semibold">Avg 21 days turnaround</p>
         </div>
 
         <div hlmCard class="p-4 space-y-1 hover:border-primary/40 transition-colors shadow-2xs">
           <span class="text-xs font-semibold text-muted-foreground">Historical Win Rate</span>
-          <div class="text-2xl font-bold text-emerald-600">68.5%</div>
-          <p class="text-[11px] text-emerald-600 font-semibold">+4.2% QoQ gain</p>
+          <div class="text-2xl font-bold text-emerald-600">
+            {{ winRate() | number:'1.1-1' }}%
+          </div>
+          <p class="text-[11px] text-emerald-600 font-semibold">B2B Custom Itineraries</p>
         </div>
       </div>
 
@@ -157,7 +152,7 @@ export interface DealItem {
           <input
             type="text"
             [(ngModel)]="searchQuery"
-            placeholder="Search deals, companies..."
+            placeholder="Search proposals, corporate clients..."
             class="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
@@ -217,7 +212,7 @@ export interface DealItem {
 
                   <!-- Footer: Close date and Owner -->
                   <div class="flex items-center justify-between pt-1 border-t border-border/60 text-[10px] text-muted-foreground">
-                    <span>Close: {{ deal.closeDate }}</span>
+                    <span>Target: {{ deal.closeDate }}</span>
                     <div class="flex items-center gap-1">
                       <div class="size-5 rounded-full bg-primary/20 text-primary font-bold text-[9px] flex items-center justify-center">
                         {{ deal.owner.name.substring(0, 2).toUpperCase() }}
@@ -266,7 +261,7 @@ export interface DealItem {
       </div>
     </app-main>
 
-    <!-- Deal Detail & Activity Timeline Sheet (size="md" = 1/2 screen width) -->
+    <!-- Deal Detail & Activity Timeline Sheet -->
     <hlm-sheet [isOpen]="detailSheetOpen()" position="right" [size]="'md'" (closed)="detailSheetOpen.set(false)">
       @if (activeDeal(); as d) {
         <div hlmSheetHeader>
@@ -274,14 +269,14 @@ export interface DealItem {
             <h3 hlmSheetTitle>{{ d.title }}</h3>
             <span hlmBadge variant="outline" class="font-bold text-xs uppercase">{{ d.stage }}</span>
           </div>
-          <p hlmSheetDescription class="text-xs">{{ d.company }} • Deal Value: \${{ d.value | number:'1.0-0' }}</p>
+          <p hlmSheetDescription class="text-xs">{{ d.company }} • Valuation: \${{ d.value | number:'1.0-0' }}</p>
         </div>
 
         <div class="space-y-6 py-4 flex-1 overflow-y-auto text-xs">
           <!-- Deal Metrics Grid -->
           <div class="grid grid-cols-3 gap-3">
             <div class="p-3 rounded-xl border border-border bg-card space-y-1">
-              <span class="text-[10px] font-bold text-muted-foreground uppercase">Expected Close</span>
+              <span class="text-[10px] font-bold text-muted-foreground uppercase">Target Departure / Close</span>
               <p class="font-bold text-foreground text-xs">{{ d.closeDate }}</p>
             </div>
             <div class="p-3 rounded-xl border border-border bg-card space-y-1">
@@ -289,19 +284,19 @@ export interface DealItem {
               <p class="font-bold text-emerald-600 text-xs">{{ d.probability }}% Confidence</p>
             </div>
             <div class="p-3 rounded-xl border border-border bg-card space-y-1">
-              <span class="text-[10px] font-bold text-muted-foreground uppercase">Assigned Rep</span>
+              <span class="text-[10px] font-bold text-muted-foreground uppercase">Lead Account Rep</span>
               <p class="font-bold text-foreground text-xs">{{ d.owner.name }}</p>
             </div>
           </div>
 
           <!-- Add Note Box -->
           <div class="space-y-2">
-            <label class="font-bold text-foreground">Log Activity / Meeting Note</label>
+            <label class="font-bold text-foreground">Log Client Interaction / Meeting Memo</label>
             <div class="flex gap-2">
               <input
                 type="text"
                 [(ngModel)]="newNoteText"
-                placeholder="Log a client call summary or next step..."
+                placeholder="Log client call summary, custom itinerary revisions..."
                 class="h-9 flex-1 rounded-md border border-input bg-background px-3 text-xs placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
               <button hlmBtn size="sm" (click)="addNote(d)" class="h-9 cursor-pointer">
@@ -312,7 +307,7 @@ export interface DealItem {
 
           <!-- Activity Stream -->
           <div class="space-y-3">
-            <h4 class="font-bold text-foreground">Activity Timeline</h4>
+            <h4 class="font-bold text-foreground">Touchpoint & Negotiation Timeline</h4>
             <div class="space-y-3 border-l-2 border-border pl-4">
               @for (act of d.activities; track act.date) {
                 <div class="space-y-0.5 relative">
@@ -332,48 +327,52 @@ export interface DealItem {
           <button hlmBtn variant="outline" (click)="detailSheetOpen.set(false)" class="cursor-pointer text-xs">
             Close
           </button>
-          <button hlmBtn (click)="markAsWon(d)" class="cursor-pointer text-xs bg-emerald-600 hover:bg-emerald-700 text-white">
-            Mark Deal as Won
-          </button>
+          @if (d.stage !== 'won') {
+            <button hlmBtn (click)="markAsWon(d)" class="cursor-pointer text-xs bg-emerald-600 hover:bg-emerald-700 text-white">
+              Mark Quotation as Accepted (Won)
+            </button>
+          } @else {
+            <span class="text-xs font-semibold text-emerald-600">Contract Executed & Closed Won</span>
+          }
         </div>
       }
     </hlm-sheet>
 
-    <!-- Create Deal Sheet (size="sm" = 1/3 screen width) -->
+    <!-- Create Deal Sheet -->
     <hlm-sheet [isOpen]="createSheetOpen()" position="right" [size]="'sm'" (closed)="createSheetOpen.set(false)">
       <div hlmSheetHeader>
-        <h3 hlmSheetTitle>Create New Sales Deal</h3>
-        <p hlmSheetDescription class="text-xs">Add a new revenue opportunity to the pipeline.</p>
+        <h3 hlmSheetTitle>Create Corporate Travel Quotation</h3>
+        <p hlmSheetDescription class="text-xs">Issue a custom tour package or corporate retreat proposal.</p>
       </div>
 
       <div class="space-y-4 py-4 flex-1 overflow-y-auto text-xs">
         <div class="space-y-1.5">
-          <label class="font-semibold text-foreground">Opportunity Title</label>
+          <label class="font-semibold text-foreground">Opportunity / Package Title</label>
           <input
             type="text"
             [(ngModel)]="newDeal.title"
-            placeholder="e.g. Enterprise Cloud Migration SLA"
+            placeholder="e.g. Goldman Sachs Alpine Executive Offsite"
             class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
 
         <div class="space-y-1.5">
-          <label class="font-semibold text-foreground">Company Name</label>
+          <label class="font-semibold text-foreground">Client Organization / Agency</label>
           <input
             type="text"
             [(ngModel)]="newDeal.company"
-            placeholder="e.g. Acme Corp"
+            placeholder="e.g. Goldman Sachs London"
             class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div class="space-y-1.5">
-            <label class="font-semibold text-foreground">Deal Value (\$)</label>
+            <label class="font-semibold text-foreground">Quotation Value (\$)</label>
             <input
               type="number"
               [(ngModel)]="newDeal.value"
-              placeholder="50000"
+              placeholder="75000"
               class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
@@ -404,11 +403,11 @@ export interface DealItem {
         </div>
 
         <div class="space-y-1.5">
-          <label class="font-semibold text-foreground">Target Close Date</label>
+          <label class="font-semibold text-foreground">Target Close / Departure Date</label>
           <input
             type="text"
             [(ngModel)]="newDeal.closeDate"
-            placeholder="Aug 28, 2026"
+            placeholder="Nov 15, 2026"
             class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
@@ -425,10 +424,13 @@ export interface DealItem {
     </hlm-sheet>
   `,
 })
-export class DealsComponent {
+export class DealsComponent implements OnInit {
+  private readonly dealsApi = inject(DealsApiService)
+
   readonly createSheetOpen = signal<boolean>(false)
   readonly detailSheetOpen = signal<boolean>(false)
   readonly activeDeal = signal<DealItem | null>(null)
+  readonly isLoading = signal<boolean>(false)
 
   searchQuery = ''
   readonly selectedOwner = signal<string>('all')
@@ -437,10 +439,10 @@ export class DealsComponent {
   newDeal: Partial<DealItem> = {
     title: '',
     company: '',
-    value: 45000,
+    value: 50000,
     probability: 60,
     stage: 'discovery',
-    closeDate: 'Aug 30, 2026',
+    closeDate: 'Nov 30, 2026',
   }
 
   readonly columns: { stage: DealStage; title: string }[] = [
@@ -462,78 +464,12 @@ export class DealsComponent {
   readonly ownerOptions: readonly SelectOption[] = [
     { label: 'All Deal Owners', value: 'all' },
     { label: 'Sarah Jenkins', value: 'Sarah Jenkins' },
-    { label: 'Michael Chang', value: 'Michael Chang' },
+    { label: 'David Kim', value: 'David Kim' },
     { label: 'Elena Rostova', value: 'Elena Rostova' },
+    { label: 'Alex Carter', value: 'Alex Carter' },
   ]
 
-  readonly deals = signal<DealItem[]>([
-    {
-      id: 'deal-1',
-      title: 'Global Cloud Infrastructure Migration',
-      company: 'Apex Global Logistics',
-      value: 145000,
-      probability: 80,
-      stage: 'negotiation',
-      owner: { name: 'Sarah Jenkins', avatar: '' },
-      closeDate: 'Aug 18, 2026',
-      activities: [
-        { date: 'Yesterday, 4:00 PM', type: 'meeting', note: 'Executive legal review with VP of IT.' },
-        { date: '3 days ago', type: 'email', note: 'Sent updated Master Services Agreement with volume discount.' },
-      ],
-    },
-    {
-      id: 'deal-2',
-      title: 'Design System & Spartan UI Custom SLA',
-      company: 'TechFlow Innovations',
-      value: 68000,
-      probability: 90,
-      stage: 'won',
-      owner: { name: 'Michael Chang', avatar: '' },
-      closeDate: 'Aug 04, 2026',
-      activities: [
-        { date: 'Aug 04', type: 'note', note: 'Contract signed via DocuSign! Onboarding scheduled for Monday.' },
-      ],
-    },
-    {
-      id: 'deal-3',
-      title: 'AI Workflow Automation Suite (100 Seats)',
-      company: 'Quantum Health Labs',
-      value: 92000,
-      probability: 70,
-      stage: 'proposal',
-      owner: { name: 'Elena Rostova', avatar: '' },
-      closeDate: 'Sep 02, 2026',
-      activities: [
-        { date: '2 days ago', type: 'call', note: 'Product demo conducted with 12 engineering leads.' },
-      ],
-    },
-    {
-      id: 'deal-4',
-      title: 'Annual Developer Team Licenses',
-      company: 'Starlight Financial Corp',
-      value: 34000,
-      probability: 50,
-      stage: 'qualified',
-      owner: { name: 'Sarah Jenkins', avatar: '' },
-      closeDate: 'Sep 15, 2026',
-      activities: [
-        { date: '4 days ago', type: 'meeting', note: 'Discovery session completed. High interest in Angular Signals.' },
-      ],
-    },
-    {
-      id: 'deal-5',
-      title: 'Enterprise Single Sign-On Add-on',
-      company: 'Nexus Robotics',
-      value: 28000,
-      probability: 30,
-      stage: 'discovery',
-      owner: { name: 'Michael Chang', avatar: '' },
-      closeDate: 'Sep 30, 2026',
-      activities: [
-        { date: 'Today, 9:30 AM', type: 'email', note: 'Inbound lead form submitted from website pricing page.' },
-      ],
-    },
-  ])
+  readonly deals = signal<DealItem[]>([])
 
   readonly filteredDeals = computed(() => {
     const q = this.searchQuery.toLowerCase().trim()
@@ -554,6 +490,29 @@ export class DealsComponent {
     return this.deals().reduce((sum, d) => sum + d.value * (d.probability / 100), 0)
   })
 
+  readonly winRate = computed(() => {
+    const total = this.deals().length
+    if (total === 0) return 0
+    const won = this.deals().filter((d) => d.stage === 'won').length
+    return (won / total) * 100
+  })
+
+  ngOnInit(): void {
+    this.loadDeals()
+  }
+
+  async loadDeals(): Promise<void> {
+    this.isLoading.set(true)
+    try {
+      const list = await this.dealsApi.loadDeals()
+      this.deals.set(list)
+    } catch {
+      toast.error('Could not load proposals from API; using cached data.')
+    } finally {
+      this.isLoading.set(false)
+    }
+  }
+
   getDealsForStage(stage: DealStage): DealItem[] {
     return this.filteredDeals().filter((d) => d.stage === stage)
   }
@@ -568,7 +527,7 @@ export class DealsComponent {
     return 'bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-800'
   }
 
-  moveDeal(deal: DealItem, direction: number, event: Event): void {
+  async moveDeal(deal: DealItem, direction: number, event: Event): Promise<void> {
     event.stopPropagation()
     const stageOrder: DealStage[] = ['discovery', 'qualified', 'proposal', 'negotiation', 'won']
     const currentIndex = stageOrder.indexOf(deal.stage)
@@ -576,6 +535,7 @@ export class DealsComponent {
 
     if (nextIndex >= 0 && nextIndex < stageOrder.length) {
       const nextStage = stageOrder[nextIndex]
+      await this.dealsApi.updateDealStage(deal.id, nextStage)
       this.deals.update((list) =>
         list.map((d) => (d.id === deal.id ? { ...d, stage: nextStage } : d))
       )
@@ -592,46 +552,48 @@ export class DealsComponent {
     this.newDeal = {
       title: '',
       company: '',
-      value: 50000,
+      value: 60000,
       probability: 50,
       stage: 'discovery',
-      closeDate: 'Aug 30, 2026',
+      closeDate: 'Nov 30, 2026',
     }
     this.createSheetOpen.set(true)
   }
 
-  saveNewDeal(): void {
+  async saveNewDeal(): Promise<void> {
     if (!this.newDeal.title || !this.newDeal.company) {
-      toast.error('Please enter deal title and company.')
+      toast.error('Please enter quotation title and client company.')
       return
     }
 
-    const item: DealItem = {
-      id: 'deal-' + (this.deals().length + 1),
-      title: this.newDeal.title,
-      company: this.newDeal.company,
-      value: Number(this.newDeal.value) || 25000,
-      probability: Number(this.newDeal.probability) || 50,
-      stage: (this.newDeal.stage as DealStage) || 'discovery',
-      owner: { name: 'Sarah Jenkins', avatar: '' },
-      closeDate: this.newDeal.closeDate || 'Sep 30, 2026',
-      activities: [
-        { date: 'Just now', type: 'note', note: 'Deal created in pipeline.' },
-      ],
-    }
+    try {
+      const created = await this.dealsApi.createDeal({
+        title: this.newDeal.title,
+        company: this.newDeal.company,
+        value: Number(this.newDeal.value) || 35000,
+        probability: Number(this.newDeal.probability) || 50,
+        stage: (this.newDeal.stage as DealStage) || 'discovery',
+        closeDate: this.newDeal.closeDate || 'Dec 15, 2026',
+      })
 
-    this.deals.update((list) => [item, ...list])
-    toast.success(`Created deal "${item.title}".`)
-    this.createSheetOpen.set(false)
+      this.deals.update((list) => [created, ...list])
+      toast.success(`Created quotation proposal "${created.title}".`)
+      this.createSheetOpen.set(false)
+    } catch {
+      toast.error('Failed to create quotation proposal.')
+    }
   }
 
-  addNote(deal: DealItem): void {
+  async addNote(deal: DealItem): Promise<void> {
     if (!this.newNoteText.trim()) return
+
+    const note = this.newNoteText.trim()
+    await this.dealsApi.addActivityNote(deal.id, note)
 
     const newAct = {
       date: 'Just now',
       type: 'note' as const,
-      note: this.newNoteText.trim(),
+      note,
     }
 
     this.deals.update((list) =>
@@ -643,15 +605,37 @@ export class DealsComponent {
     toast.success('Activity logged.')
   }
 
-  markAsWon(deal: DealItem): void {
+  async markAsWon(deal: DealItem): Promise<void> {
+    await this.dealsApi.markAsWon(deal.id)
     this.deals.update((list) =>
       list.map((d) => (d.id === deal.id ? { ...d, stage: 'won', probability: 100 } : d))
     )
-    toast.success(`Congratulations! Deal "${deal.title}" marked as Won!`)
+    toast.success(`Proposal "${deal.title}" marked as Won!`)
     this.detailSheetOpen.set(false)
   }
 
   exportPipeline(): void {
-    toast.success('Deals pipeline exported to CSV.')
+    const rows = [
+      ['Deal ID', 'Title', 'Client Company', 'Value ($)', 'Win Probability (%)', 'Stage', 'Close Date', 'Owner'],
+      ...this.deals().map((d) => [
+        d.id,
+        `"${d.title}"`,
+        `"${d.company}"`,
+        d.value.toString(),
+        d.probability.toString(),
+        d.stage,
+        d.closeDate,
+        `"${d.owner.name}"`,
+      ]),
+    ]
+    const csvContent = 'data:text/csv;charset=utf-8,' + rows.map((e) => e.join(',')).join('\n')
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement('a')
+    link.setAttribute('href', encodedUri)
+    link.setAttribute('download', `deals_pipeline_${new Date().toISOString().slice(0, 10)}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    toast.success('CRM proposals pipeline exported to CSV.')
   }
 }

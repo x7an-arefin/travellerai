@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core'
+import { Component, OnInit, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms'
 import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
@@ -6,6 +6,7 @@ import { HlmInputImports } from '../../../ui/input/hlm-input.directive'
 import { HlmTextareaImports } from '../../../ui/textarea/hlm-textarea.directive'
 import { HlmSeparatorImports } from '../../../ui/separator/hlm-separator.directive'
 import { AuthService } from '../../../core/services/auth.service'
+import { SettingsApiService } from '../data-access/services/settings-api.service'
 import { toast } from 'ngx-sonner'
 
 @Component({
@@ -49,8 +50,8 @@ import { toast } from 'ngx-sonner'
 
         <div class="space-y-2">
           <label class="text-sm font-medium leading-none">URLs</label>
-          <input hlmInput formControlName="url1" placeholder="https://github.com/satnaing" />
-          <input hlmInput formControlName="url2" placeholder="https://twitter.com/satnaing" />
+          <input hlmInput formControlName="url1" placeholder="https://traveller.ai" />
+          <input hlmInput formControlName="url2" placeholder="https://github.com/travellerai" />
           <p class="text-xs text-muted-foreground">Add links to your website, blog, or social media profiles.</p>
         </div>
 
@@ -61,20 +62,34 @@ import { toast } from 'ngx-sonner'
     </div>
   `,
 })
-export class ProfileComponent {
+export class ProfileComponent implements OnInit {
   private readonly fb = inject(FormBuilder)
+  private readonly settingsApi = inject(SettingsApiService)
   readonly authService = inject(AuthService)
 
   readonly profileForm: FormGroup = this.fb.group({
-    username: ['satnaing', [Validators.required]],
-    email: ['satnaingdev@gmail.com', [Validators.required, Validators.email]],
-    bio: ["I'm a passionate frontend engineer building open source tools and UI components."],
-    url1: ['https://satnaing.dev'],
-    url2: ['https://github.com/satnaing'],
+    username: ['', [Validators.required]],
+    email: ['', [Validators.required, Validators.email]],
+    bio: [''],
+    url1: [''],
+    url2: [''],
   })
 
-  onSubmit(): void {
+  ngOnInit(): void {
+    const profile = this.settingsApi.getProfile()
+    this.profileForm.patchValue({
+      username: profile.username,
+      email: profile.email,
+      bio: profile.bio,
+      url1: profile.url1 || '',
+      url2: profile.url2 || '',
+    })
+  }
+
+  async onSubmit(): Promise<void> {
     if (this.profileForm.invalid) return
+    await this.settingsApi.updateProfile(this.profileForm.value)
     toast.success('Profile updated successfully!')
   }
 }
+

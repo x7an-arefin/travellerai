@@ -1,0 +1,5 @@
+export * from './models/tickets.model'
+export * from './models/tickets-api.types'
+export * from './services/tickets-api.service'
+export * from './store/tickets.store'
+export * from './tickets.facade'

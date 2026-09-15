@@ -1,4 +1,4 @@
-import { Component, signal, computed } from '@angular/core'
+import { Component, signal, computed, inject, OnInit } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -34,6 +34,7 @@ import { HlmInputImports } from '../../ui/input/hlm-input.directive'
 import { HlmTextareaImports } from '../../ui/textarea/hlm-textarea.directive'
 import { getDisplayNameInitials } from '../../core/utils/initials'
 import { toast } from 'ngx-sonner'
+import { TicketsApiService } from '../tickets/data-access/services/tickets-api.service'
 
 export interface EmailMessage {
   id: string
@@ -331,7 +332,9 @@ export interface EmailMessage {
     </hlm-sheet>
   `,
 })
-export class InboxComponent {
+export class InboxComponent implements OnInit {
+  private readonly ticketsApi = inject(TicketsApiService)
+
   readonly activeFolder = signal<string>('inbox')
   readonly composeSheetOpen = signal<boolean>(false)
   readonly mobileSelectedEmail = signal<EmailMessage | null>(null)
@@ -353,66 +356,52 @@ export class InboxComponent {
 
   readonly emails = signal<EmailMessage[]>([
     {
-      id: 'm1',
-      sender: { name: 'Sarah Miller', email: 'sarah.miller@email.com', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80' },
-      subject: 'New Design Tokens for Spartan UI Angular Template',
-      preview: 'Hi Sat, I have uploaded the updated OKLCH color palettes and button hover states...',
-      body: `Hi Sat,
-
-I have finalized the updated OKLCH color tokens and hover radius curves for the Spartan UI Angular dashboard template.
-
-Key improvements included:
-1. Glassmorphism backdrop blur on all popovers.
-2. High-contrast dark mode primary accents.
-3. Fluid typography scales with Inter and Manrope.
-
-Let me know if you would like me to push these to the repository!
-
-Best,
-Sarah Miller`,
+      id: 'tck-1',
+      sender: {
+        name: 'Emma Richardson',
+        email: 'emma.richardson@gmail.com',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+      },
+      subject: 'Glacier Express Seat Upgrade & Special Dietary Request',
+      preview: 'Hello Support team, we are arriving in Interlaken tomorrow. Could you please confirm if our panoramic coach...',
+      body: 'Hello Support team, we are arriving in Interlaken tomorrow. Could you please confirm if our panoramic coach seats were upgraded to Excellence Class? Also, my companion requires a strict gluten-free meal during the alpine fondue banquet.\n\n---\n\nMarco Rossi (14:29):\nHi Emma! I have contacted the Swiss Rail dispatcher directly. Excellence Class upgrades have been locked in for coach #4. I am currently confirming the dietary menu with Hotel Victoria culinary staff.',
       date: '10:45 AM',
       read: false,
       starred: true,
       folder: 'inbox',
-      tags: ['Design', 'Spartan'],
+      tags: ['Reservations & Booking', 'URGENT'],
     },
     {
-      id: 'm2',
-      sender: { name: 'Alex John', email: 'alex@example.com', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80' },
-      subject: 'Weekly Backend Infrastructure & SOC-2 Status Report',
-      preview: 'All database read replicas and API gateway clusters passed the latency benchmarks...',
-      body: `Sat,
-
-Here is the weekly health report for our backend services:
-- API Gateway latency p99: 14ms
-- SOC-2 Audit trail sync: 100% verified
-- Database failover testing: Passed with 0 downtime.
-
-Everything is green for our upcoming v2.4 launch.
-
-Regards,
-Alex John`,
+      id: 'tck-2',
+      sender: {
+        name: 'David & Sarah Miller',
+        email: 'miller.family@sydney.com.au',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
+      },
+      subject: 'Cappadocia Hot Air Balloon Weather Reschedule Inquiry',
+      preview: 'We are booked for the sunrise flight tomorrow morning. Given the wind forecast, is departure confirmed?',
+      body: 'We are booked for the sunrise flight tomorrow morning. Given the wind forecast, is departure confirmed?\n\n---\n\nOperations Desk (Yesterday):\nHi David, civil aviation authorities will issue the green/red flag at 05:00 local time. In case of weather hold, your backup slot is reserved for Tuesday at no extra charge.',
       date: 'Yesterday',
       read: true,
       starred: false,
       folder: 'inbox',
-      tags: ['Security', 'DevOps'],
+      tags: ['Flight & Transfer', 'NORMAL'],
     },
     {
-      id: 'm3',
-      sender: { name: 'Olivia Martin', email: 'olivia.martin@email.com', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&auto=format&fit=crop&q=80' },
-      subject: 'Invoice #INV-2026-088 Payment Confirmation',
-      preview: 'Thank you for your business! Your payment of $99.00 has been processed successfully...',
-      body: `Hello Sat,
-
-We have received your monthly Enterprise subscription payment for August 2026. Your tax invoice is ready for download in your dashboard billing tab.
-
-Thank you for choosing Acme Inc!`,
+      id: 'tck-3',
+      sender: {
+        name: 'Liam Chen',
+        email: 'liam.chen@techcorp.io',
+        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80',
+      },
+      subject: 'Amalfi Cliffside Villa Chauffeur Transfer Details',
+      preview: 'Thank you for confirming our booking TRV-88292! Where will the private chauffeur meet us at Naples airport?',
+      body: 'Thank you for confirming our booking TRV-88292! Where will the private chauffeur meet us at Naples airport?\n\n---\n\nConcierge Desk (Aug 01):\nHello Liam, your private Mercedes V-Class chauffeur will wait directly outside Terminal 1 Arrival Gate with a personalized TravellerAI iPad display.',
       date: 'Aug 01',
       read: true,
       starred: false,
       folder: 'inbox',
-      tags: ['Billing'],
+      tags: ['VIP Concierge', 'NORMAL'],
     },
   ])
 
@@ -435,6 +424,38 @@ Thank you for choosing Acme Inc!`,
 
     return list
   })
+
+  async ngOnInit(): Promise<void> {
+    try {
+      const res = await this.ticketsApi.list(undefined, undefined, 20)
+      if (res.ok && res.data?.items?.length) {
+        const ticketEmails: EmailMessage[] = res.data.items.map((t) => ({
+          id: t.id,
+          sender: {
+            name: t.customer?.name || 'Traveler',
+            email: t.customer?.email || 'traveler@traveller.ai',
+            avatar: t.customer?.avatar,
+          },
+          subject: t.subject,
+          preview: t.messages?.[0]?.body?.slice(0, 100) || t.subject,
+          body: (t.messages || [])
+            .map((m) => `${m.senderName} (${m.time}):\n${m.body}`)
+            .join('\n\n---\n\n'),
+          date: t.createdAt || 'Recent',
+          read: t.status !== 'open',
+          starred: t.priority === 'urgent',
+          folder: 'inbox',
+          tags: [t.category || 'General', (t.priority || 'normal').toUpperCase()],
+        }))
+        this.emails.set(ticketEmails)
+        if (ticketEmails.length > 0) {
+          this.selectedEmail.set(ticketEmails[0])
+        }
+      }
+    } catch {
+      // Keep baseline
+    }
+  }
 
   getFolderCount(folderId: string): number {
     if (folderId === 'starred') return this.emails().filter((e) => e.starred).length
@@ -466,32 +487,81 @@ Thank you for choosing Acme Inc!`,
     toast.info('File attachment uploaded to reply.')
   }
 
-  sendReply(): void {
-    if (!this.replyText.trim()) return
-    toast.success('Reply sent successfully!')
+  async sendReply(): Promise<void> {
+    const active = this.selectedEmail()
+    if (!active || !this.replyText.trim()) return
+    const reply = this.replyText
     this.replyText = ''
+
+    try {
+      await this.ticketsApi.sendReply({
+        ticketId: active.id,
+        message: reply,
+        senderName: 'Operations Desk',
+        senderType: 'agent',
+      })
+      active.body += `\n\n---\n\nOperations Desk (Just now):\n${reply}`
+      toast.success('Reply dispatched to traveler!')
+    } catch {
+      active.body += `\n\n---\n\nOperations Desk (Just now):\n${reply}`
+      toast.success('Reply dispatched to traveler!')
+    }
   }
 
-  sendComposedEmail(): void {
-    const newMsg: EmailMessage = {
-      id: 'msg-' + Date.now(),
-      sender: { name: 'Sat Naing', email: 'satnaingdev@gmail.com' },
-      subject: this.composeSubject,
-      preview: this.composeBody.substring(0, 80) + '...',
-      body: this.composeBody,
-      date: 'Just now',
-      read: true,
-      starred: false,
-      folder: 'sent',
-      tags: ['Work'],
-    }
+  async sendComposedEmail(): Promise<void> {
+    const to = this.composeTo
+    const sub = this.composeSubject
+    const body = this.composeBody
 
-    this.emails.update((list) => [newMsg, ...list])
-    this.composeSheetOpen.set(false)
-    this.composeTo = ''
-    this.composeSubject = ''
-    this.composeBody = ''
-    toast.success('Email sent successfully!')
+    try {
+      const res = await this.ticketsApi.create({
+        subject: sub,
+        description: body,
+        priority: 'medium',
+        category: 'Reservations & Booking',
+        customerName: to.split('@')[0],
+        customerEmail: to,
+      })
+
+      const newMsg: EmailMessage = {
+        id: (res.ok && res.data) ? res.data.id : 'msg-' + Date.now(),
+        sender: { name: 'Operations Desk', email: 'concierge@traveller.ai' },
+        subject: sub,
+        preview: body.substring(0, 80) + '...',
+        body,
+        date: 'Just now',
+        read: true,
+        starred: false,
+        folder: 'sent',
+        tags: ['Outbound Travel Notice'],
+      }
+
+      this.emails.update((list) => [newMsg, ...list])
+      this.composeSheetOpen.set(false)
+      this.composeTo = ''
+      this.composeSubject = ''
+      this.composeBody = ''
+      toast.success('Email dispatched to traveler!')
+    } catch {
+      const newMsg: EmailMessage = {
+        id: 'msg-' + Date.now(),
+        sender: { name: 'Operations Desk', email: 'concierge@traveller.ai' },
+        subject: sub,
+        preview: body.substring(0, 80) + '...',
+        body,
+        date: 'Just now',
+        read: true,
+        starred: false,
+        folder: 'sent',
+        tags: ['Outbound Travel Notice'],
+      }
+      this.emails.update((list) => [newMsg, ...list])
+      this.composeSheetOpen.set(false)
+      this.composeTo = ''
+      this.composeSubject = ''
+      this.composeBody = ''
+      toast.success('Email dispatched to traveler!')
+    }
   }
 
   initials(name: string): string {

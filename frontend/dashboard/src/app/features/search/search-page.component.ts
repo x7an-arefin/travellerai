@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core'
+import { Component, OnInit, inject, signal, computed } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { Router } from '@angular/router'
@@ -37,24 +37,8 @@ import { HlmInputImports } from '../../ui/input/hlm-input.directive'
 import { UniversalCartFacade } from '../checkout/data-access/universal-cart.facade'
 import { CartItem, CartItemType } from '../checkout/data-access/models/cart.model'
 import { toast } from 'ngx-sonner'
+import { SearchExperienceItem, SearchApiService } from './data-access'
 
-export interface SearchExperienceItem {
-  id: string
-  type: CartItemType
-  title: string
-  subtitle: string
-  destination: string
-  imageUrl: string
-  rating: number
-  reviewCount: number
-  providerName: string
-  basePrice: number
-  priceSuffix: string
-  highlights: string[]
-  isFeatured?: boolean
-  freeCancellation: boolean
-  securityDeposit?: number
-}
 
 @Component({
   selector: 'app-search-page',
@@ -538,13 +522,14 @@ export interface SearchExperienceItem {
     </app-main>
   `,
 })
-export class SearchPageComponent {
+export class SearchPageComponent implements OnInit {
   readonly cart = inject(UniversalCartFacade)
   private readonly router = inject(Router)
+  private readonly searchApi = inject(SearchApiService)
 
   readonly selectedServiceType = signal<string>('all')
   readonly filterMinRating = signal<number>(4.0)
-  readonly filterMaxPrice = signal<number>(600)
+  readonly filterMaxPrice = signal<number>(1500)
   readonly filterFreeCancellation = signal<boolean>(false)
 
   searchDestination = ''
@@ -555,6 +540,18 @@ export class SearchPageComponent {
   readonly aiTripPrompt = signal('5 days in Switzerland for 2 with luxury mountain view suite, panoramic rail tour, and airport VIP transfer')
   readonly aiGeneratedTrip = signal<any | null>(null)
   readonly showPriceComparison = signal<Record<string, boolean>>({})
+
+  ngOnInit(): void {
+    this.loadExperiences()
+  }
+
+  async loadExperiences(): Promise<void> {
+    const res = await this.searchApi.search()
+    if (res.ok && res.data.items.length > 0) {
+      this.experiences.set(res.data.items)
+    }
+  }
+
 
   toggleOtaRates(id: string): void {
     this.showPriceComparison.update((prev) => ({

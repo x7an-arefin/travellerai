@@ -1,4 +1,4 @@
-import { Component } from '@angular/core'
+import { Component, OnInit, inject, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { RouterModule } from '@angular/router'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -12,6 +12,7 @@ import {
 import { HlmBadgeImports } from '../../../ui/badge/hlm-badge.directive'
 import { HlmAvatarImports } from '../../../ui/avatar/hlm-avatar.components'
 import { getDisplayNameInitials } from '../../../core/utils/initials'
+import { BookingsApiService } from '../../bookings/data-access/services/bookings-api.service'
 
 export interface BookingQueueItem {
   id: string
@@ -43,7 +44,7 @@ export interface BookingQueueItem {
   ],
   template: `
     <div class="space-y-4">
-      @for (booking of bookings; track booking.reference) {
+      @for (booking of bookings(); track booking.reference) {
         <div class="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border/30 hover:border-border/60 hover:bg-muted/30 transition-all gap-3">
           <div class="flex items-center gap-3 min-w-0">
             <hlm-avatar class="size-9 shrink-0 border border-border/60">
@@ -70,23 +71,22 @@ export interface BookingQueueItem {
                   <ng-icon name="lucideUsers" class="size-3 text-muted-foreground" />
                   {{ booking.participants }} guests
                 </span>
+                <span>•</span>
+                <span class="font-medium text-foreground">\${{ booking.totalAmount | number }}</span>
               </div>
             </div>
           </div>
 
-          <div class="text-right shrink-0 space-y-1">
-            <div class="text-sm font-bold text-foreground tabular-nums">
-              \${{ booking.totalAmount | number:'1.2-2' }}
-            </div>
-            @if (booking.status === 'confirmed') {
-              <span hlmBadge variant="default" class="text-[10px] px-1.5 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                Confirmed
+          <div class="flex flex-col items-end gap-1.5 shrink-0">
+            @if (booking.checkinStatus === 'checked_in') {
+              <span hlmBadge class="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] px-1.5 py-0.5">
+                Checked In
               </span>
-            } @else if (booking.status === 'pending_payment') {
-              <span hlmBadge variant="outline" class="text-[10px] px-1.5 py-0.5 text-amber-600 dark:text-amber-400 border-amber-500/30">
-                Payment Due
+            } @else if (booking.checkinStatus === 'pending') {
+              <span hlmBadge variant="outline" class="text-amber-500 border-amber-500/30 text-[10px] px-1.5 py-0.5">
+                Pending Check-in
               </span>
-            } @else if (booking.status === 'completed') {
+            } @else {
               <span hlmBadge variant="secondary" class="text-[10px] px-1.5 py-0.5">
                 Completed
               </span>
@@ -97,8 +97,10 @@ export interface BookingQueueItem {
     </div>
   `,
 })
-export class RecentBookingsComponent {
-  readonly bookings: BookingQueueItem[] = [
+export class RecentBookingsComponent implements OnInit {
+  private readonly bookingsApi = inject(BookingsApiService)
+
+  readonly bookings = signal<BookingQueueItem[]>([
     {
       id: 'b-101',
       reference: 'TRV-88291',
@@ -149,10 +151,10 @@ export class RecentBookingsComponent {
       travelerAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80',
       packageTitle: 'Kyoto Ancient Temples & Tea Rituals',
       destination: 'Japan',
-      departureDate: 'Oct 02, 2026',
+      departureDate: 'Sep 28, 2026',
       participants: 1,
       totalAmount: 890,
-      status: 'pending_payment',
+      status: 'confirmed',
       checkinStatus: 'pending',
     },
     {
@@ -169,9 +171,40 @@ export class RecentBookingsComponent {
       status: 'completed',
       checkinStatus: 'checked_in',
     },
-  ]
+  ])
+
+  async ngOnInit(): Promise<void> {
+    await this.loadRecentBookings()
+  }
+
+  async loadRecentBookings(): Promise<void> {
+    try {
+      const res = await this.bookingsApi.list(undefined, 10)
+      if (res.ok && res.data.items.length > 0) {
+        this.bookings.set(
+          res.data.items.slice(0, 5).map(b => ({
+            id: b.id,
+            reference: b.bookingReference,
+            travelerName: b.guestName,
+            travelerEmail: b.guestEmail,
+            travelerAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(b.guestName)}`,
+            packageTitle: b.packageTitle || 'Travel Package',
+            destination: b.destination || 'Global Tour',
+            departureDate: b.departureDate || 'Sep 20, 2026',
+            participants: b.participantCount,
+            totalAmount: b.totalAmount,
+            status: b.bookingStatus as any,
+            checkinStatus: b.checkinStatus || 'pending',
+          }))
+        )
+      }
+    } catch {
+      // Fallback data is already preserved in signal initialization
+    }
+  }
 
   initials(name: string): string {
     return getDisplayNameInitials(name)
   }
 }
+

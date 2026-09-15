@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core'
+import { Component, signal, OnInit } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -39,6 +39,8 @@ export interface ApiKeyItem {
   createdDate: string
   lastUsed: string
 }
+
+const STORAGE_KEY = 'traveller_api_keys_v1'
 
 @Component({
   selector: 'app-api-keys',
@@ -94,7 +96,7 @@ export interface ApiKeyItem {
         <div>
           <h1 class="text-2xl font-bold tracking-tight">API Keys & Webhooks</h1>
           <p class="text-xs text-muted-foreground">
-            Manage your REST developer credentials, secret tokens, and webhook endpoints.
+            Manage your REST developer credentials, agency tokens, and real-time webhook endpoints.
           </p>
         </div>
 
@@ -109,7 +111,7 @@ export interface ApiKeyItem {
         <div class="flex items-center justify-between">
           <div>
             <h3 class="text-base font-semibold text-foreground">Active Secret Tokens</h3>
-            <p class="text-xs text-muted-foreground">Do not share secret keys in public repositories.</p>
+            <p class="text-xs text-muted-foreground">Use secret keys to integrate booking widgets, flight radar, and agency sync pipelines.</p>
           </div>
         </div>
 
@@ -181,7 +183,7 @@ export interface ApiKeyItem {
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h3 class="text-base font-semibold text-foreground">Webhook Subscriptions</h3>
-            <p class="text-xs text-muted-foreground">Receive real-time HTTP POST notifications when events happen.</p>
+            <p class="text-xs text-muted-foreground">Receive real-time HTTP POST notifications when guest bookings or departures are triggered.</p>
           </div>
 
           <button hlmBtn variant="outline" size="sm" (click)="testWebhook()" class="gap-1.5 cursor-pointer text-xs">
@@ -194,13 +196,13 @@ export interface ApiKeyItem {
           <div class="p-4 rounded-xl border border-border bg-muted/20 space-y-2">
             <div class="flex items-center justify-between">
               <span class="font-mono text-xs font-semibold text-foreground truncate max-w-[280px]">
-                https://api.acme.corp/webhooks/tasks
+                https://api.partner-agency.com/webhooks/bookings
               </span>
               <span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.2 text-[10px] font-bold text-emerald-600">
                 Active
               </span>
             </div>
-            <p class="text-xs text-muted-foreground">Subscribed to: <code class="font-mono text-primary">task.created</code>, <code class="font-mono text-primary">task.updated</code></p>
+            <p class="text-xs text-muted-foreground">Subscribed to: <code class="font-mono text-primary">booking.confirmed</code>, <code class="font-mono text-primary">booking.refunded</code></p>
           </div>
 
           <div class="p-4 rounded-xl border border-border bg-muted/20 space-y-2">
@@ -212,7 +214,7 @@ export interface ApiKeyItem {
                 Active
               </span>
             </div>
-            <p class="text-xs text-muted-foreground">Subscribed to: <code class="font-mono text-primary">user.invited</code>, <code class="font-mono text-primary">billing.invoice</code></p>
+            <p class="text-xs text-muted-foreground">Subscribed to: <code class="font-mono text-primary">dispatch.assigned</code>, <code class="font-mono text-primary">flight.delayed</code></p>
           </div>
         </div>
       </div>
@@ -228,7 +230,7 @@ export interface ApiKeyItem {
       <div class="space-y-4 py-4 flex-1 text-xs">
         <div class="space-y-1.5">
           <label class="font-semibold text-foreground">Key Identifier Name</label>
-          <input hlmInput [(ngModel)]="newKeyName" placeholder="e.g. CI/CD Deployment Token" />
+          <input hlmInput [(ngModel)]="newKeyName" placeholder="e.g. Zurich Agency Booking Integration" />
         </div>
 
         <div class="space-y-1.5">
@@ -241,67 +243,64 @@ export interface ApiKeyItem {
         </div>
 
         <div class="space-y-1.5">
-          <label class="font-semibold text-foreground">Expiration</label>
+          <label class="font-semibold text-foreground">Token Expiration</label>
           <hlm-custom-select
             [options]="expirationOptions"
             [(ngModel)]="newKeyExpiration"
-            placeholder="Select expiration"
+            placeholder="Select duration"
           />
-        </div>
-
-        <div class="rounded-lg border border-border bg-muted/30 p-3 space-y-1 text-muted-foreground leading-relaxed">
-          <p class="font-semibold text-foreground">Security Note:</p>
-          <p>Your API key can perform actions on behalf of your workspace. Keep it secure and rotate regularly.</p>
         </div>
       </div>
 
       <div hlmSheetFooter class="mt-auto">
         <button hlmBtn variant="outline" (click)="createSheetOpen.set(false)" class="cursor-pointer">Cancel</button>
-        <button hlmBtn [disabled]="!newKeyName.trim()" (click)="saveNewKey()" class="cursor-pointer">Generate Key</button>
+        <button hlmBtn [disabled]="!newKeyName.trim()" (click)="saveNewKey()" class="cursor-pointer">Generate Token</button>
       </div>
     </hlm-sheet>
   `,
 })
-export class ApiKeysComponent {
+export class ApiKeysComponent implements OnInit {
   readonly createSheetOpen = signal<boolean>(false)
   newKeyName = ''
-  newKeyScope: any = 'read:tasks,write:tasks'
+  newKeyScope: any = 'read:bookings,write:departures'
   newKeyExpiration: any = '90d'
 
-  readonly apiKeys = signal<ApiKeyItem[]>([
+  private readonly defaultKeys: ApiKeyItem[] = [
     {
       id: 'k1',
-      name: 'Production Worker Token',
-      keyPrefix: 'fast_live_9a8b7c6d',
-      fullToken: 'fast_live_9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d',
-      scope: 'read:tasks, write:tasks',
+      name: 'Mobile App Concierge Gateway',
+      keyPrefix: 'trv_live_9a8b7c6d',
+      fullToken: 'trv_live_9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d',
+      scope: 'read:bookings, write:departures',
       createdDate: 'Aug 01, 2026',
       lastUsed: '2 minutes ago',
     },
     {
       id: 'k2',
-      name: 'GitHub Actions CI Key',
-      keyPrefix: 'fast_live_4f3a2b1c',
-      fullToken: 'fast_live_4f3a2b1c0d9e8f7a6b5c4d9a8b7c6d5e',
+      name: 'B2B Wholesale Travel Agency Sync',
+      keyPrefix: 'trv_live_4f3a2b1c',
+      fullToken: 'trv_live_4f3a2b1c0d9e8f7a6b5c4d9a8b7c6d5e',
       scope: 'admin:all',
       createdDate: 'Jul 15, 2026',
       lastUsed: 'Yesterday',
     },
     {
       id: 'k3',
-      name: 'Development Sandbox Key',
-      keyPrefix: 'fast_test_1c0d9e8f',
-      fullToken: 'fast_test_1c0d9e8f7a6b5c4d9a8b7c6d5e4f3a2b',
+      name: 'Staging & Sandbox Booking Pipeline',
+      keyPrefix: 'trv_test_1c0d9e8f',
+      fullToken: 'trv_test_1c0d9e8f7a6b5c4d9a8b7c6d5e4f3a2b',
       scope: 'read:all',
       createdDate: 'Jun 20, 2026',
       lastUsed: '3 days ago',
     },
-  ])
+  ]
+
+  readonly apiKeys = signal<ApiKeyItem[]>([])
 
   readonly scopeOptions = [
-    { label: 'Read & Write (Standard)', value: 'read:tasks,write:tasks' },
-    { label: 'Full Admin (admin:all)', value: 'admin:all' },
-    { label: 'Read Only (read:all)', value: 'read:all' },
+    { label: 'Read & Write Bookings', value: 'read:bookings,write:departures' },
+    { label: 'Full Admin Access (admin:all)', value: 'admin:all' },
+    { label: 'Catalog Read-Only (read:packages)', value: 'read:packages' },
   ]
 
   readonly expirationOptions = [
@@ -310,6 +309,21 @@ export class ApiKeysComponent {
     { label: '1 Year', value: '365d' },
     { label: 'No Expiration', value: 'never' },
   ]
+
+  ngOnInit(): void {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY)
+        if (saved) {
+          this.apiKeys.set(JSON.parse(saved))
+          return
+        }
+      } catch {
+        // Fallback
+      }
+    }
+    this.apiKeys.set(this.defaultKeys)
+  }
 
   openCreateKey(): void {
     this.newKeyName = ''
@@ -321,14 +335,16 @@ export class ApiKeysComponent {
     const newKey: ApiKeyItem = {
       id: 'k-' + Date.now(),
       name: this.newKeyName,
-      keyPrefix: 'fast_live_' + Math.random().toString(36).substring(2, 10),
-      fullToken: 'fast_live_' + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2),
+      keyPrefix: 'trv_live_' + Math.random().toString(36).substring(2, 10),
+      fullToken: 'trv_live_' + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2),
       scope: this.newKeyScope,
       createdDate: 'Today',
       lastUsed: 'Never',
     }
 
-    this.apiKeys.update((list) => [newKey, ...list])
+    const updated = [newKey, ...this.apiKeys()]
+    this.apiKeys.set(updated)
+    this.persistKeys(updated)
     this.createSheetOpen.set(false)
     toast.success(`API key "${newKey.name}" generated!`)
   }
@@ -341,11 +357,23 @@ export class ApiKeysComponent {
   }
 
   revokeKey(k: ApiKeyItem): void {
-    this.apiKeys.update((list) => list.filter((item) => item.id !== k.id))
+    const updated = this.apiKeys().filter((item) => item.id !== k.id)
+    this.apiKeys.set(updated)
+    this.persistKeys(updated)
     toast.success(`API key "${k.name}" revoked permanently.`)
   }
 
   testWebhook(): void {
     toast.success('Test webhook event dispatched! HTTP 200 OK received.')
+  }
+
+  private persistKeys(keys: ApiKeyItem[]): void {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(keys))
+      } catch {
+        // ignore
+      }
+    }
   }
 }

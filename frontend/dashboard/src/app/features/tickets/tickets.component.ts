@@ -1,4 +1,4 @@
-import { Component, signal, computed, inject } from '@angular/core'
+import { Component, OnInit, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -37,29 +37,8 @@ import { HlmSheetImports } from '../../ui/sheet/hlm-sheet.components'
 import { HlmSelectImports, SelectOption } from '../../ui/select/hlm-select.components'
 import { HlmAvatarImports } from '../../ui/avatar/hlm-avatar.components'
 import { toast } from 'ngx-sonner'
+import { SupportTicket, TicketPriority, TicketStatus, TicketsFacade } from './data-access'
 
-export type TicketPriority = 'urgent' | 'high' | 'medium' | 'low'
-export type TicketStatus = 'open' | 'in_progress' | 'waiting' | 'resolved'
-
-export interface SupportTicket {
-  id: string
-  ticketNumber: string
-  subject: string
-  customer: { name: string; email: string; tier: string; timezone: string }
-  priority: TicketPriority
-  status: TicketStatus
-  slaRemainingMinutes: number
-  assignee: { name: string; avatar: string }
-  createdAt: string
-  messages: {
-    id: string
-    sender: 'customer' | 'agent' | 'system'
-    senderName: string
-    time: string
-    body: string
-    isInternal?: boolean
-  }[]
-}
 
 @Component({
   selector: 'app-tickets',
@@ -465,12 +444,27 @@ export interface SupportTicket {
     </hlm-sheet>
   `,
 })
-export class TicketsComponent {
-  readonly createDrawerOpen = signal<boolean>(false)
-  readonly activeStatusTab = signal<string>('all')
-  readonly isInternalNote = signal<boolean>(false)
-  searchQuery = ''
+export class TicketsComponent implements OnInit {
+  private readonly facade = inject(TicketsFacade)
+  private readonly exportService = inject(ExportService)
+
+  readonly createDrawerOpen = this.facade.createDrawerOpen
+  readonly activeStatusTab = this.facade.activeStatusTab
+  readonly isInternalNote = this.facade.isInternalNote
+  readonly selectedTicket = this.facade.selectedTicket
+  readonly filteredTickets = this.facade.items
+  readonly openTicketsCount = this.facade.openTicketsCount
+  readonly urgentCount = this.facade.urgentCount
+  readonly isLoading = this.facade.isLoading
+
   replyMessage = ''
+
+  get searchQuery(): string {
+    return this.facade.searchQuery()
+  }
+  set searchQuery(val: string) {
+    this.facade.setSearchQuery(val)
+  }
 
   readonly newTicket = {
     email: '',
@@ -501,100 +495,12 @@ export class TicketsComponent {
     { label: 'Alex Rivera (DevOps)', value: 'Alex Rivera' },
   ]
 
-  readonly tickets = signal<SupportTicket[]>([
-    {
-      id: 'tck-1',
-      ticketNumber: '#TCK-9810',
-      subject: 'Webhook 504 Timeout during batch sync',
-      customer: { name: 'David Miller', email: 'david@enterprise.io', tier: 'Enterprise SLA', timezone: 'UTC-5 (EST)' },
-      priority: 'urgent',
-      status: 'in_progress',
-      slaRemainingMinutes: 24,
-      assignee: { name: 'Sarah Jenkins', avatar: '' },
-      createdAt: '42 mins ago',
-      messages: [
-        {
-          id: 'm-1',
-          sender: 'customer',
-          senderName: 'David Miller',
-          time: '42 mins ago',
-          body: 'We are experiencing 504 Gateway Timeouts when our webhook endpoint receives more than 500 events per minute. Can you assist?',
-        },
-        {
-          id: 'm-2',
-          sender: 'agent',
-          senderName: 'Sarah Jenkins',
-          time: '28 mins ago',
-          body: 'We are inspecting our load balancer ingress logs right now. Our engineering team is testing an auto-scale buffer rule.',
-        },
-      ],
-    },
-    {
-      id: 'tck-2',
-      ticketNumber: '#TCK-9809',
-      subject: 'SAML Single Sign-On certificate rollover',
-      customer: { name: 'Elena Rostova', email: 'elena@biotechcorp.com', tier: 'Pro Plan', timezone: 'UTC+1 (CET)' },
-      priority: 'high',
-      status: 'open',
-      slaRemainingMinutes: 52,
-      assignee: { name: 'Michael Chang', avatar: '' },
-      createdAt: '1 hour ago',
-      messages: [
-        {
-          id: 'm-3',
-          sender: 'customer',
-          senderName: 'Elena Rostova',
-          time: '1 hour ago',
-          body: 'Our Okta identity certificate expires next week. Where do we upload the new X.509 certificate pem string in settings?',
-        },
-      ],
-    },
-    {
-      id: 'tck-3',
-      ticketNumber: '#TCK-9808',
-      subject: 'Custom domain DNS verification pending',
-      customer: { name: 'Marcus Aurelius', email: 'marcus@designlabs.co', tier: 'Starter', timezone: 'UTC-8 (PST)' },
-      priority: 'medium',
-      status: 'waiting',
-      slaRemainingMinutes: 180,
-      assignee: { name: 'Alex Rivera', avatar: '' },
-      createdAt: '3 hours ago',
-      messages: [
-        {
-          id: 'm-4',
-          sender: 'agent',
-          senderName: 'Alex Rivera',
-          time: '2 hours ago',
-          body: 'Your CNAME record has been propagated. Please refresh your custom domain tab in Display Settings.',
-        },
-      ],
-    },
-  ])
-
-  readonly selectedTicket = signal<SupportTicket | null>(this.tickets()[0])
-
-  readonly filteredTickets = computed(() => {
-    const q = this.searchQuery.toLowerCase().trim()
-    const tab = this.activeStatusTab()
-
-    return this.tickets().filter((t) => {
-      const matchesQ =
-        !q ||
-        t.ticketNumber.toLowerCase().includes(q) ||
-        t.subject.toLowerCase().includes(q) ||
-        t.customer.name.toLowerCase().includes(q)
-
-      const matchesTab = tab === 'all' || t.status === tab
-      return matchesQ && matchesTab
-    })
-  })
-
-  readonly openTicketsCount = computed(() => {
-    return this.tickets().filter((t) => t.status !== 'resolved').length
-  })
+  ngOnInit(): void {
+    this.facade.loadAll()
+  }
 
   selectTicket(ticket: SupportTicket): void {
-    this.selectedTicket.set(ticket)
+    this.facade.selectTicket(ticket.id)
   }
 
   formatSla(mins: number): string {
@@ -636,82 +542,40 @@ export class TicketsComponent {
     this.replyMessage = text
   }
 
-  sendReply(ticket: SupportTicket): void {
+  async sendReply(ticket: SupportTicket): Promise<void> {
     if (!this.replyMessage.trim()) return
-
-    const newMsg = {
-      id: 'm-' + (ticket.messages.length + 1),
-      sender: 'agent' as const,
-      senderName: 'Sarah Jenkins',
-      time: 'Just now',
-      body: this.replyMessage.trim(),
-      isInternal: this.isInternalNote(),
+    const success = await this.facade.sendReply(ticket.id, this.replyMessage)
+    if (success) {
+      this.replyMessage = ''
     }
-
-    const updated = this.tickets().map((t) =>
-      t.id === ticket.id ? { ...t, messages: [...t.messages, newMsg] } : t
-    )
-
-    this.tickets.set(updated)
-    this.selectedTicket.update((t) => (t ? { ...t, messages: [...t.messages, newMsg] } : null))
-    this.replyMessage = ''
-    toast.success(this.isInternalNote() ? 'Internal note posted.' : 'Reply sent to customer.')
   }
 
-  markResolved(ticket: SupportTicket): void {
-    this.tickets.update((list) =>
-      list.map((t) => (t.id === ticket.id ? { ...t, status: 'resolved' } : t))
-    )
-    this.selectedTicket.update((t) => (t ? { ...t, status: 'resolved' } : null))
-    toast.success(`Ticket ${ticket.ticketNumber} marked as Resolved.`)
+  async markResolved(ticket: SupportTicket): Promise<void> {
+    await this.facade.markResolved(ticket.id)
   }
 
   openCreateDrawer(): void {
     this.newTicket.email = ''
     this.newTicket.subject = ''
     this.newTicket.description = ''
-    this.createDrawerOpen.set(true)
+    this.facade.openCreateDrawer()
   }
 
-  saveNewTicket(): void {
+  async saveNewTicket(): Promise<void> {
     if (!this.newTicket.email || !this.newTicket.subject) {
       toast.error('Please enter customer email and ticket subject.')
       return
     }
 
-    const ticket: SupportTicket = {
-      id: 'tck-' + (this.tickets().length + 1),
-      ticketNumber: '#TCK-98' + (11 + this.tickets().length),
+    await this.facade.createTicket({
       subject: this.newTicket.subject,
-      customer: {
-        name: this.newTicket.email.split('@')[0],
-        email: this.newTicket.email,
-        tier: 'Enterprise SLA',
-        timezone: 'UTC',
-      },
+      customerEmail: this.newTicket.email,
       priority: this.newTicket.priority,
-      status: 'open',
-      slaRemainingMinutes: 60,
-      assignee: { name: this.newTicket.assignee, avatar: '' },
-      createdAt: 'Just now',
-      messages: [
-        {
-          id: 'm-init',
-          sender: 'customer',
-          senderName: this.newTicket.email.split('@')[0],
-          time: 'Just now',
-          body: this.newTicket.description || 'No initial details provided.',
-        },
-      ],
-    }
-
-    this.tickets.update((list) => [ticket, ...list])
-    this.selectedTicket.set(ticket)
-    toast.success(`Created ticket ${ticket.ticketNumber}.`)
-    this.createDrawerOpen.set(false)
+      description: this.newTicket.description,
+      assigneeName: this.newTicket.assignee,
+    })
   }
 
-  private readonly exportService = inject(ExportService)
 
   exportTicketsCsv(): void {
     const data = this.filteredTickets().map((t) => ({

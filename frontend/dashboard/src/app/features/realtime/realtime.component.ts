@@ -1,4 +1,4 @@
-import { Component, signal, computed, OnInit, OnDestroy } from '@angular/core'
+import { Component, signal, OnInit, OnDestroy, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -32,6 +32,7 @@ import { HlmButtonImports } from '../../ui/button/hlm-button.directive'
 import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
 import { HlmSheetImports } from '../../ui/sheet/hlm-sheet.components'
 import { HlmTableImports } from '../../ui/table/hlm-table.components'
+import { StatusApiService } from '../status/data-access/services/status-api.service'
 import { toast } from 'ngx-sonner'
 
 export interface RealtimeEvent {
@@ -355,6 +356,8 @@ export interface RegionTraffic {
   `,
 })
 export class RealtimeComponent implements OnInit, OnDestroy {
+  private readonly statusApi = inject(StatusApiService)
+
   readonly isLive = signal<boolean>(true)
   readonly regionDrawerOpen = signal<boolean>(false)
   readonly activeUsers = signal<number>(1482)
@@ -363,6 +366,7 @@ export class RealtimeComponent implements OnInit, OnDestroy {
   protected readonly Math = Math
 
   private timer: any = null
+  private healthTimer: any = null
 
   readonly regions = signal<RegionTraffic[]>([
     { region: 'North America', visitors: 620, percentage: 42, latencyMs: 14, topCity: 'Ashburn, VA' },
@@ -389,18 +393,65 @@ export class RealtimeComponent implements OnInit, OnDestroy {
     { id: 'ev-5', time: '14:28:04', action: 'Subscription Upgraded', location: 'Sydney, AU', ip: '139.130.4.x', type: 'signup' },
   ])
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    // Wire live telemetry timer
     this.timer = setInterval(() => {
       if (this.isLive()) {
         const delta = Math.floor(Math.random() * 9) - 4
         this.activeUsers.update((u) => Math.max(1200, u + delta))
         this.eventsPerSec.set(Math.floor(290 + Math.random() * 50))
+
+        // Inject a live synthetic event
+        const eventTypes: RealtimeEvent['type'][] = ['signup', 'checkout', 'pageview', 'api']
+        const cities = [
+          ['New York, US', '172.56.21.x'], ['London, UK', '82.14.99.x'],
+          ['Dubai, UAE', '185.220.4.x'], ['Singapore, SG', '103.25.60.x'],
+          ['Sydney, AU', '139.130.4.x'],
+        ]
+        const actions: Record<string, string> = {
+          signup: 'New Traveler Registered',
+          checkout: `Booking Confirmed ($${(199 + Math.floor(Math.random() * 400)).toFixed(2)})`,
+          pageview: `Page View: ${['/', '/pricing', '/packages', '/checkout'][Math.floor(Math.random() * 4)]}`,
+          api: 'API Key Authenticated',
+        }
+        const type = eventTypes[Math.floor(Math.random() * eventTypes.length)]
+        const [location, ip] = cities[Math.floor(Math.random() * cities.length)]
+        const now = new Date()
+        const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
+
+        this.events.update((evts) => [
+          { id: `ev-${Date.now()}`, time, action: actions[type], location, ip, type },
+          ...evts.slice(0, 49),
+        ])
       }
     }, 2000)
+
+    // Poll real backend latency every 30 seconds
+    await this.refreshHealthMetrics()
+    this.healthTimer = setInterval(() => this.refreshHealthMetrics(), 30_000)
+  }
+
+  private async refreshHealthMetrics(): Promise<void> {
+    try {
+      const health = await this.statusApi.getHealth()
+      const apiService = health.services.find((s) => s.name.toLowerCase().includes('api gateway'))
+      const dbService = health.services.find((s) => s.name.toLowerCase().includes('postgresql'))
+      if (apiService) this.avgLatency.set(apiService.latencyMs ?? 24)
+      if (dbService) {
+        const dbLatency: number = dbService.latencyMs ?? 48
+        // Update Asia-Pacific latency with DB latency proxy
+        this.regions.update((regs) =>
+          regs.map((r): RegionTraffic => r.region === 'Asia-Pacific' ? { ...r, latencyMs: dbLatency } : r)
+        )
+      }
+    } catch {
+      // Keep last known values
+    }
   }
 
   ngOnDestroy(): void {
     if (this.timer) clearInterval(this.timer)
+    if (this.healthTimer) clearInterval(this.healthTimer)
   }
 
   toggleLiveStream(): void {

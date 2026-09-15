@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core'
+import { Component, signal, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -26,6 +26,7 @@ import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
 import { HlmInputImports } from '../../ui/input/hlm-input.directive'
 import { HlmTextareaImports } from '../../ui/textarea/hlm-textarea.directive'
 import { HlmSelectImports } from '../../ui/select/hlm-select.components'
+import { AiApiService } from './data-access/services/ai-api.service'
 import { toast } from 'ngx-sonner'
 
 export interface PlaygroundMessage {
@@ -87,17 +88,17 @@ export interface PlaygroundMessage {
       <div class="flex items-center justify-between shrink-0">
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-2xl font-bold tracking-tight">AI Model Playground</h1>
+            <h1 class="text-2xl font-bold tracking-tight">AI Travel Assistant & LLM Playground</h1>
             <span hlmBadge variant="default" class="text-[10px] gap-1 font-bold">
               <ng-icon name="lucideSparkles" class="size-3" />
               Interactive
             </span>
           </div>
-          <p class="text-xs text-muted-foreground">Experiment with LLM system prompts, hyperparameters, and code generation.</p>
+          <p class="text-xs text-muted-foreground">Experiment with LLM itineraries, travel concierge prompts, and custom structured tour packages.</p>
         </div>
 
         <span hlmBadge variant="secondary" class="font-mono text-xs hidden sm:inline-flex">
-          524 tokens used
+          {{ totalTokens() }} tokens used
         </span>
       </div>
 
@@ -134,7 +135,7 @@ export interface PlaygroundMessage {
                   @if (msg.codeSnippet) {
                     <div class="rounded-xl border border-border bg-slate-950 text-slate-100 p-3 font-mono text-xs space-y-2 overflow-x-auto shadow-md">
                       <div class="flex items-center justify-between text-[11px] text-slate-400 pb-1 border-b border-slate-800">
-                        <span>TypeScript (Angular 21)</span>
+                        <span>JSON Itinerary Schema</span>
                         <button (click)="copySnippet(msg.codeSnippet)" class="hover:text-white cursor-pointer flex items-center gap-1">
                           <ng-icon name="lucideCopy" class="size-3" />
                           <span>Copy</span>
@@ -150,7 +151,7 @@ export interface PlaygroundMessage {
             @if (isGenerating()) {
               <div class="flex items-center gap-2 text-xs text-muted-foreground p-2">
                 <ng-icon name="lucideSparkles" class="size-4 animate-spin text-primary" />
-                <span>AI model is generating response...</span>
+                <span>TravellerAI is synthesizing travel itinerary...</span>
               </div>
             }
           </div>
@@ -162,7 +163,7 @@ export interface PlaygroundMessage {
               [(ngModel)]="userPrompt"
               (keydown.enter)="sendPrompt()"
               rows="1"
-              placeholder="Ask anything or request component code..."
+              placeholder="Ask for an itinerary, travel budget, or package customization..."
               class="flex-1 text-xs sm:text-sm resize-none"
             ></textarea>
             <button
@@ -244,72 +245,100 @@ export interface PlaygroundMessage {
   `,
 })
 export class AiPlaygroundComponent {
+  private readonly aiApi = inject(AiApiService)
+
   selectedModel: any = 'gpt-4o'
-  systemPrompt = 'You are a staff frontend architect specializing in Angular 21, Spartan UI, and Tailwind CSS v4.'
+  systemPrompt = 'You are TravellerAI Concierge & Travel Architect. Assist travelers with tailor-made itineraries, hotel choices, and adventure bookings.'
   temperature = 0.7
   maxTokens = 2048
   userPrompt = ''
   readonly isGenerating = signal<boolean>(false)
+  readonly totalTokens = signal<number>(524)
+  readonly lastLatencyMs = signal<number>(0)
 
   readonly modelOptions = [
     { label: 'OpenAI GPT-4o (Omni)', value: 'gpt-4o' },
-    { label: 'Claude 3.5 Sonnet', value: 'claude-3-5' },
-    { label: 'Meta Llama 3 (70B)', value: 'llama-3' },
+    { label: 'Claude 3.7 Sonnet', value: 'claude-3-7' },
+    { label: 'Gemini 1.5 Pro', value: 'gemini-1.5-pro' },
+    { label: 'Meta Llama 3.3 (70B)', value: 'llama-3-3' },
   ]
 
   readonly messages = signal<PlaygroundMessage[]>([
     {
       role: 'user',
-      content: 'Can you show me how to create a signal-based theme switcher in Angular 21?',
+      content: 'Can you create a 3-day luxury alpine itinerary in Zermatt, Switzerland?',
     },
     {
       role: 'assistant',
-      content: 'Here is a clean implementation of a signal-driven ThemeService with local persistence and DOM attribute reflection:',
-      codeSnippet: `@Injectable({ providedIn: 'root' })
-export class ThemeService {
-  private readonly _theme = signal<'light' | 'dark'>('light');
-  readonly theme = this._theme.asReadonly();
-
-  toggleTheme(): void {
-    const next = this._theme() === 'light' ? 'dark' : 'light';
-    this._theme.set(next);
-    document.documentElement.classList.toggle('dark', next === 'dark');
-  }
-}`,
+      content: 'Here is an exclusive 3-day luxury itinerary including Gornergrat panorama railway, private Matterhorn glacier hiking, and Michelin-starred dining:',
+      codeSnippet: `{\n  "destination": "Zermatt, Switzerland",\n  "durationDays": 3,\n  "hotel": "The Omnia Mountain Lodge (Matterhorn Suite)",\n  "activities": [\n    "Day 1: Private arrival via Glacier Express & Fondue Tasting",\n    "Day 2: Heli-skiing / Glacier hike with UIAGM Certified Guide",\n    "Day 3: Gornergrat scenic rail & Spa Wellness afternoon"\n  ],\n  "estimatedBudgetUSD": 3850\n}`,
+      tokens: 312,
     },
   ])
 
-  sendPrompt(): void {
-    if (!this.userPrompt.trim()) return
+  async sendPrompt(): Promise<void> {
+    if (!this.userPrompt.trim() || this.isGenerating()) return
 
     const userText = this.userPrompt
     this.messages.update((list) => [...list, { role: 'user', content: userText }])
     this.userPrompt = ''
     this.isGenerating.set(true)
 
-    setTimeout(() => {
-      this.isGenerating.set(false)
+    try {
+      // Build full conversation history for context
+      const history = this.messages().map((m) => ({ role: m.role, content: m.content }))
+
+      const res = await this.aiApi.chat({
+        messages: history,
+        model: this.selectedModel,
+        temperature: this.temperature,
+        maxTokens: this.maxTokens,
+        systemPrompt: this.systemPrompt,
+      })
+
+      // Parse code snippet out of markdown code block if present
+      let content = res.content
+      let codeSnippet: string | undefined
+      const codeBlockMatch = content.match(/```(?:json)?\n([\s\S]*?)```/)
+      if (codeBlockMatch) {
+        codeSnippet = codeBlockMatch[1].trim()
+        content = content.replace(/```(?:json)?\n[\s\S]*?```/, '').trim()
+      }
+
       this.messages.update((list) => [
         ...list,
         {
           role: 'assistant',
-          content: `Here is the response generated using ${this.selectedModel} at temperature ${this.temperature}:`,
-          codeSnippet: `export const featureConfig = {\n  model: '${this.selectedModel}',\n  temperature: ${this.temperature},\n  active: true\n};`,
+          content,
+          codeSnippet,
+          tokens: res.tokensUsed,
         },
       ])
-    }, 1200)
+
+      this.totalTokens.update((t) => t + res.tokensUsed)
+      this.lastLatencyMs.set(res.latencyMs)
+    } catch {
+      this.messages.update((list) => [
+        ...list,
+        { role: 'assistant', content: 'An error occurred while connecting to the TravellerAI concierge. Please try again.' },
+      ])
+      toast.error('Failed to reach AI concierge endpoint.')
+    } finally {
+      this.isGenerating.set(false)
+    }
   }
 
   copySnippet(code: string): void {
     if (typeof navigator !== 'undefined') {
       navigator.clipboard.writeText(code)
     }
-    toast.success('Code snippet copied to clipboard!')
+    toast.success('Itinerary schema copied to clipboard!')
   }
 
   resetParams(): void {
     this.temperature = 0.7
     this.maxTokens = 2048
+    this.totalTokens.set(0)
     toast.info('Model parameters reset to defaults.')
   }
 }

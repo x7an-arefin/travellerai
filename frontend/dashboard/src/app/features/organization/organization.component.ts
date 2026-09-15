@@ -1,4 +1,4 @@
-import { Component, signal, computed } from '@angular/core'
+import { Component, signal, computed, inject, OnInit } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -30,21 +30,7 @@ import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
 import { HlmSheetImports } from '../../ui/sheet/hlm-sheet.components'
 import { HlmSelectImports, SelectOption } from '../../ui/select/hlm-select.components'
 import { toast } from 'ngx-sonner'
-
-export interface EmployeeNode {
-  id: string
-  name: string
-  role: string
-  department: string
-  email: string
-  location: string
-  status: 'active' | 'in_meeting' | 'on_leave'
-  directReportsCount: number
-  managerId?: string
-  compensationTier: string
-  startDate: string
-  avatarInitials: string
-}
+import { OrganizationApiService, EmployeeNode, OrgOverviewStats } from './data-access'
 
 @Component({
   selector: 'app-organization',
@@ -100,8 +86,8 @@ export interface EmployeeNode {
       <!-- Title & Action Bar -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight text-foreground">Organization Hierarchy & Directory</h1>
-          <p class="text-xs text-muted-foreground">Interactive reporting chain, departmental structures, and employee role directory.</p>
+          <h1 class="text-2xl font-bold tracking-tight text-foreground">Organization Hierarchy & Staff Directory</h1>
+          <p class="text-xs text-muted-foreground">Interactive reporting chain, departmental structures, and operator staff directory.</p>
         </div>
 
         <div class="flex items-center gap-2">
@@ -120,25 +106,25 @@ export interface EmployeeNode {
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div hlmCard class="p-4 space-y-1 hover:border-primary/40 transition-colors shadow-2xs">
           <span class="text-xs font-semibold text-muted-foreground">Total Headcount</span>
-          <div class="text-2xl font-bold text-foreground">{{ employees().length }} Employees</div>
+          <div class="text-2xl font-bold text-foreground">{{ stats().totalHeadcount }} Employees</div>
           <p class="text-[11px] text-emerald-600 font-semibold">+8 hires this quarter</p>
         </div>
 
         <div hlmCard class="p-4 space-y-1 hover:border-primary/40 transition-colors shadow-2xs">
           <span class="text-xs font-semibold text-muted-foreground">Active Departments</span>
-          <div class="text-2xl font-bold text-foreground">5 Business Units</div>
-          <p class="text-[11px] text-sky-500 font-semibold">Engineering is largest (45%)</p>
+          <div class="text-2xl font-bold text-foreground">{{ stats().activeDepartments }} Business Units</div>
+          <p class="text-[11px] text-sky-500 font-semibold">Engineering & Ops are largest</p>
         </div>
 
         <div hlmCard class="p-4 space-y-1 hover:border-primary/40 transition-colors shadow-2xs">
           <span class="text-xs font-semibold text-muted-foreground">Remote Distribution</span>
-          <div class="text-2xl font-bold text-foreground">62% Remote</div>
+          <div class="text-2xl font-bold text-foreground">{{ stats().remotePercentage }}% Remote</div>
           <p class="text-[11px] text-muted-foreground">Across 8 global timezones</p>
         </div>
 
         <div hlmCard class="p-4 space-y-1 hover:border-primary/40 transition-colors shadow-2xs">
           <span class="text-xs font-semibold text-muted-foreground">Retention Rate</span>
-          <div class="text-2xl font-bold text-emerald-600">96.4%</div>
+          <div class="text-2xl font-bold text-emerald-600">{{ stats().retentionRate }}%</div>
           <p class="text-[11px] text-emerald-600 font-semibold">Industry leading</p>
         </div>
       </div>
@@ -257,7 +243,7 @@ export interface EmployeeNode {
       </div>
     </app-main>
 
-    <!-- Employee Profile Inspector Sheet (size="md" = 1/2 screen width) -->
+    <!-- Employee Profile Inspector Sheet -->
     <hlm-sheet [isOpen]="profileDrawerOpen()" position="right" [size]="'md'" (closed)="profileDrawerOpen.set(false)">
       @if (selectedEmployee(); as emp) {
         <div hlmSheetHeader>
@@ -315,7 +301,7 @@ export interface EmployeeNode {
       }
     </hlm-sheet>
 
-    <!-- Add Team Member Sheet (size="sm" = 1/3 screen width) -->
+    <!-- Add Team Member Sheet -->
     <hlm-sheet [isOpen]="addMemberOpen()" position="right" [size]="'sm'" (closed)="addMemberOpen.set(false)">
       <div hlmSheetHeader>
         <h3 hlmSheetTitle>Add Team Member</h3>
@@ -338,7 +324,7 @@ export interface EmployeeNode {
           <input
             type="text"
             [(ngModel)]="newMember.role"
-            placeholder="e.g. Senior Frontend Architect"
+            placeholder="e.g. Senior Operations Curator"
             class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
@@ -375,7 +361,9 @@ export interface EmployeeNode {
     </hlm-sheet>
   `,
 })
-export class OrganizationComponent {
+export class OrganizationComponent implements OnInit {
+  private readonly orgApi = inject(OrganizationApiService)
+
   readonly profileDrawerOpen = signal<boolean>(false)
   readonly addMemberOpen = signal<boolean>(false)
   readonly selectedEmployee = signal<EmployeeNode | null>(null)
@@ -394,98 +382,24 @@ export class OrganizationComponent {
     { label: 'All Departments', value: 'all' },
     { label: 'Executive', value: 'Executive' },
     { label: 'Engineering', value: 'Engineering' },
-    { label: 'Product & Design', value: 'Product & Design' },
-    { label: 'Sales & Growth', value: 'Sales & Growth' },
-    { label: 'Customer Success', value: 'Customer Success' },
+    { label: 'Operations', value: 'Operations' },
+    { label: 'Design', value: 'Design' },
+    { label: 'Marketing', value: 'Marketing' },
   ]
 
   readonly formDepartmentOptions: readonly SelectOption[] = [
+    { label: 'Executive', value: 'Executive' },
     { label: 'Engineering', value: 'Engineering' },
-    { label: 'Product & Design', value: 'Product & Design' },
-    { label: 'Sales & Growth', value: 'Sales & Growth' },
-    { label: 'Customer Success', value: 'Customer Success' },
+    { label: 'Operations', value: 'Operations' },
+    { label: 'Design', value: 'Design' },
+    { label: 'Marketing', value: 'Marketing' },
   ]
 
-  readonly employees = signal<EmployeeNode[]>([
-    {
-      id: 'emp-1',
-      name: 'Dr. Eleanor Vance',
-      role: 'Chief Executive Officer',
-      department: 'Executive',
-      email: 'eleanor.vance@enterprise.io',
-      location: 'San Francisco, CA',
-      status: 'active',
-      directReportsCount: 6,
-      compensationTier: 'Band E-1 (Executive)',
-      startDate: 'Jan 2021',
-      avatarInitials: 'EV',
-    },
-    {
-      id: 'emp-2',
-      name: 'Marcus Brody',
-      role: 'Chief Technology Officer',
-      department: 'Executive',
-      email: 'marcus.brody@enterprise.io',
-      location: 'New York, NY',
-      status: 'active',
-      directReportsCount: 14,
-      compensationTier: 'Band E-2 (Executive)',
-      startDate: 'Mar 2021',
-      avatarInitials: 'MB',
-    },
-    {
-      id: 'emp-3',
-      name: 'Sarah Jenkins',
-      role: 'VP of Sales & Growth',
-      department: 'Sales & Growth',
-      email: 'sarah.jenkins@enterprise.io',
-      location: 'Austin, TX',
-      status: 'in_meeting',
-      directReportsCount: 8,
-      compensationTier: 'Band L-7 (VP)',
-      startDate: 'Jun 2022',
-      avatarInitials: 'SJ',
-    },
-    {
-      id: 'emp-4',
-      name: 'Alex Rivera',
-      role: 'Staff Platform Architect',
-      department: 'Engineering',
-      email: 'alex.rivera@enterprise.io',
-      location: 'Remote - Berlin, DE',
-      status: 'active',
-      directReportsCount: 4,
-      compensationTier: 'Band L-6 (Staff)',
-      startDate: 'Nov 2022',
-      avatarInitials: 'AR',
-    },
-    {
-      id: 'emp-5',
-      name: 'Elena Rostova',
-      role: 'Head of Product Design',
-      department: 'Product & Design',
-      email: 'elena.rostova@enterprise.io',
-      location: 'Remote - Zurich, CH',
-      status: 'active',
-      directReportsCount: 5,
-      compensationTier: 'Band L-6 (Director)',
-      startDate: 'Jan 2023',
-      avatarInitials: 'ER',
-    },
-    {
-      id: 'emp-6',
-      name: 'Michael Chang',
-      role: 'Lead Customer Engineer',
-      department: 'Customer Success',
-      email: 'michael.chang@enterprise.io',
-      location: 'Seattle, WA',
-      status: 'on_leave',
-      directReportsCount: 3,
-      compensationTier: 'Band L-5 (Lead)',
-      startDate: 'Aug 2023',
-      avatarInitials: 'MC',
-    },
-  ])
+  readonly employees = signal<EmployeeNode[]>([])
+
+  readonly stats = computed<OrgOverviewStats>(() => {
+    return this.orgApi.getStats(this.employees())
+  })
 
   readonly filteredEmployees = computed(() => {
     const q = this.searchQuery.toLowerCase().trim()
@@ -502,6 +416,12 @@ export class OrganizationComponent {
       return matchesQ && matchesDept
     })
   })
+
+  ngOnInit(): void {
+    this.orgApi.listEmployees().subscribe((list) => {
+      this.employees.set(list)
+    })
+  }
 
   getLeadership(): EmployeeNode[] {
     return this.filteredEmployees().filter((e) => e.department === 'Executive')
@@ -544,33 +464,46 @@ export class OrganizationComponent {
       return
     }
 
-    const initials = this.newMember.name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .substring(0, 2)
-      .toUpperCase()
-
-    const item: EmployeeNode = {
-      id: 'emp-' + (this.employees().length + 1),
+    this.orgApi.addEmployee({
       name: this.newMember.name,
       role: this.newMember.role,
       department: this.newMember.department,
-      email: `${this.newMember.name.toLowerCase().replace(/\s+/g, '.')}@enterprise.io`,
       location: this.newMember.location,
-      status: 'active',
-      directReportsCount: 0,
-      compensationTier: 'Band L-4 (Senior)',
-      startDate: 'Aug 2026',
-      avatarInitials: initials || 'EM',
-    }
-
-    this.employees.update((list) => [...list, item])
-    toast.success(`Added ${item.name} to organizational directory.`)
-    this.addMemberOpen.set(false)
+      email: `${this.newMember.name.toLowerCase().replace(/\s+/g, '.')}@traveller.ai`,
+    }).subscribe((item) => {
+      this.employees.update((list) => [...list, item])
+      toast.success(`Added ${item.name} to organizational directory.`)
+      this.addMemberOpen.set(false)
+    })
   }
 
   exportDirectory(): void {
+    const list = this.employees()
+    if (list.length === 0) {
+      toast.error('No employee records to export.')
+      return
+    }
+
+    const headers = ['ID', 'Name', 'Role', 'Department', 'Email', 'Location', 'Status', 'Compensation']
+    const rows = list.map((e) => [
+      `"${e.id}"`,
+      `"${e.name}"`,
+      `"${e.role}"`,
+      `"${e.department}"`,
+      `"${e.email}"`,
+      `"${e.location}"`,
+      `"${e.status}"`,
+      `"${e.compensationTier}"`,
+    ])
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `organization_directory_${Date.now()}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
     toast.success('Organization directory exported to CSV.')
   }
 }

@@ -1,6 +1,8 @@
-import { Component, signal } from '@angular/core'
+import { Component, signal, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
+import { Router } from '@angular/router'
 import { NgIcon, provideIcons } from '@ng-icons/core'
+import { BillingApiService } from '../billing/data-access/services/billing-api.service'
 import {
   lucideCheck,
   lucideSparkles,
@@ -245,7 +247,11 @@ import { toast } from 'ngx-sonner'
   `,
 })
 export class PricingComponent {
+  private readonly router = inject(Router)
+  private readonly billingApi = inject(BillingApiService)
+
   readonly isAnnual = signal<boolean>(true)
+  readonly activePlan = signal<string>('Starter')
 
   readonly faqs = [
     { q: 'Can I change my plan anytime?', a: 'Yes, you can upgrade, downgrade, or cancel your subscription at any moment from your billing dashboard.' },
@@ -255,6 +261,12 @@ export class PricingComponent {
   ]
 
   selectPlan(plan: string): void {
-    toast.success(`Selected ${plan} plan. Redirecting to checkout...`)
+    toast.success(`Selected ${plan} plan. Navigating to Billing Checkout...`)
+    this.router.navigate(['/billing'], {
+      queryParams: {
+        plan: plan.toLowerCase(),
+        cycle: this.isAnnual() ? 'annual' : 'monthly',
+      },
+    })
   }
 }

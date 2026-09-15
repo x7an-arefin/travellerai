@@ -1,4 +1,4 @@
-import { Component, signal, computed } from '@angular/core'
+import { Component, signal, computed, inject, OnInit, ViewChild, ElementRef } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -31,16 +31,7 @@ import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
 import { HlmSheetImports } from '../../ui/sheet/hlm-sheet.components'
 import { HlmTableImports } from '../../ui/table/hlm-table.components'
 import { toast } from 'ngx-sonner'
-
-export interface FileItem {
-  id: string
-  name: string
-  extension: 'pdf' | 'png' | 'zip' | 'mp4' | 'ts'
-  size: string
-  folder: string
-  updatedAt: string
-  uploader: string
-}
+import { FilesApiService, FileItem } from './data-access'
 
 @Component({
   selector: 'app-files',
@@ -92,149 +83,129 @@ export interface FileItem {
       </div>
     </app-header>
 
+    <!-- Hidden file input for real uploads -->
+    <input type="file" #fileInput (change)="onFileSelected($event)" class="hidden" />
+
     <!-- Main Content -->
     <app-main [fixed]="true" class="space-y-6">
       <!-- Heading & Controls -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 class="text-2xl font-bold tracking-tight">Files & Media Drive</h1>
-          <p class="text-xs text-muted-foreground">
-            Explore workspace files, manage cloud assets, and preview documents.
-          </p>
+          <p class="text-xs text-muted-foreground">Manage tour vouchers, itinerary PDFs, destination photography, and contract archives.</p>
         </div>
 
         <div class="flex items-center gap-2">
-          <!-- View Switcher -->
-          <div class="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border/40">
-            <button
-              type="button"
-              (click)="viewMode.set('grid')"
-              class="p-1.5 rounded-md cursor-pointer transition-colors"
-              [class.bg-background]="viewMode() === 'grid'"
-              [class.text-foreground]="viewMode() === 'grid'"
-              [class.shadow-2xs]="viewMode() === 'grid'"
-              [class.text-muted-foreground]="viewMode() !== 'grid'"
-              aria-label="Grid view"
-            >
-              <ng-icon name="lucideLayoutGrid" class="size-4" />
-            </button>
-            <button
-              type="button"
-              (click)="viewMode.set('list')"
-              class="p-1.5 rounded-md cursor-pointer transition-colors"
-              [class.bg-background]="viewMode() === 'list'"
-              [class.text-foreground]="viewMode() === 'list'"
-              [class.shadow-2xs]="viewMode() === 'list'"
-              [class.text-muted-foreground]="viewMode() !== 'list'"
-              aria-label="List view"
-            >
-              <ng-icon name="lucideList" class="size-4" />
-            </button>
-          </div>
-
-          <button hlmBtn size="sm" (click)="uploadFile()" class="gap-1.5 cursor-pointer h-9 shadow-xs">
+          <button hlmBtn size="sm" (click)="triggerUpload()" class="gap-1.5 cursor-pointer shadow-xs">
             <ng-icon name="lucideUploadCloud" class="size-4" />
             <span>Upload File</span>
           </button>
         </div>
       </div>
 
-      <!-- Storage Breakdown Bar -->
-      <div hlmCard class="p-4 space-y-3">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-foreground">Storage Allocation</span>
-          <span class="text-xs font-mono font-bold text-muted-foreground">18.4 GB of 50 GB Used</span>
-        </div>
-
-        <div class="h-2.5 w-full bg-muted rounded-full overflow-hidden flex">
-          <div class="bg-primary h-full" style="width: 42%;" title="Documents (42%)"></div>
-          <div class="bg-sky-500 h-full" style="width: 28%;" title="Images (28%)"></div>
-          <div class="bg-amber-500 h-full" style="width: 18%;" title="Media (18%)"></div>
-          <div class="bg-emerald-500 h-full" style="width: 12%;" title="Archives (12%)"></div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-4 text-xs pt-1">
-          <div class="flex items-center gap-1.5 font-medium"><span class="size-2 rounded-full bg-primary"></span>Documents (42%)</div>
-          <div class="flex items-center gap-1.5 font-medium text-muted-foreground"><span class="size-2 rounded-full bg-sky-500"></span>Images (28%)</div>
-          <div class="flex items-center gap-1.5 font-medium text-muted-foreground"><span class="size-2 rounded-full bg-amber-500"></span>Media (18%)</div>
-          <div class="flex items-center gap-1.5 font-medium text-muted-foreground"><span class="size-2 rounded-full bg-emerald-500"></span>Archives (12%)</div>
-        </div>
-      </div>
-
-      <!-- Folders Grid -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Folders</h3>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          @for (folder of folders; track folder.name) {
-            <div
-              (click)="filterFolder(folder.name)"
-              class="flex items-center gap-3 p-3.5 rounded-xl border border-border bg-card hover:border-primary/50 transition-all cursor-pointer group shadow-2xs"
-            >
-              <div class="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform">
-                <ng-icon name="lucideFolder" class="size-5" />
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="text-xs font-semibold text-foreground truncate">{{ folder.name }}</p>
-                <p class="text-[10px] text-muted-foreground">{{ folder.count }} files</p>
-              </div>
+      <!-- Quick Folder Shortcuts -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        @for (f of folders; track f.name) {
+          <div
+            (click)="filterFolder(f.name)"
+            class="p-4 rounded-xl border border-border bg-card shadow-2xs hover:border-primary/50 transition-all cursor-pointer space-y-1 group"
+            [class.border-primary]="selectedFolder() === f.name"
+          >
+            <div class="flex items-center justify-between">
+              <ng-icon name="lucideFolder" class="size-5 text-primary" />
+              <span class="text-xs font-mono text-muted-foreground">{{ f.count }} files</span>
             </div>
+            <h4 class="font-bold text-xs text-foreground group-hover:text-primary transition-colors">{{ f.name }}</h4>
+          </div>
+        }
+      </div>
+
+      <!-- Filter and View Mode Switcher -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="relative w-full sm:w-64">
+          <ng-icon name="lucideSearch" class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            placeholder="Search by file name..."
+            class="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </div>
+
+        <div class="flex items-center gap-2">
+          @if (selectedFolder()) {
+            <button hlmBtn variant="ghost" size="sm" (click)="clearFolderFilter()" class="h-8 text-xs cursor-pointer">
+              Clear Filter: "{{ selectedFolder() }}"
+            </button>
           }
+          <div class="flex items-center border border-border rounded-lg p-0.5 bg-muted/40">
+            <button
+              (click)="viewMode.set('grid')"
+              class="p-1 rounded-md cursor-pointer transition-colors"
+              [class.bg-card]="viewMode() === 'grid'"
+              [class.shadow-2xs]="viewMode() === 'grid'"
+            >
+              <ng-icon name="lucideLayoutGrid" class="size-4 text-foreground" />
+            </button>
+            <button
+              (click)="viewMode.set('list')"
+              class="p-1 rounded-md cursor-pointer transition-colors"
+              [class.bg-card]="viewMode() === 'list'"
+              [class.shadow-2xs]="viewMode() === 'list'"
+            >
+              <ng-icon name="lucideList" class="size-4 text-foreground" />
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Recent Files Section -->
-      <div class="space-y-3">
-        <div class="flex items-center justify-between">
-          <h3 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Recent Files</h3>
-          <span class="text-xs text-muted-foreground">{{ files().length }} items</span>
-        </div>
-
+      <!-- Files Display Grid / Table -->
+      <div>
         @if (viewMode() === 'grid') {
-          <!-- Grid View -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            @for (file of files(); track file.id) {
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            @for (file of filteredFiles(); track file.id) {
               <div
-                hlmCard
                 (click)="previewFile(file)"
-                class="p-4 justify-between hover:border-primary/50 transition-all cursor-pointer group shadow-2xs"
+                class="p-4 rounded-xl border border-border bg-card shadow-2xs hover:border-primary/40 transition-all cursor-pointer space-y-3 group relative"
               >
-                <div class="flex items-start justify-between">
-                  <div class="flex size-10 items-center justify-center rounded-lg bg-muted/60 text-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                    <ng-icon [name]="getFileIcon(file.extension)" class="size-5" />
-                  </div>
-                  <span hlmBadge variant="outline" class="text-[9px] uppercase font-bold">
-                    {{ file.extension }}
-                  </span>
+                <div class="h-28 w-full rounded-lg bg-muted/40 border border-border flex items-center justify-center text-muted-foreground overflow-hidden">
+                  @if (file.extension === 'png' && file.url) {
+                    <img [src]="file.url" [alt]="file.name" class="h-full w-full object-cover group-hover:scale-105 transition-transform" />
+                  } @else {
+                    <ng-icon [name]="getFileIcon(file.extension)" class="size-10 opacity-60 text-primary" />
+                  }
                 </div>
 
-                <div class="space-y-1 mt-3">
-                  <p class="text-xs font-semibold text-foreground truncate">{{ file.name }}</p>
-                  <p class="text-[10px] text-muted-foreground">{{ file.size }} • {{ file.updatedAt }}</p>
+                <div>
+                  <h4 class="font-bold text-xs text-foreground group-hover:text-primary transition-colors truncate">
+                    {{ file.name }}
+                  </h4>
+                  <div class="flex items-center justify-between text-[11px] text-muted-foreground mt-1">
+                    <span>{{ file.size }}</span>
+                    <span>{{ file.updatedAt }}</span>
+                  </div>
                 </div>
               </div>
             }
           </div>
         } @else {
-          <!-- List View Table -->
-          <div class="rounded-lg border border-border bg-card overflow-x-auto shadow-2xs">
-            <table hlmTable class="min-w-[600px]">
+          <div hlmCard class="p-0 overflow-hidden shadow-2xs">
+            <table hlmTable class="w-full text-xs">
               <thead hlmTableHeader>
                 <tr hlmTableRow>
-                  <th hlmTableHead class="ps-4">Name</th>
+                  <th hlmTableHead class="ps-4">File Name</th>
                   <th hlmTableHead>Folder</th>
                   <th hlmTableHead>Size</th>
-                  <th hlmTableHead>Modified</th>
-                  <th hlmTableHead>Owner</th>
+                  <th hlmTableHead>Updated</th>
+                  <th hlmTableHead>Uploader</th>
                 </tr>
               </thead>
               <tbody hlmTableBody>
-                @for (file of files(); track file.id) {
-                  <tr hlmTableRow (click)="previewFile(file)" class="cursor-pointer hover:bg-muted/40">
-                    <td hlmTableCell class="ps-4 font-medium text-xs text-foreground">
-                      <div class="flex items-center gap-2">
-                        <ng-icon [name]="getFileIcon(file.extension)" class="size-4 text-muted-foreground" />
-                        <span>{{ file.name }}</span>
-                      </div>
+                @for (file of filteredFiles(); track file.id) {
+                  <tr (click)="previewFile(file)" class="hover:bg-muted/40 transition-colors cursor-pointer">
+                    <td hlmTableCell class="ps-4 font-semibold text-foreground flex items-center gap-2">
+                      <ng-icon [name]="getFileIcon(file.extension)" class="size-4 text-primary" />
+                      <span class="truncate max-w-[280px]">{{ file.name }}</span>
                     </td>
                     <td hlmTableCell class="text-xs text-muted-foreground">{{ file.folder }}</td>
                     <td hlmTableCell class="text-xs font-mono text-muted-foreground">{{ file.size }}</td>
@@ -265,10 +236,14 @@ export interface FileItem {
         </div>
 
         <div class="space-y-4 py-4 flex-1 text-xs">
-          <!-- Placeholder Thumbnail Preview -->
-          <div class="h-44 w-full rounded-xl bg-muted/50 border border-border flex flex-col items-center justify-center text-muted-foreground">
-            <ng-icon [name]="getFileIcon(file.extension)" class="size-10 mb-2 opacity-40" />
-            <span class="text-[11px] font-medium">{{ file.name }} preview</span>
+          <!-- Thumbnail Preview -->
+          <div class="h-44 w-full rounded-xl bg-muted/50 border border-border flex flex-col items-center justify-center text-muted-foreground overflow-hidden">
+            @if (file.extension === 'png' && file.url) {
+              <img [src]="file.url" [alt]="file.name" class="h-full w-full object-cover" />
+            } @else {
+              <ng-icon [name]="getFileIcon(file.extension)" class="size-10 mb-2 opacity-40 text-primary" />
+              <span class="text-[11px] font-medium">{{ file.name }} preview</span>
+            }
           </div>
 
           <div class="space-y-2 border-t border-border pt-3">
@@ -301,26 +276,46 @@ export interface FileItem {
     </hlm-sheet>
   `,
 })
-export class FilesComponent {
+export class FilesComponent implements OnInit {
+  @ViewChild('fileInput') fileInputRef!: ElementRef<HTMLInputElement>
+  private readonly filesApi = inject(FilesApiService)
+
   readonly viewMode = signal<'grid' | 'list'>('grid')
   readonly previewSheetOpen = signal<boolean>(false)
   readonly activeFile = signal<FileItem | null>(null)
+  readonly selectedFolder = signal<string | null>(null)
+  searchQuery = ''
 
   readonly folders = [
-    { name: 'Design Assets', count: 24 },
-    { name: 'Invoices & Taxes', count: 18 },
-    { name: 'Marketing Brand', count: 32 },
-    { name: 'Source Code', count: 12 },
+    { name: 'Documents', count: 18 },
+    { name: 'Images', count: 42 },
+    { name: 'Contracts', count: 12 },
+    { name: 'Vouchers', count: 26 },
   ]
 
-  readonly files = signal<FileItem[]>([
-    { id: 'f1', name: 'Brand_Guidelines_2026.pdf', extension: 'pdf', size: '3.4 MB', folder: 'Design Assets', updatedAt: '2 hours ago', uploader: 'Sat Naing' },
-    { id: 'f2', name: 'Dashboard_Mockup_v2.png', extension: 'png', size: '1.8 MB', folder: 'Design Assets', updatedAt: 'Yesterday', uploader: 'Sarah Miller' },
-    { id: 'f3', name: 'Spartan_UI_Components.zip', extension: 'zip', size: '14.2 MB', folder: 'Source Code', updatedAt: '3 days ago', uploader: 'Sat Naing' },
-    { id: 'f4', name: 'Keynote_Presentation.mp4', extension: 'mp4', size: '48.0 MB', folder: 'Marketing Brand', updatedAt: 'Aug 02, 2026', uploader: 'Olivia Martin' },
-    { id: 'f5', name: 'Invoice_August_Receipt.pdf', extension: 'pdf', size: '240 KB', folder: 'Invoices & Taxes', updatedAt: 'Aug 01, 2026', uploader: 'System' },
-    { id: 'f6', name: 'ThemeService_Types.ts', extension: 'ts', size: '18 KB', folder: 'Source Code', updatedAt: 'Jul 28, 2026', uploader: 'Sat Naing' },
-  ])
+  readonly files = signal<FileItem[]>([])
+
+  readonly filteredFiles = computed(() => {
+    let list = this.files()
+    const folder = this.selectedFolder()
+    const q = this.searchQuery.toLowerCase().trim()
+
+    if (folder) {
+      list = list.filter((f) => f.folder.toLowerCase() === folder.toLowerCase())
+    }
+
+    if (q) {
+      list = list.filter((f) => f.name.toLowerCase().includes(q))
+    }
+
+    return list
+  })
+
+  ngOnInit(): void {
+    this.filesApi.listFiles().subscribe((list) => {
+      this.files.set(list)
+    })
+  }
 
   getFileIcon(ext: string): string {
     switch (ext) {
@@ -338,14 +333,36 @@ export class FilesComponent {
   }
 
   downloadFile(file: FileItem): void {
+    if (file.url) {
+      const a = document.createElement('a')
+      a.href = file.url
+      a.download = file.name
+      a.target = '_blank'
+      a.click()
+    }
     toast.success(`Downloading ${file.name}...`)
   }
 
-  uploadFile(): void {
-    toast.info('File upload dropzone opened.')
+  triggerUpload(): void {
+    this.fileInputRef?.nativeElement?.click()
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0]
+      this.filesApi.uploadFile(file).subscribe((newFile) => {
+        this.files.update((list) => [newFile, ...list])
+        toast.success(`Uploaded ${file.name} to Media Drive.`)
+      })
+    }
   }
 
   filterFolder(folderName: string): void {
-    toast.info(`Filtering files in "${folderName}"`)
+    this.selectedFolder.set(folderName)
+  }
+
+  clearFolderFilter(): void {
+    this.selectedFolder.set(null)
   }
 }

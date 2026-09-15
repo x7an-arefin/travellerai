@@ -1,7 +1,8 @@
-import { Component, signal, computed } from '@angular/core'
+import { Component, signal, computed, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
+import { TicketsApiService } from '../tickets/data-access/services/tickets-api.service'
 import {
   lucideSearch,
   lucideBook,
@@ -551,6 +552,8 @@ interface VideoTutorial {
   `,
 })
 export class HelpCenterComponent {
+  private readonly ticketsApi = inject(TicketsApiService)
+
   readonly activeCategory = signal<string>('all')
   readonly selectedArticle = signal<HelpArticle | null>(null)
   readonly agentTyping = signal<boolean>(false)
@@ -720,7 +723,7 @@ export class HelpCenterComponent {
     }, 1400)
   }
 
-  submitTicket(): void {
+  async submitTicket(): Promise<void> {
     if (!this.ticketSubject.trim()) {
       toast.error('Missing Subject', { description: 'Please enter a subject for your support ticket.' })
       return
@@ -734,14 +737,27 @@ export class HelpCenterComponent {
       return
     }
 
-    const ticketRef = 'TKT-' + Math.floor(10000 + Math.random() * 90000)
-    toast.success('Support Ticket Submitted', {
-      description: `Your ${this.ticketPriority}-priority ticket ${ticketRef} has been created. Expect a response within 4 hours.`,
-    })
-    this.ticketSubject = ''
-    this.ticketCategory = ''
-    this.ticketDescription = ''
-    this.ticketPriority = 'Medium'
+    try {
+      const res = await this.ticketsApi.create({
+        subject: this.ticketSubject.trim(),
+        category: this.ticketCategory,
+        priority: (this.ticketPriority.toLowerCase() as any) || 'medium',
+        customerName: 'Travel Operator',
+        customerEmail: 'operator@traveller.ai',
+        description: this.ticketDescription.trim(),
+      })
+
+      const ticketRef = res.ok && res.data ? res.data.ticketNumber : '#TCK-9921'
+      toast.success('Support Ticket Dispatched to System', {
+        description: `Ticket ${ticketRef} has been logged in Support Tickets. Support desk notified.`,
+      })
+      this.ticketSubject = ''
+      this.ticketCategory = ''
+      this.ticketDescription = ''
+      this.ticketPriority = 'Medium'
+    } catch {
+      toast.error('Failed to submit ticket.')
+    }
   }
 
   openDevResource(label: string): void {

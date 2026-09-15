@@ -1,4 +1,4 @@
-import { Component, signal, computed } from '@angular/core'
+import { Component, OnInit, inject, signal, computed } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -27,17 +27,10 @@ import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
 import { HlmSheetImports } from '../../ui/sheet/hlm-sheet.components'
 import { HlmTableImports } from '../../ui/table/hlm-table.components'
 import { HlmSelectImports, SelectOption } from '../../ui/select/hlm-select.components'
+import { ExpensesApiService } from './data-access/services/expenses-api.service'
+import { ExpenseItem } from './data-access/models/expenses.model'
 import { toast } from 'ngx-sonner'
 
-export interface ExpenseItem {
-  id: string
-  employeeName: string
-  category: string
-  merchant: string
-  amount: number
-  date: string
-  status: 'approved' | 'pending' | 'rejected'
-}
 
 @Component({
   selector: 'app-expenses',
@@ -234,26 +227,29 @@ export interface ExpenseItem {
     </hlm-sheet>
   `,
 })
-export class ExpensesComponent {
+export class ExpensesComponent implements OnInit {
+  private readonly expensesApi = inject(ExpensesApiService)
   readonly createSheetOpen = signal<boolean>(false)
 
   newExpense = {
     merchant: '',
     amount: 85,
-    category: 'Software & SaaS',
+    category: 'Fleet & Fuel',
   }
 
   readonly categoryOptions: readonly SelectOption[] = [
+    { label: 'Fleet & Fuel', value: 'Fleet & Fuel' },
+    { label: 'Park & Permit Fees', value: 'Park & Permit Fees' },
+    { label: 'Equipment & Gear', value: 'Equipment & Gear' },
+    { label: 'Guide & Driver Stipends', value: 'Guide & Driver Stipends' },
     { label: 'Software & SaaS', value: 'Software & SaaS' },
-    { label: 'Travel & Flights', value: 'Travel & Flights' },
-    { label: 'Hardware & Devices', value: 'Hardware & Devices' },
-    { label: 'Client Entertainment', value: 'Client Entertainment' },
+    { label: 'Hospitality & Meals', value: 'Hospitality & Meals' },
   ]
 
   readonly expenses = signal<ExpenseItem[]>([
-    { id: 'exp-1', employeeName: 'Alex Rivera', category: 'Software & SaaS', merchant: 'GitHub Copilot Enterprise', amount: 240.0, date: 'Today', status: 'approved' },
-    { id: 'exp-2', employeeName: 'Sarah Jenkins', category: 'Travel & Flights', merchant: 'United Airlines (SFO -> JFK)', amount: 620.0, date: 'Yesterday', status: 'pending' },
-    { id: 'exp-3', employeeName: 'Michael Chang', category: 'Hardware & Devices', merchant: 'Apple Store (USB-C Hub)', amount: 89.0, date: 'Aug 03', status: 'approved' },
+    { id: 'exp-1', employeeName: 'Rafiqul Islam (VIP Fleet)', category: 'Fleet & Fuel', merchant: 'TotalEnergies Premium Diesel Refill', amount: 145.0, date: 'Today', status: 'approved' },
+    { id: 'exp-2', employeeName: 'Tanvir Ahmed (Eco-Guide)', category: 'Park & Permit Fees', merchant: 'Forestry & Swamp Authority Pass Bureau', amount: 85.0, date: 'Today', status: 'approved' },
+    { id: 'exp-3', employeeName: 'Elena Vance (Concierge)', category: 'Hospitality & Meals', merchant: 'Alpine Bakery & Artisan Cheese Cellar', amount: 62.5, date: 'Yesterday', status: 'pending' },
   ])
 
   readonly totalSpent = computed(() => {
@@ -264,31 +260,40 @@ export class ExpensesComponent {
     return this.expenses().filter((e) => e.status === 'pending').length
   })
 
-  approveExpense(exp: ExpenseItem): void {
+  async ngOnInit(): Promise<void> {
+    const res = await this.expensesApi.list()
+    if (res.ok && res.data.length > 0) {
+      this.expenses.set(res.data)
+    }
+  }
+
+  async approveExpense(exp: ExpenseItem): Promise<void> {
+    await this.expensesApi.approve(exp.id)
     this.expenses.update((list) =>
       list.map((e) => (e.id === exp.id ? { ...e, status: 'approved' } : e))
     )
     toast.success(`Expense from ${exp.employeeName} approved.`)
   }
 
-  saveExpense(): void {
+  async saveExpense(): Promise<void> {
     if (!this.newExpense.merchant) {
       toast.error('Please enter a merchant name.')
       return
     }
 
-    const item: ExpenseItem = {
-      id: 'exp-' + (this.expenses().length + 1),
-      employeeName: 'Current User',
+    const res = await this.expensesApi.create({
       merchant: this.newExpense.merchant,
       amount: Number(this.newExpense.amount) || 50,
       category: this.newExpense.category,
-      date: 'Today',
-      status: 'pending',
+      employeeName: 'Field Coordinator',
+    })
+
+    if (res.ok) {
+      this.expenses.update((list) => [res.data, ...list])
     }
 
-    this.expenses.update((list) => [item, ...list])
     toast.success('Expense claim submitted for approval.')
     this.createSheetOpen.set(false)
   }
 }
+

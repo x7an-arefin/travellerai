@@ -1,8 +1,9 @@
-import { Component } from '@angular/core'
+import { Component, OnInit, inject } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { HlmButtonImports } from '../../../ui/button/hlm-button.directive'
 import { HlmCheckboxImports } from '../../../ui/checkbox/hlm-checkbox.component'
 import { HlmSeparatorImports } from '../../../ui/separator/hlm-separator.directive'
+import { SettingsApiService } from '../data-access/services/settings-api.service'
 import { toast } from 'ngx-sonner'
 
 @Component({
@@ -53,13 +54,30 @@ import { toast } from 'ngx-sonner'
     </div>
   `,
 })
-export class DisplayComponent {
+export class DisplayComponent implements OnInit {
+  private readonly settingsApi = inject(SettingsApiService)
+
   showTasks = true
   showApps = true
   showChats = true
   showUsers = true
 
-  saveDisplay(): void {
+  ngOnInit(): void {
+    const display = this.settingsApi.getDisplay()
+    this.showTasks = display.showTasks
+    this.showApps = display.showApps
+    this.showChats = display.showChats
+    this.showUsers = display.showUsers
+  }
+
+  async saveDisplay(): Promise<void> {
+    await this.settingsApi.updateDisplay({
+      showTasks: this.showTasks,
+      showApps: this.showApps,
+      showChats: this.showChats,
+      showUsers: this.showUsers,
+    })
     toast.success('Display preferences updated!')
   }
 }
+

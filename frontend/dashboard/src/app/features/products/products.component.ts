@@ -1,7 +1,9 @@
-import { Component, signal, computed } from '@angular/core'
+import { Component, signal, computed, inject, OnInit } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
+import { PackagesApiService } from '../packages/data-access/services/packages-api.service'
+import { Package } from '../packages/data-access/models/packages.model'
 import {
   lucideBoxes,
   lucidePackage,
@@ -554,12 +556,15 @@ export interface ProductItem {
     </hlm-dialog>
   `,
 })
-export class ProductsComponent {
+export class ProductsComponent implements OnInit {
+  private readonly packagesApi = inject(PackagesApiService)
+
   readonly viewMode = signal<'grid' | 'table'>('grid')
   readonly drawerOpen = signal<boolean>(false)
   readonly adjustDialogOpen = signal<boolean>(false)
   readonly isEditing = signal<boolean>(false)
   readonly activeProduct = signal<ProductItem | null>(null)
+  readonly isLoading = signal<boolean>(false)
 
   searchQuery = ''
   readonly selectedCategory = signal<string>('all')
@@ -571,29 +576,29 @@ export class ProductsComponent {
   formData: Partial<ProductItem> = {
     name: '',
     sku: '',
-    category: 'Electronics',
-    price: 129.99,
-    costPrice: 65.0,
-    stock: 80,
-    minStock: 15,
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60',
+    category: 'Multi-Day Expeditions',
+    price: 1450,
+    costPrice: 950,
+    stock: 48,
+    minStock: 4,
+    image: 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?w=600&auto=format&fit=crop&q=80',
   }
 
   readonly categoryOptions: readonly SelectOption[] = [
     { label: 'All Categories', value: 'all' },
-    { label: 'Electronics', value: 'Electronics' },
-    { label: 'Audio & Sound', value: 'Audio & Sound' },
-    { label: 'Wearables', value: 'Wearables' },
-    { label: 'Accessories', value: 'Accessories' },
-    { label: 'Office & Desk', value: 'Office & Desk' },
+    { label: 'Multi-Day Expeditions', value: 'Multi-Day Expeditions' },
+    { label: 'Luxury Resort Stays', value: 'Luxury Resort Stays' },
+    { label: 'Overland & 4x4 Vehicles', value: 'Overland & 4x4 Vehicles' },
+    { label: 'Cultural Day Passes', value: 'Cultural Day Passes' },
+    { label: 'Eco & Wildlife Safaris', value: 'Eco & Wildlife Safaris' },
   ]
 
   readonly formCategoryOptions: readonly SelectOption[] = [
-    { label: 'Electronics', value: 'Electronics' },
-    { label: 'Audio & Sound', value: 'Audio & Sound' },
-    { label: 'Wearables', value: 'Wearables' },
-    { label: 'Accessories', value: 'Accessories' },
-    { label: 'Office & Desk', value: 'Office & Desk' },
+    { label: 'Multi-Day Expeditions', value: 'Multi-Day Expeditions' },
+    { label: 'Luxury Resort Stays', value: 'Luxury Resort Stays' },
+    { label: 'Overland & 4x4 Vehicles', value: 'Overland & 4x4 Vehicles' },
+    { label: 'Cultural Day Passes', value: 'Cultural Day Passes' },
+    { label: 'Eco & Wildlife Safaris', value: 'Eco & Wildlife Safaris' },
   ]
 
   readonly statusOptions: readonly SelectOption[] = [
@@ -604,98 +609,130 @@ export class ProductsComponent {
   ]
 
   readonly adjustReasons: readonly SelectOption[] = [
-    { label: 'Supplier Restock', value: 'restock' },
+    { label: 'Tour Capacity Extension', value: 'restock' },
     { label: 'Inventory Audit Correction', value: 'audit' },
-    { label: 'Damaged Goods Write-off', value: 'damaged' },
-    { label: 'Customer Return', value: 'return' },
+    { label: 'Weather Maintenance Lock', value: 'damaged' },
+    { label: 'Guest Cancellation Return', value: 'return' },
   ]
 
   readonly products = signal<ProductItem[]>([
     {
       id: 'prd-1',
-      sku: 'AUD-WL-901',
-      name: 'Wireless Studio Noise-Cancelling Headphones',
-      category: 'Audio & Sound',
-      price: 299.99,
-      costPrice: 145.0,
-      stock: 142,
-      minStock: 25,
+      sku: 'TRV-SWI-101',
+      name: 'Swiss Alps Grand Panorama Express & Glacier Hike',
+      category: 'Multi-Day Expeditions',
+      price: 1450,
+      costPrice: 950,
+      stock: 48,
+      minStock: 4,
       status: 'in_stock',
-      rating: 4.9,
-      salesCount: 1420,
-      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60',
+      rating: 4.96,
+      salesCount: 248,
+      image: 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?w=600&auto=format&fit=crop&q=80',
     },
     {
       id: 'prd-2',
-      sku: 'WCH-SM-440',
-      name: 'Titanium Smart Watch Pro with OLED Display',
-      category: 'Wearables',
-      price: 449.0,
-      costPrice: 210.0,
-      stock: 14,
-      minStock: 20,
+      sku: 'TRV-ITA-102',
+      name: 'Amalfi Cliffside Villa & Infinity Suites (4 Nights)',
+      category: 'Luxury Resort Stays',
+      price: 3840,
+      costPrice: 2400,
+      stock: 12,
+      minStock: 2,
       status: 'low_stock',
-      rating: 4.8,
-      salesCount: 890,
-      image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60',
+      rating: 4.92,
+      salesCount: 180,
+      image: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?w=600&auto=format&fit=crop&q=80',
     },
     {
       id: 'prd-3',
-      sku: 'MEC-KB-600',
-      name: 'Ergonomic Custom Mechanical Keyboard (Linear Red)',
-      category: 'Office & Desk',
-      price: 179.5,
-      costPrice: 82.0,
-      stock: 64,
-      minStock: 15,
+      sku: 'TRV-ICE-103',
+      name: 'Iceland Arctic 4x4 Defender Expedition Camper',
+      category: 'Overland & 4x4 Vehicles',
+      price: 2100,
+      costPrice: 1300,
+      stock: 24,
+      minStock: 4,
       status: 'in_stock',
-      rating: 4.95,
-      salesCount: 2150,
-      image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=500&auto=format&fit=crop&q=60',
+      rating: 4.88,
+      salesCount: 310,
+      image: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=600&auto=format&fit=crop&q=80',
     },
     {
       id: 'prd-4',
-      sku: 'LNS-DL-105',
-      name: 'Ultra-Wide Cinema Prime Camera Lens 35mm F1.4',
-      category: 'Electronics',
-      price: 899.0,
-      costPrice: 520.0,
+      sku: 'TRV-JPN-104',
+      name: 'Kyoto Heritage Ryokan & Tea Ceremony Pass',
+      category: 'Cultural Day Passes',
+      price: 650,
+      costPrice: 380,
       stock: 0,
       minStock: 5,
       status: 'out_of_stock',
-      rating: 4.7,
-      salesCount: 310,
-      image: 'https://images.unsplash.com/photo-1617005082133-548c4dd27f35?w=500&auto=format&fit=crop&q=60',
+      rating: 4.98,
+      salesCount: 420,
+      image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&auto=format&fit=crop&q=80',
     },
     {
       id: 'prd-5',
-      sku: 'ACC-CH-012',
-      name: 'MagSafe 3-in-1 Fast Wireless Charging Station',
-      category: 'Accessories',
-      price: 89.99,
-      costPrice: 38.0,
-      stock: 210,
-      minStock: 30,
+      sku: 'TRV-TAN-105',
+      name: 'Serengeti 5-Day Luxury Tented Safari & Air Transfer',
+      category: 'Eco & Wildlife Safaris',
+      price: 5200,
+      costPrice: 3500,
+      stock: 36,
+      minStock: 6,
       status: 'in_stock',
-      rating: 4.85,
-      salesCount: 4600,
-      image: 'https://images.unsplash.com/photo-1622445262464-84b1456045b6?w=500&auto=format&fit=crop&q=60',
+      rating: 4.95,
+      salesCount: 140,
+      image: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?w=600&auto=format&fit=crop&q=80',
     },
     {
       id: 'prd-6',
-      sku: 'AUD-SP-770',
-      name: 'Portable Waterproof Hi-Fi Bluetooth Speaker',
-      category: 'Audio & Sound',
-      price: 129.0,
-      costPrice: 58.0,
-      stock: 18,
-      minStock: 25,
-      status: 'low_stock',
-      rating: 4.6,
-      salesCount: 1180,
-      image: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&auto=format&fit=crop&q=60',
+      sku: 'TRV-BAL-106',
+      name: 'Ubud Sacred Valley, Waterfall & Cultural Immersion',
+      category: 'Multi-Day Expeditions',
+      price: 890,
+      costPrice: 520,
+      stock: 60,
+      minStock: 10,
+      status: 'in_stock',
+      rating: 4.9,
+      salesCount: 520,
+      image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&auto=format&fit=crop&q=80',
     },
   ])
+
+  ngOnInit(): void {
+    this.loadPackages()
+  }
+
+  async loadPackages(): Promise<void> {
+    this.isLoading.set(true)
+    try {
+      const res = await this.packagesApi.list()
+      if (res.ok && res.data && res.data.items && res.data.items.length > 0) {
+        const mapped: ProductItem[] = res.data.items.map((pkg: Package, idx: number) => ({
+          id: pkg.id || `pkg-${idx + 1}`,
+          sku: `TRV-${(pkg.destinationId || 'EXP').substring(0, 3).toUpperCase()}-${100 + idx}`,
+          name: pkg.title,
+          category: 'Multi-Day Expeditions',
+          price: pkg.basePrice || 1200,
+          costPrice: Math.round((pkg.basePrice || 1200) * 0.7),
+          stock: (pkg.maxParticipants || 16) * 3,
+          minStock: pkg.minParticipants || 4,
+          status: 'in_stock',
+          rating: pkg.rating || 4.9,
+          salesCount: pkg.totalBookings || 85,
+          image: pkg.featuredImage || 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?w=600&auto=format&fit=crop&q=80',
+        }))
+        this.products.set(mapped)
+      }
+    } catch {
+      // offline fallback
+    } finally {
+      this.isLoading.set(false)
+    }
+  }
 
   readonly filteredProducts = computed(() => {
     const q = this.searchQuery.toLowerCase().trim()

@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core'
+import { Component, signal, inject, OnInit } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -27,17 +27,7 @@ import { HlmSheetImports } from '../../ui/sheet/hlm-sheet.components'
 import { HlmTableImports } from '../../ui/table/hlm-table.components'
 import { HlmSelectImports, SelectOption } from '../../ui/select/hlm-select.components'
 import { toast } from 'ngx-sonner'
-
-export interface WorkspaceItem {
-  id: string
-  name: string
-  slug: string
-  plan: 'Enterprise Pro' | 'Team Starter' | 'Custom SLA'
-  memberCount: number
-  region: string
-  monthlySpend: string
-  isCurrent: boolean
-}
+import { WorkspacesApiService, WorkspaceItem } from './data-access'
 
 @Component({
   selector: 'app-workspaces',
@@ -91,7 +81,7 @@ export interface WorkspaceItem {
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 class="text-2xl font-bold tracking-tight text-foreground">Multi-Tenant Workspaces & RBAC Matrix</h1>
-          <p class="text-xs text-muted-foreground">Manage organization boundaries, isolated tenant domains, and role-based permissions.</p>
+          <p class="text-xs text-muted-foreground">Manage tour operator boundaries, isolated provider domains, and role-based permissions.</p>
         </div>
 
         <div class="flex items-center gap-2">
@@ -156,7 +146,7 @@ export interface WorkspaceItem {
       <div class="space-y-3 pt-4">
         <div>
           <h2 class="text-base font-bold text-foreground">Granular Role-Based Access Matrix</h2>
-          <p class="text-xs text-muted-foreground">Permission rules across Organization Owners, Admins, Engineers, and Auditors.</p>
+          <p class="text-xs text-muted-foreground">Permission rules across Marketplace Owners, Agency Admins, Tour Operations, and Auditors.</p>
         </div>
 
         <div hlmCard class="p-0 overflow-hidden shadow-2xs">
@@ -165,38 +155,38 @@ export interface WorkspaceItem {
               <tr hlmTableRow>
                 <th hlmTableHead class="ps-4">Resource Scope</th>
                 <th hlmTableHead class="text-center">Org Owner</th>
-                <th hlmTableHead class="text-center">Admin</th>
-                <th hlmTableHead class="text-center">Engineer</th>
-                <th hlmTableHead class="text-center">Auditor</th>
+                <th hlmTableHead class="text-center">Operator Admin</th>
+                <th hlmTableHead class="text-center">Tour Guide</th>
+                <th hlmTableHead class="text-center">Finance & Auditor</th>
               </tr>
             </thead>
             <tbody hlmTableBody>
               <tr hlmTableRow>
-                <td hlmTableCell class="ps-4 font-bold text-foreground">Production Cloud Deployments</td>
+                <td hlmTableCell class="ps-4 font-bold text-foreground">Package & Itinerary Publishing</td>
                 <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
                 <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
                 <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
                 <td hlmTableCell class="text-center text-rose-500 font-bold">READ ONLY</td>
               </tr>
               <tr hlmTableRow>
-                <td hlmTableCell class="ps-4 font-bold text-foreground">Billing & Invoice Payment Methods</td>
+                <td hlmTableCell class="ps-4 font-bold text-foreground">Escrow Payouts & Bank Accounts</td>
+                <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
+                <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
+                <td hlmTableCell class="text-center text-rose-500 font-bold">DENIED</td>
+                <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
+              </tr>
+              <tr hlmTableRow>
+                <td hlmTableCell class="ps-4 font-bold text-foreground">API Keys & Webhooks Configuration</td>
                 <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
                 <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
                 <td hlmTableCell class="text-center text-rose-500 font-bold">DENIED</td>
                 <td hlmTableCell class="text-center text-rose-500 font-bold">READ ONLY</td>
               </tr>
               <tr hlmTableRow>
-                <td hlmTableCell class="ps-4 font-bold text-foreground">API Secret Key Generation</td>
-                <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
+                <td hlmTableCell class="ps-4 font-bold text-foreground">Audit Log & Compliance Inspection</td>
                 <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
                 <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
                 <td hlmTableCell class="text-center text-rose-500 font-bold">DENIED</td>
-              </tr>
-              <tr hlmTableRow>
-                <td hlmTableCell class="ps-4 font-bold text-foreground">Audit Log Inspection</td>
-                <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
-                <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
-                <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
                 <td hlmTableCell class="text-center text-emerald-600 font-bold">ALLOWED</td>
               </tr>
             </tbody>
@@ -205,11 +195,11 @@ export interface WorkspaceItem {
       </div>
     </app-main>
 
-    <!-- Create Workspace Sheet (size="sm" = 1/3 screen width) -->
+    <!-- Create Workspace Sheet -->
     <hlm-sheet [isOpen]="createSheetOpen()" position="right" [size]="'sm'" (closed)="createSheetOpen.set(false)">
       <div hlmSheetHeader>
         <h3 hlmSheetTitle>Create Organization Workspace</h3>
-        <p hlmSheetDescription class="text-xs">Provision a secure isolated tenant boundary.</p>
+        <p hlmSheetDescription class="text-xs">Provision a secure isolated tour operator tenant boundary.</p>
       </div>
 
       <div class="space-y-4 py-4 flex-1 overflow-y-auto text-xs">
@@ -218,7 +208,7 @@ export interface WorkspaceItem {
           <input
             type="text"
             [(ngModel)]="newWs.name"
-            placeholder="e.g. Acme Labs Europe"
+            placeholder="e.g. Alpine Expeditions AG"
             class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
@@ -228,7 +218,7 @@ export interface WorkspaceItem {
           <input
             type="text"
             [(ngModel)]="newWs.slug"
-            placeholder="acme-labs-eu"
+            placeholder="alpine-expeditions"
             class="h-9 w-full rounded-md border border-input bg-background px-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
@@ -255,26 +245,30 @@ export interface WorkspaceItem {
     </hlm-sheet>
   `,
 })
-export class WorkspacesComponent {
+export class WorkspacesComponent implements OnInit {
+  private readonly workspacesApi = inject(WorkspacesApiService)
+
   readonly createSheetOpen = signal<boolean>(false)
+  readonly workspaces = signal<WorkspaceItem[]>([])
 
   newWs = {
     name: '',
     slug: '',
-    region: 'US East (N. Virginia)',
+    region: 'EU West (Frankfurt)',
   }
 
   readonly regionOptions: readonly SelectOption[] = [
-    { label: 'US East (N. Virginia)', value: 'US East (N. Virginia)' },
     { label: 'EU West (Frankfurt)', value: 'EU West (Frankfurt)' },
+    { label: 'US East (N. Virginia)', value: 'US East (N. Virginia)' },
     { label: 'Asia Pacific (Tokyo)', value: 'Asia Pacific (Tokyo)' },
+    { label: 'Asia Pacific (Singapore)', value: 'Asia Pacific (Singapore)' },
   ]
 
-  readonly workspaces = signal<WorkspaceItem[]>([
-    { id: 'ws-1', name: 'Spartan UI Main Org', slug: 'spartan-main', plan: 'Enterprise Pro', memberCount: 24, region: 'US East (N. Virginia)', monthlySpend: '$1,420/mo', isCurrent: true },
-    { id: 'ws-2', name: 'Acme Health Robotics', slug: 'acme-health', plan: 'Custom SLA', memberCount: 68, region: 'EU West (Frankfurt)', monthlySpend: '$3,800/mo', isCurrent: false },
-    { id: 'ws-3', name: 'Starlight Financial Staging', slug: 'starlight-stg', plan: 'Team Starter', memberCount: 8, region: 'US East (N. Virginia)', monthlySpend: '$290/mo', isCurrent: false },
-  ])
+  ngOnInit(): void {
+    this.workspacesApi.listWorkspaces().subscribe((list) => {
+      this.workspaces.set(list)
+    })
+  }
 
   switchWorkspace(ws: WorkspaceItem): void {
     this.workspaces.update((list) =>
@@ -289,19 +283,15 @@ export class WorkspacesComponent {
       return
     }
 
-    const item: WorkspaceItem = {
-      id: 'ws-' + (this.workspaces().length + 1),
+    this.workspacesApi.createWorkspace({
       name: this.newWs.name,
       slug: this.newWs.slug || this.newWs.name.toLowerCase().replace(/\s+/g, '-'),
-      plan: 'Team Starter',
-      memberCount: 1,
       region: this.newWs.region,
-      monthlySpend: '$0/mo',
-      isCurrent: false,
-    }
-
-    this.workspaces.update((list) => [...list, item])
-    toast.success(`Workspace "${item.name}" provisioned.`)
-    this.createSheetOpen.set(false)
+    }).subscribe((item) => {
+      this.workspaces.update((list) => [item, ...list])
+      toast.success(`Workspace "${item.name}" provisioned successfully.`)
+      this.createSheetOpen.set(false)
+      this.newWs = { name: '', slug: '', region: 'EU West (Frankfurt)' }
+    })
   }
 }

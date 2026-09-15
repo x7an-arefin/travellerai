@@ -1,7 +1,8 @@
-import { Component, signal, computed } from '@angular/core'
+import { Component, signal, computed, inject, OnInit } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
+import { StatusApiService } from '../status/data-access/services/status-api.service'
 import {
   lucideServer,
   lucideHardDrive,
@@ -386,11 +387,39 @@ export interface DeploymentStep {
     </hlm-dialog>
   `,
 })
-export class InfrastructureComponent {
+export class InfrastructureComponent implements OnInit {
+  private readonly statusApi = inject(StatusApiService)
+
   readonly logsConsoleOpen = signal<boolean>(false)
   readonly scaleDialogOpen = signal<boolean>(false)
   readonly logLevel = signal<'ALL' | 'INFO' | 'WARN' | 'ERROR'>('ALL')
   targetReplicas = 12
+
+  ngOnInit(): void {
+    this.syncLiveTelemetry()
+  }
+
+  async syncLiveTelemetry(): Promise<void> {
+    try {
+      const health = await this.statusApi.getHealth()
+      const dbService = health.services.find((s) => s.name.includes('Database'))
+      if (dbService) {
+        this.nodes.update((list) =>
+          list.map((n) =>
+            n.role === 'Database Cluster'
+              ? {
+                  ...n,
+                  status: dbService.status === 'healthy' ? 'healthy' : 'warning',
+                  uptime: dbService.uptime,
+                }
+              : n
+          )
+        )
+      }
+    } catch {
+      // offline fallback
+    }
+  }
 
   readonly deploymentSteps: DeploymentStep[] = [
     { step: 1, title: 'GitHub Push #4f9a21', desc: 'Triggered by merge to main', status: 'completed', duration: '2s' },

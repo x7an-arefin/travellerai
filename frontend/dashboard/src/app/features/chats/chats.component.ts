@@ -1,4 +1,4 @@
-import { Component, computed, signal, inject, PLATFORM_ID } from '@angular/core'
+import { Component, OnInit, computed, signal, inject, PLATFORM_ID } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -28,10 +28,11 @@ import { HlmButtonImports } from '../../ui/button/hlm-button.directive'
 import { HlmAvatarImports } from '../../ui/avatar/hlm-avatar.components'
 import { HlmDialogImports } from '../../ui/dialog/hlm-dialog.components'
 import { NewChatDialogComponent } from './components/new-chat.component'
-import { Conversation, ChatMessage } from './data/chat.types'
-import { mockConversations } from './data/convo.data'
+import { Conversation, ChatMessage } from './data-access/models/chats.model'
+import { ChatsApiService } from './data-access/services/chats-api.service'
 import { getDisplayNameInitials } from '../../core/utils/initials'
 import { toast } from 'ngx-sonner'
+
 
 @Component({
   selector: 'app-chats',
@@ -266,10 +267,12 @@ import { toast } from 'ngx-sonner'
     />
   `,
 })
-export class ChatsComponent {
+export class ChatsComponent implements OnInit {
   private readonly platformId = inject(PLATFORM_ID)
-  readonly conversations = signal<Conversation[]>(mockConversations)
-  readonly selectedConversation = signal<Conversation | null>(mockConversations[0] || null)
+  private readonly chatsApi = inject(ChatsApiService)
+
+  readonly conversations = signal<Conversation[]>([])
+  readonly selectedConversation = signal<Conversation | null>(null)
   readonly mobileActiveConvo = signal<Conversation | null>(null)
   readonly newChatOpen = signal<boolean>(false)
   readonly isTyping = signal<boolean>(false)
@@ -284,7 +287,18 @@ export class ChatsComponent {
     )
   })
 
+  async ngOnInit(): Promise<void> {
+    const res = await this.chatsApi.listConversations()
+    if (res.ok && res.data.length > 0) {
+      this.conversations.set(res.data)
+      if (!this.selectedConversation()) {
+        this.selectedConversation.set(res.data[0])
+      }
+    }
+  }
+
   selectConversation(convo: Conversation): void {
+    convo.unreadCount = 0
     this.selectedConversation.set(convo)
     this.mobileActiveConvo.set(convo)
 
@@ -292,39 +306,36 @@ export class ChatsComponent {
     this.isTyping.set(true)
     setTimeout(() => {
       this.isTyping.set(false)
-    }, 1800)
+    }, 1200)
   }
 
-  sendMessage(): void {
+  async sendMessage(): Promise<void> {
     if (!this.newMessage.trim()) return
     const active = this.selectedConversation()
     if (!active) return
 
-    const now = new Date()
-    const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`
-
-    const newMsg: ChatMessage = {
-      sender: 'You',
-      message: this.newMessage,
-      timestamp: timeStr,
-    }
-
-    active.messages.push(newMsg)
+    const text = this.newMessage.trim()
     this.newMessage = ''
 
-    // Simulate instant reply
+    const res = await this.chatsApi.sendMessage({ conversationId: active.id, message: text })
+    if (res.ok) {
+      active.messages.push(res.data)
+    }
+
+    // Simulate field coordinator reply
     setTimeout(() => {
       this.isTyping.set(true)
       setTimeout(() => {
         this.isTyping.set(false)
         active.messages.push({
           sender: active.fullName,
-          message: 'Got it! Thanks for the update.',
+          message: 'Received! Coordinating with the field operations team.',
           timestamp: 'Just now',
         })
-      }, 1500)
-    }, 1000)
+      }, 1400)
+    }, 800)
   }
+
 
   mockCall(type: 'Audio' | 'Video'): void {
     toast.info(`Starting ${type} call with ${this.selectedConversation()?.fullName}...`)

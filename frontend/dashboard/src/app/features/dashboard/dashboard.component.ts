@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core'
+import { Component, OnInit, inject, signal } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { RouterModule } from '@angular/router'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -39,7 +39,10 @@ import { TopPackagesComponent } from './components/top-packages.component'
 import { RecentBookingsComponent } from './components/recent-bookings.component'
 import { OperationalTasksComponent } from './components/operational-tasks.component'
 import { TravelAnalyticsComponent } from './components/travel-analytics.component'
+import { DashboardApiService } from './data-access/services/dashboard-api.service'
+import { DashboardKpis } from './data-access/models/dashboard.model'
 import { toast } from 'ngx-sonner'
+
 
 @Component({
   selector: 'app-dashboard',
@@ -190,7 +193,7 @@ import { toast } from 'ngx-sonner'
                 </div>
               </div>
               <div hlmCardContent>
-                <div class="text-2xl font-bold tracking-tight">\$482,950.00</div>
+                <div class="text-2xl font-bold tracking-tight">\${{ kpis().totalRevenue | number:'1.2-2' }}</div>
                 <div class="flex items-center justify-between mt-1.5">
                   <span class="inline-flex items-center gap-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                     <ng-icon name="lucideTrendingUp" class="size-3.5" />
@@ -210,7 +213,7 @@ import { toast } from 'ngx-sonner'
                 </div>
               </div>
               <div hlmCardContent>
-                <div class="text-2xl font-bold tracking-tight">\$72,442.50</div>
+                <div class="text-2xl font-bold tracking-tight">\${{ kpis().netPlatformEarnings | number:'1.2-2' }}</div>
                 <div class="flex items-center justify-between mt-1.5">
                   <span class="inline-flex items-center gap-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                     <ng-icon name="lucideTrendingUp" class="size-3.5" />
@@ -230,7 +233,7 @@ import { toast } from 'ngx-sonner'
                 </div>
               </div>
               <div hlmCardContent>
-                <div class="text-2xl font-bold tracking-tight">\$21,680.00</div>
+                <div class="text-2xl font-bold tracking-tight">\${{ kpis().pendingPayouts | number:'1.2-2' }}</div>
                 <div class="flex items-center justify-between mt-1.5">
                   <span class="text-xs font-semibold text-amber-600 dark:text-amber-400">
                     18 provider requests
@@ -249,13 +252,13 @@ import { toast } from 'ngx-sonner'
                 </div>
               </div>
               <div hlmCardContent>
-                <div class="text-2xl font-bold tracking-tight">1,948 Trips</div>
+                <div class="text-2xl font-bold tracking-tight">{{ kpis().totalBookings | number }} Trips</div>
                 <div class="flex items-center justify-between mt-1.5">
                   <span class="inline-flex items-center gap-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                     <ng-icon name="lucideTrendingUp" class="size-3.5" />
                     +18.5% YoY
                   </span>
-                  <span class="text-[11px] text-muted-foreground">4,260 travelers</span>
+                  <span class="text-[11px] text-muted-foreground">{{ kpis().activeTravelers | number }} travelers</span>
                 </div>
               </div>
             </div>
@@ -267,7 +270,7 @@ import { toast } from 'ngx-sonner'
                 <ng-icon name="lucideClock" class="size-4 text-primary" />
               </div>
               <div hlmCardContent>
-                <div class="text-xl font-bold">42 Active Tours</div>
+                <div class="text-xl font-bold">{{ kpis().upcomingDepartures }} Active Tours</div>
                 <p class="text-xs text-muted-foreground mt-1">Scheduled next 14 days · 94% seat capacity</p>
               </div>
             </div>
@@ -279,7 +282,7 @@ import { toast } from 'ngx-sonner'
                 <ng-icon name="lucidePackage" class="size-4 text-emerald-500" />
               </div>
               <div hlmCardContent>
-                <div class="text-xl font-bold">1,480 Tours</div>
+                <div class="text-xl font-bold">{{ kpis().concludedTours | number }} Tours</div>
                 <p class="text-xs text-muted-foreground mt-1">99.2% on-schedule completion rate</p>
               </div>
             </div>
@@ -291,7 +294,7 @@ import { toast } from 'ngx-sonner'
                 <ng-icon name="lucideRotateCcw" class="size-4 text-rose-500" />
               </div>
               <div hlmCardContent>
-                <div class="text-xl font-bold">1.34% ($3,450)</div>
+                <div class="text-xl font-bold">{{ kpis().refundRate }}% (\${{ kpis().refundAmount | number:'1.2-2' }})</div>
                 <p class="text-xs text-muted-foreground mt-1">Well below 3.0% marketplace risk threshold</p>
               </div>
             </div>
@@ -303,10 +306,11 @@ import { toast } from 'ngx-sonner'
                 <ng-icon name="lucideStar" class="size-4 text-amber-500 fill-amber-500" />
               </div>
               <div hlmCardContent>
-                <div class="text-xl font-bold">4.88 / 5.0 ★</div>
-                <p class="text-xs text-muted-foreground mt-1">From 2,410 verified customer reviews</p>
+                <div class="text-xl font-bold">{{ kpis().travelerRating }} / 5.0 ★</div>
+                <p class="text-xs text-muted-foreground mt-1">From {{ kpis().verifiedReviewsCount | number }} verified customer reviews</p>
               </div>
             </div>
+
           </div>
 
           <!-- Mid Section: Chart (Left) + Operational Tasks (Right) -->
@@ -391,7 +395,9 @@ import { toast } from 'ngx-sonner'
     </app-main>
   `,
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
+  private readonly dashboardApi = inject(DashboardApiService)
+
   readonly topNavLinks: TopNavLink[] = [
     { title: 'Overview', href: '/', isActive: true },
     { title: 'Packages & Tours', href: '/packages' },
@@ -401,9 +407,35 @@ export class DashboardComponent {
     { title: 'Payouts', href: '/withdrawals' },
   ]
 
+  readonly kpis = signal<DashboardKpis>({
+    totalRevenue: 482950,
+    netPlatformEarnings: 72442.5,
+    pendingPayouts: 21680,
+    totalBookings: 1948,
+    activeTravelers: 4260,
+    upcomingDepartures: 42,
+    concludedTours: 1480,
+    refundRate: 1.34,
+    refundAmount: 3450,
+    travelerRating: 4.88,
+    verifiedReviewsCount: 2410,
+  })
+
+  async ngOnInit(): Promise<void> {
+    try {
+      const res = await this.dashboardApi.getMetrics()
+      if (res.ok && res.data && res.data.kpis) {
+        this.kpis.set(res.data.kpis)
+      }
+    } catch {
+      // Fallback preserved
+    }
+  }
+
   downloadReport(): void {
     toast.success('Marketplace Report Generated', {
       description: 'The Q3 2026 travel performance CSV has been downloaded.',
     })
   }
 }
+

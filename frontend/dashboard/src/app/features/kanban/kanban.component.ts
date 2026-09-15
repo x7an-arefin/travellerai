@@ -1,4 +1,4 @@
-import { Component, computed, signal, inject } from '@angular/core'
+import { Component, computed, signal, inject, OnInit } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -14,6 +14,7 @@ import {
   lucideCalendar,
   lucidePaperclip,
   lucideMessageSquare,
+  lucideRefreshCw,
 } from '@ng-icons/lucide'
 import { HeaderComponent } from '../../layout/authenticated/header/header.component'
 import { MainComponent } from '../../layout/authenticated/main/main.component'
@@ -31,18 +32,7 @@ import { HlmInputImports } from '../../ui/input/hlm-input.directive'
 import { HlmSelectImports } from '../../ui/select/hlm-select.components'
 import { getDisplayNameInitials } from '../../core/utils/initials'
 import { toast } from 'ngx-sonner'
-
-export interface KanbanCard {
-  id: string
-  title: string
-  label: 'bug' | 'feature' | 'documentation'
-  priority: 'low' | 'medium' | 'high' | 'critical'
-  status: 'backlog' | 'todo' | 'in progress' | 'done'
-  assignee: { name: string; avatar?: string }
-  subtasks: { completed: number; total: number }
-  dueDate?: string
-  commentsCount?: number
-}
+import { KanbanCard, KanbanStatus, KanbanApiService } from './data-access'
 
 @Component({
   selector: 'app-kanban',
@@ -79,6 +69,7 @@ export interface KanbanCard {
       lucideCalendar,
       lucidePaperclip,
       lucideMessageSquare,
+      lucideRefreshCw,
     }),
   ],
   template: `
@@ -98,9 +89,9 @@ export interface KanbanCard {
       <!-- Title & Filters -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight">Kanban Sprint Board</h1>
+          <h1 class="text-2xl font-bold tracking-tight">Operations Sprint Board</h1>
           <p class="text-xs text-muted-foreground">
-            Track agile sprints, move tasks across workflows, and prioritize backlog.
+            Track traveler requests, guide authorizations, fleet compliance, and expedition tasks.
           </p>
         </div>
 
@@ -115,6 +106,11 @@ export interface KanbanCard {
               class="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
+
+          <button hlmBtn variant="outline" size="sm" (click)="loadCards()" [disabled]="isLoading()" class="gap-1.5 cursor-pointer h-9 shadow-xs">
+            <ng-icon name="lucideRefreshCw" class="size-3.5 text-muted-foreground" [class.animate-spin]="isLoading()" />
+            <span>Sync</span>
+          </button>
 
           <button hlmBtn size="sm" (click)="openAddCard('todo')" class="gap-1.5 cursor-pointer h-9 shadow-xs">
             <ng-icon name="lucidePlus" class="size-3.5" />
@@ -231,14 +227,14 @@ export interface KanbanCard {
     <!-- Create Card Side Sheet -->
     <hlm-sheet [isOpen]="addSheetOpen()" position="right" [size]="'sm'" (closed)="addSheetOpen.set(false)">
       <div hlmSheetHeader>
-        <h3 hlmSheetTitle>Add Kanban Task</h3>
-        <p hlmSheetDescription>Create a new task card in your sprint board.</p>
+        <h3 hlmSheetTitle>Add Operations Task</h3>
+        <p hlmSheetDescription>Create a new task card in your operations sprint board.</p>
       </div>
 
       <div class="space-y-4 py-4 flex-1">
         <div class="space-y-1.5">
           <label class="text-xs font-semibold text-muted-foreground">Title</label>
-          <input hlmInput [(ngModel)]="newCardTitle" placeholder="e.g. Implement WebSocket gateway" />
+          <input hlmInput [(ngModel)]="newCardTitle" placeholder="e.g. Verify mountain guide licenses" />
         </div>
 
         <div class="space-y-1.5">
@@ -276,11 +272,15 @@ export interface KanbanCard {
     </hlm-sheet>
   `,
 })
-export class KanbanComponent {
+export class KanbanComponent implements OnInit {
+  private readonly kanbanApi = inject(KanbanApiService)
+
   searchQuery = ''
   readonly addSheetOpen = signal<boolean>(false)
+  readonly isLoading = signal<boolean>(false)
+
   newCardTitle = ''
-  newCardStatus: any = 'todo'
+  newCardStatus: KanbanStatus = 'todo'
   newCardLabel: any = 'feature'
   newCardPriority: any = 'medium'
 
@@ -291,62 +291,7 @@ export class KanbanComponent {
     { id: 'done', title: 'Done', dotColor: 'bg-emerald-500' },
   ]
 
-  readonly cards = signal<KanbanCard[]>([
-    {
-      id: 'TASK-1024',
-      title: 'Implement OAuth 2.0 authentication flow with PKCE support',
-      label: 'feature',
-      priority: 'high',
-      status: 'in progress',
-      assignee: { name: 'Sat Naing', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80' },
-      subtasks: { completed: 3, total: 4 },
-    },
-    {
-      id: 'TASK-2048',
-      title: 'Fix responsive table overflow on mobile viewports',
-      label: 'bug',
-      priority: 'critical',
-      status: 'todo',
-      assignee: { name: 'Alex John', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80' },
-      subtasks: { completed: 1, total: 2 },
-    },
-    {
-      id: 'TASK-3096',
-      title: 'Write developer integration guide for Webhook endpoints',
-      label: 'documentation',
-      priority: 'medium',
-      status: 'backlog',
-      assignee: { name: 'Sarah Miller', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80' },
-      subtasks: { completed: 0, total: 3 },
-    },
-    {
-      id: 'TASK-4012',
-      title: 'Refactor ThemeService with modern Angular Signals',
-      label: 'feature',
-      priority: 'high',
-      status: 'done',
-      assignee: { name: 'Sat Naing', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80' },
-      subtasks: { completed: 5, total: 5 },
-    },
-    {
-      id: 'TASK-5120',
-      title: 'Optimize CSS bundle sizes and purge unused Tailwind utility classes',
-      label: 'feature',
-      priority: 'medium',
-      status: 'in progress',
-      assignee: { name: 'David Kim', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80' },
-      subtasks: { completed: 2, total: 3 },
-    },
-    {
-      id: 'TASK-6240',
-      title: 'Design high-fidelity invoice PDF export template',
-      label: 'feature',
-      priority: 'low',
-      status: 'todo',
-      assignee: { name: 'Olivia Martin', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&auto=format&fit=crop&q=80' },
-      subtasks: { completed: 0, total: 2 },
-    },
-  ])
+  readonly cards = signal<KanbanCard[]>([])
 
   readonly columnSelectOptions = [
     { label: 'Backlog', value: 'backlog' },
@@ -357,8 +302,8 @@ export class KanbanComponent {
 
   readonly labelSelectOptions = [
     { label: 'Feature', value: 'feature' },
-    { label: 'Bug', value: 'bug' },
-    { label: 'Documentation', value: 'documentation' },
+    { label: 'Bug / Issue', value: 'bug' },
+    { label: 'Documentation / Permit', value: 'documentation' },
   ]
 
   readonly prioritySelectOptions = [
@@ -367,6 +312,22 @@ export class KanbanComponent {
     { label: 'High', value: 'high' },
     { label: 'Critical', value: 'critical' },
   ]
+
+  ngOnInit(): void {
+    this.loadCards()
+  }
+
+  async loadCards(): Promise<void> {
+    this.isLoading.set(true)
+    try {
+      const data = await this.kanbanApi.loadCards()
+      this.cards.set(data)
+    } catch {
+      toast.error('Could not sync cards; loaded cached board.')
+    } finally {
+      this.isLoading.set(false)
+    }
+  }
 
   getCardsForColumn(colId: string): KanbanCard[] {
     const q = this.searchQuery.toLowerCase().trim()
@@ -386,9 +347,10 @@ export class KanbanComponent {
     }
   }
 
-  moveCard(card: KanbanCard, event: Event): void {
+  async moveCard(card: KanbanCard, event: Event): Promise<void> {
     const select = event.target as HTMLSelectElement
-    const newStatus = select.value as any
+    const newStatus = select.value as KanbanStatus
+    await this.kanbanApi.updateCardStatus(card.id, newStatus)
     this.cards.update((list) =>
       list.map((c) => (c.id === card.id ? { ...c, status: newStatus } : c))
     )
@@ -396,24 +358,21 @@ export class KanbanComponent {
   }
 
   openAddCard(columnId: string): void {
-    this.newCardStatus = columnId
+    this.newCardStatus = columnId as KanbanStatus
     this.newCardTitle = ''
     this.addSheetOpen.set(true)
   }
 
-  saveNewCard(): void {
+  async saveNewCard(): Promise<void> {
     if (!this.newCardTitle.trim()) return
-    const newCard: KanbanCard = {
-      id: `TASK-${Math.floor(1000 + Math.random() * 9000)}`,
+    const created = await this.kanbanApi.createCard({
       title: this.newCardTitle,
       status: this.newCardStatus,
       label: this.newCardLabel,
       priority: this.newCardPriority,
-      assignee: { name: 'Sat Naing', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80' },
-      subtasks: { completed: 0, total: 3 },
-    }
+    })
 
-    this.cards.update((list) => [newCard, ...list])
+    this.cards.update((list) => [created, ...list])
     this.addSheetOpen.set(false)
     toast.success('New card added to Kanban board!')
   }

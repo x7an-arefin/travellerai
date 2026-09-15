@@ -1,5 +1,7 @@
-import { Injectable, signal, computed } from '@angular/core'
+import { Injectable, signal, computed, inject } from '@angular/core'
 import { CartItem, SplitSettlementAllocation } from './models/cart.model'
+import { CheckoutApiService } from './services/checkout-api.service'
+import { CheckoutCustomerInfo, CheckoutPaymentInfo, CheckoutPayload } from './models/checkout-api.types'
 
 export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'BDT' | 'AED'
 
@@ -21,6 +23,8 @@ export const SUPPORTED_CURRENCIES: Record<CurrencyCode, CurrencyRate> = {
   providedIn: 'root',
 })
 export class UniversalCartFacade {
+  private readonly checkoutApi = inject(CheckoutApiService)
+
   // Sample multi-vendor bundle representing an all-in-one trip
   readonly items = signal<CartItem[]>([
     {
@@ -93,6 +97,7 @@ export class UniversalCartFacade {
   readonly isCheckingOut = signal<boolean>(false)
   readonly checkoutSuccess = signal<boolean>(false)
   readonly lastBookingReference = signal<string>('')
+  readonly lastBookingId = signal<string>('')
 
   // Currency helper
   readonly activeCurrency = computed(() => SUPPORTED_CURRENCIES[this.selectedCurrency()])
@@ -183,21 +188,47 @@ export class UniversalCartFacade {
     this.selectedCurrency.set(code)
   }
 
-  processCheckout(): Promise<string> {
+  async processCheckout(customer?: CheckoutCustomerInfo, payment?: CheckoutPaymentInfo): Promise<string> {
     this.isCheckingOut.set(true)
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const ref = `TRV-BND-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
-        this.lastBookingReference.set(ref)
-        this.isCheckingOut.set(false)
+    try {
+      const payload: CheckoutPayload = {
+        customer: customer || {
+          firstName: 'Sultanul',
+          lastName: 'Arefin',
+          email: 'arefin@traveller.ai',
+          phone: '+880 1711 999888',
+        },
+        payment: payment || {
+          method: 'card',
+          gateway: 'stripe',
+        },
+        items: this.items(),
+        splitAllocation: this.splitAllocation(),
+        subtotal: this.subtotal(),
+        bundleDiscountAmount: this.bundleDiscountAmount(),
+        platformServiceFee: this.platformServiceFee(),
+        refundableSecurityDepositTotal: this.refundableSecurityDepositTotal(),
+        grandTotal: this.grandTotal(),
+        currencyCode: this.selectedCurrency(),
+      }
+
+      const res = await this.checkoutApi.executeCheckout(payload)
+      if (res.ok) {
+        this.lastBookingReference.set(res.data.bookingReference)
+        this.lastBookingId.set(res.data.bookingId)
         this.checkoutSuccess.set(true)
-        resolve(ref)
-      }, 1200)
-    })
+        return res.data.bookingReference
+      }
+      throw new Error(res.error)
+    } finally {
+      this.isCheckingOut.set(false)
+    }
   }
 
   resetCheckout(): void {
     this.checkoutSuccess.set(false)
     this.lastBookingReference.set('')
+    this.lastBookingId.set('')
   }
 }
+

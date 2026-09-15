@@ -1,4 +1,4 @@
-import { Component, signal, computed } from '@angular/core'
+import { Component, inject, signal, computed } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgIcon, provideIcons } from '@ng-icons/core'
@@ -29,7 +29,9 @@ import { HlmBadgeImports } from '../../ui/badge/hlm-badge.directive'
 import { HlmSheetImports } from '../../ui/sheet/hlm-sheet.components'
 import { HlmTableImports } from '../../ui/table/hlm-table.components'
 import { HlmSelectImports, SelectOption } from '../../ui/select/hlm-select.components'
+import { BillingApiService } from '../billing/data-access/services/billing-api.service'
 import { toast } from 'ngx-sonner'
+
 
 export interface InvoiceLineItem {
   id: string
@@ -374,19 +376,21 @@ export interface InvoiceLineItem {
   `,
 })
 export class InvoicesComponent {
+  private readonly billingApi = inject(BillingApiService)
   readonly sendSheetOpen = signal<boolean>(false)
 
-  invoiceNumber = 'INV-2026-088'
-  clientName = 'Acme Global Innovations'
-  clientEmail = 'billing@acmeglobal.com'
+  invoiceNumber = 'INV-TRV-9082'
+  clientName = 'Grand Sylhet Luxury Expeditions'
+  clientEmail = 'accounts@grandsylhet.com'
   readonly currency = signal<string>('USD')
   readonly terms = signal<string>('Net 30 Days')
   discountPercent = 10
   taxPercent = 8
 
   readonly lineItems = signal<InvoiceLineItem[]>([
-    { id: '1', description: 'Angular 21 + Spartan UI Enterprise License', quantity: 1, unitPrice: 1200 },
-    { id: '2', description: 'Custom Component Architectural Consulting (Hours)', quantity: 8, unitPrice: 150 },
+    { id: '1', description: '5-Day Sylhet Rain Forest & Luxury Highlands Expedition Package', quantity: 2, unitPrice: 420 },
+    { id: '2', description: 'VIP Airport Chauffeur Meet & Greet Transfer', quantity: 1, unitPrice: 65 },
+    { id: '3', description: '4x4 Self-Drive Expedition Rental Vehicle (Day Pass)', quantity: 1, unitPrice: 110 },
   ])
 
   readonly currencyOptions: readonly SelectOption[] = [
@@ -449,8 +453,10 @@ export class InvoicesComponent {
     toast.success('Triggered printable invoice document render.')
   }
 
-  confirmSend(): void {
+  async confirmSend(): Promise<void> {
+    await this.billingApi.sendInvoiceEmail(this.invoiceNumber, this.clientEmail, this.grandTotal())
     toast.success(`Invoice ${this.invoiceNumber} emailed to ${this.clientEmail}.`)
     this.sendSheetOpen.set(false)
   }
 }
+

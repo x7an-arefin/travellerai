@@ -14,6 +14,7 @@ import {
   lucideCheck,
   lucideCopy,
   lucideSettings,
+  lucideCompass,
 } from '@ng-icons/lucide'
 import { HeaderComponent } from '../../layout/authenticated/header/header.component'
 import { MainComponent } from '../../layout/authenticated/main/main.component'
@@ -33,6 +34,7 @@ export interface ChatMessage {
   user: string
   time: string
   text: string
+  role?: string
 }
 
 @Component({
@@ -67,6 +69,7 @@ export interface ChatMessage {
       lucideCheck,
       lucideCopy,
       lucideSettings,
+      lucideCompass,
     }),
   ],
   template: `
@@ -87,13 +90,13 @@ export interface ChatMessage {
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-2xl font-bold tracking-tight text-foreground">Live Broadcast & Webinar Studio</h1>
+            <h1 class="text-2xl font-bold tracking-tight text-foreground">Live Destination Stream & Virtual Walkthrough</h1>
             <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-rose-500/10 text-rose-600 border border-rose-200">
               <span class="size-2 rounded-full bg-rose-500 animate-ping"></span>
               ON AIR LIVE
             </span>
           </div>
-          <p class="text-xs text-muted-foreground">Manage RTMP video streaming inputs, moderate live audience chat, and inspect stream health metrics.</p>
+          <p class="text-xs text-muted-foreground">Stream live travel guides, broadcast alpine virtual walking tours, and moderate traveler questions.</p>
         </div>
 
         <div class="flex items-center gap-2">
@@ -107,27 +110,27 @@ export interface ChatMessage {
       <!-- Stream Health KPI Deck -->
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div hlmCard class="p-4 space-y-1 hover:border-primary/40 transition-colors shadow-2xs">
-          <span class="text-xs font-semibold text-muted-foreground">Live Viewers</span>
-          <div class="text-2xl font-bold text-foreground font-mono">1,842 Concurrents</div>
-          <p class="text-[11px] text-emerald-600 font-semibold">+310 joined during keynote</p>
+          <span class="text-xs font-semibold text-muted-foreground">Live Travelers Watching</span>
+          <div class="text-2xl font-bold text-foreground font-mono">1,842 Viewers</div>
+          <p class="text-[11px] text-emerald-600 font-semibold">+310 joined during Glacier Hike</p>
         </div>
 
         <div hlmCard class="p-4 space-y-1 hover:border-primary/40 transition-colors shadow-2xs">
           <span class="text-xs font-semibold text-muted-foreground">Bitrate & Quality</span>
           <div class="text-2xl font-bold text-foreground font-mono">6,000 kbps</div>
-          <p class="text-[11px] text-sky-500 font-semibold">1080p60 Full HD</p>
+          <p class="text-[11px] text-sky-500 font-semibold">1080p60 Full HD HDR</p>
         </div>
 
         <div hlmCard class="p-4 space-y-1 hover:border-primary/40 transition-colors shadow-2xs">
           <span class="text-xs font-semibold text-muted-foreground">Dropped Frames</span>
           <div class="text-2xl font-bold text-emerald-600 font-mono">0.00%</div>
-          <p class="text-[11px] text-emerald-600 font-semibold">Stable fiber uplink</p>
+          <p class="text-[11px] text-emerald-600 font-semibold">Starlink Alpine Satellite Uplink</p>
         </div>
 
         <div hlmCard class="p-4 space-y-1 hover:border-primary/40 transition-colors shadow-2xs">
-          <span class="text-xs font-semibold text-muted-foreground">Broadcast Duration</span>
+          <span class="text-xs font-semibold text-muted-foreground">Session Duration</span>
           <div class="text-2xl font-bold text-foreground font-mono">01:14:28</div>
-          <p class="text-[11px] text-muted-foreground">DVR Recording enabled</p>
+          <p class="text-[11px] text-muted-foreground">4K Recording & DVR enabled</p>
         </div>
       </div>
 
@@ -138,23 +141,23 @@ export interface ChatMessage {
           <div class="h-[380px] w-full rounded-2xl bg-zinc-950 border border-border relative overflow-hidden flex flex-col justify-between p-4 shadow-xl">
             <div class="flex items-center justify-between z-10">
               <span class="rounded-md bg-rose-600 text-white font-bold text-[10px] px-2 py-0.5 uppercase tracking-wider">
-                LIVE
+                LIVE FROM ZERMATT
               </span>
               <span class="rounded-md bg-black/60 backdrop-blur-xs text-white text-[10px] px-2 py-0.5 font-mono">
                 1080p 60FPS
               </span>
             </div>
 
-            <!-- Central Video Placeholder Artwork -->
+            <!-- Central Video Artwork -->
             <div class="flex flex-col items-center justify-center space-y-2 text-center text-zinc-400">
               <ng-icon name="lucideTv" class="size-16 opacity-40 text-primary" />
-              <p class="text-sm font-semibold text-zinc-200">Spartan UI Keynote: Building at Enterprise Scale</p>
-              <p class="text-xs text-zinc-500">Live Stage Feed • Host: Eleanor Vance</p>
+              <p class="text-sm font-semibold text-zinc-200">Swiss Alps Live Walk: Matterhorn Glacier Trail & Gornergrat</p>
+              <p class="text-xs text-zinc-500">Live Field Guide: Marco Rossi • Local Time: 15:55 CEST</p>
             </div>
 
             <div class="flex items-center justify-between z-10">
-              <span class="text-zinc-400 text-xs font-mono">RTMP Ingest: rtmp://live.spartan.ng/app</span>
-              <span class="text-emerald-400 text-xs font-bold font-mono">HEALTHY BUFFER</span>
+              <span class="text-zinc-400 text-xs font-mono">RTMP Ingest: rtmp://live.travellerai.com/live_alpine</span>
+              <span class="text-emerald-400 text-xs font-bold font-mono">EXCELLENT SIGNAL</span>
             </div>
           </div>
         </div>
@@ -162,7 +165,7 @@ export interface ChatMessage {
         <!-- Live Audience Chat Pane (4 Cols) -->
         <div hlmCard class="lg:col-span-4 p-0 overflow-hidden shadow-2xs flex flex-col h-[380px]">
           <div class="p-3 border-b border-border flex items-center justify-between bg-muted/20">
-            <h3 class="font-bold text-xs text-foreground">Live Chat Moderation</h3>
+            <h3 class="font-bold text-xs text-foreground">Live Traveler Chat</h3>
             <span class="text-[10px] text-muted-foreground font-mono">{{ chatMessages().length }} messages</span>
           </div>
 
@@ -183,7 +186,7 @@ export interface ChatMessage {
               type="text"
               [(ngModel)]="chatInput"
               (keydown.enter)="sendChatMessage()"
-              placeholder="Post message to live stream..."
+              placeholder="Ask the tour guide a question..."
               class="h-8 flex-1 rounded-md border border-input bg-background px-2.5 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             <button hlmBtn size="sm" (click)="sendChatMessage()" class="h-8 px-2.5 cursor-pointer">
@@ -194,11 +197,11 @@ export interface ChatMessage {
       </div>
     </app-main>
 
-    <!-- Stream Settings Sheet (size="sm" = 1/3 screen width) -->
+    <!-- Stream Settings Sheet -->
     <hlm-sheet [isOpen]="settingsDrawerOpen()" position="right" [size]="'sm'" (closed)="settingsDrawerOpen.set(false)">
       <div hlmSheetHeader>
         <h3 hlmSheetTitle>Broadcast Stream Settings</h3>
-        <p hlmSheetDescription class="text-xs">RTMP ingestion keys and encoding configuration.</p>
+        <p hlmSheetDescription class="text-xs">RTMP ingestion keys and encoding configuration for field tour guides.</p>
       </div>
 
       <div class="space-y-4 py-4 flex-1 overflow-y-auto text-xs">
@@ -207,7 +210,7 @@ export interface ChatMessage {
           <input
             type="text"
             readonly
-            value="rtmp://live.spartan.ng/live_prod"
+            value="rtmp://live.travellerai.com/live_alpine"
             class="h-9 w-full rounded-md border border-input bg-muted/40 font-mono text-xs px-3 outline-none"
           />
         </div>
@@ -217,7 +220,7 @@ export interface ChatMessage {
           <input
             type="password"
             readonly
-            value="live_sk_88921a9982410fc0"
+            value="live_sk_trv_88921a9982410fc0"
             class="h-9 w-full rounded-md border border-input bg-muted/40 font-mono text-xs px-3 outline-none"
           />
         </div>
@@ -236,9 +239,10 @@ export class BroadcastComponent {
   chatInput = ''
 
   readonly chatMessages = signal<ChatMessage[]>([
-    { id: 'c-1', user: 'David M.', time: '14:28', text: 'Great breakdown of Spartan UI sheets!' },
-    { id: 'c-2', user: 'Elena R.', time: '14:29', text: 'Are the exit animations customizable via CSS variables?' },
-    { id: 'c-3', user: 'Marcus B.', time: '14:30', text: 'Yes, 350ms in and 280ms out with cubic-bezier easing.' },
+    { id: 'c-1', user: 'David Miller', time: '14:28', text: 'Can you see the Matterhorn peak from this viewpoint?' },
+    { id: 'c-2', user: 'Elena Rostova', time: '14:29', text: 'Yes, clear blue skies today! The glacier hike looks breathtaking.' },
+    { id: 'c-3', user: 'Marco Rossi (Guide)', time: '14:30', text: 'Temperature is 12°C, crampons recommended on the upper ridge.' },
+    { id: 'c-4', user: 'Sophia Chen', time: '14:31', text: 'Just booked the 3-day Zermatt itinerary for October!' },
   ])
 
   sendChatMessage(): void {
@@ -246,12 +250,13 @@ export class BroadcastComponent {
 
     const msg: ChatMessage = {
       id: 'c-' + (this.chatMessages().length + 1),
-      user: 'Host Moderator',
+      user: 'Operations Host',
       time: 'Just now',
       text: this.chatInput.trim(),
     }
 
     this.chatMessages.update((list) => [...list, msg])
     this.chatInput = ''
+    toast.success('Comment posted to live stream audience.')
   }
 }

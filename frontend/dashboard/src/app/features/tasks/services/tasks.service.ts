@@ -1,4 +1,8 @@
-import { Injectable, computed, signal } from '@angular/core'
+import { Injectable, computed, signal, inject } from '@angular/core'
+import { HttpClient } from '@angular/common/http'
+import { firstValueFrom, of } from 'rxjs'
+import { catchError } from 'rxjs/operators'
+import { ApiConfigService } from '../../../core/services/api-config.service'
 import { Task } from '../data/schema'
 import { mockTasks } from '../data/tasks'
 
@@ -8,6 +12,10 @@ export type SortDirection = 'asc' | 'desc' | null
   providedIn: 'root',
 })
 export class TasksService {
+  private readonly http = inject(HttpClient)
+  private readonly apiConfig = inject(ApiConfigService)
+  private readonly baseUrl = this.apiConfig.buildUrl('support-tickets')
+
   private readonly _tasks = signal<Task[]>(mockTasks)
   readonly tasks = this._tasks.asReadonly()
 
@@ -37,6 +45,40 @@ export class TasksService {
   readonly viewTask = signal<Task | null>(null)
   readonly multiDeleteOpen = signal<boolean>(false)
   readonly importOpen = signal<boolean>(false)
+
+  constructor() {
+    this.syncWithBackend()
+  }
+
+  async syncWithBackend(): Promise<void> {
+    this.isLoading.set(true)
+    try {
+      const res = await firstValueFrom(
+        this.http.get<{ data: any[] } | any[]>(this.baseUrl).pipe(catchError(() => of(null)))
+      )
+      if (res) {
+        const rows = Array.isArray(res) ? res : res.data || []
+        if (rows.length > 0) {
+          const mapped: Task[] = rows.map((r: any, i: number) => ({
+            id: r.ticketNumber || `TASK-${i + 9000}`,
+            title: r.subject || r.title || 'Operational Task',
+            status: (r.status === 'open' ? 'todo' : r.status === 'resolved' ? 'done' : 'in progress') as any,
+            label: (r.category === 'billing' ? 'bug' : 'feature') as any,
+            priority: (r.priority === 'urgent' ? 'critical' : r.priority || 'medium') as any,
+            description: r.description || '',
+          }))
+          // Merge with mock tasks so we have full coverage
+          const existingIds = new Set(mapped.map((m) => m.id))
+          const combined = [...mapped, ...mockTasks.filter((m) => !existingIds.has(m.id))]
+          this._tasks.set(combined)
+        }
+      }
+    } catch {
+      // Offline fallback
+    } finally {
+      this.isLoading.set(false)
+    }
+  }
 
   // Filtered & Sorted tasks computation
   readonly filteredTasks = computed(() => {

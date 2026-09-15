@@ -511,12 +511,25 @@ export class CheckoutComponent {
     }
 
     try {
-      const ref = await this.cart.processCheckout()
+      const ref = await this.cart.processCheckout(
+        {
+          firstName: this.traveler.firstName,
+          lastName: this.traveler.lastName,
+          email: this.traveler.email,
+          phone: this.traveler.phone,
+        },
+        {
+          method: this.paymentMethod(),
+          gateway: this.paymentMethod() === 'mfs' ? 'bkash' : 'stripe',
+          cardNumberLast4: this.paymentCard.number.slice(-4),
+        }
+      )
       toast.success(`Booking confirmed! Master Reference: ${ref}`)
     } catch {
       toast.error('Payment processing failed. Please try again.')
     }
   }
+
 
   onPrintPass(): void {
     window.print()
