@@ -1,0 +1,211 @@
+---
+import Layout from '@layouts/Layout.astro';
+import { getProviders } from '@modules/providers/providers.model';
+
+const providers = await getProviders();
+---
+
+<Layout 
+  title="Verified Independent Travel Operators & Guides" 
+  description="Meet the vetted local mountain guides, cultural guilds, and executive fleet partners behind TravellerAI experiences."
+>
+  <div class="providers-page">
+    <div class="container">
+      <div class="page-header">
+        <span class="editorial-tag">The Creators</span>
+        <h1 class="page-title">Verified Operators & Guides</h1>
+        <p class="page-lead">
+          Every provider on TravellerAI undergoes background verification, license inspection, and strict safety audits. Direct bookings with 100% financial transparency.
+        </p>
+      </div>
+
+      <div class="providers-grid">
+        {providers.map((p) => (
+          <article class="provider-card">
+            <div class="cover-image-wrap">
+              <img src={p.coverImage} alt={p.name} />
+              <div class="avatar-wrap">
+                <img src={p.avatarImage} alt={p.name} />
+              </div>
+            </div>
+
+            <div class="provider-body">
+              <div class="top-row">
+                <span class="prov-cat">{p.category}</span>
+                <span class="rating-badge">★ {p.rating.toFixed(2)} ({p.reviewsCount})</span>
+              </div>
+
+              <h2 class="prov-name">
+                <a href={`/providers/${p.slug}`}>{p.name}</a>
+              </h2>
+
+              <p class="prov-tagline">{p.tagline}</p>
+
+              <div class="trust-pills">
+                {p.verifiedKyc && <span class="badge badge-success">✓ KYC Verified</span>}
+                {p.insuranceVerified && <span class="badge badge-neutral">✓ Insured</span>}
+                <span class="badge badge-neutral">{p.yearsActive} Yrs Active</span>
+              </div>
+
+              <div class="prov-footer">
+                <span class="loc">{p.location}, {p.country}</span>
+                <a href={`/providers/${p.slug}`} class="btn btn-secondary btn-sm">
+                  View Profile ({p.activeListingsCount} Trips)
+                </a>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .providers-page {
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-20);
+  }
+
+  .page-header {
+    margin-bottom: var(--space-10);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .page-title {
+    font-size: var(--text-4xl);
+  }
+
+  .page-lead {
+    font-size: var(--text-base);
+    color: var(--color-mist);
+    max-width: 620px;
+  }
+
+  .providers-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  @media (min-width: 768px) {
+    .providers-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .providers-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .provider-card {
+    background-color: var(--color-pure-white);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  }
+
+  .provider-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
+    border-color: var(--color-graphite);
+  }
+
+  .cover-image-wrap {
+    position: relative;
+    aspect-ratio: 16 / 8;
+    background-color: var(--color-fog);
+  }
+
+  .cover-image-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .avatar-wrap {
+    position: absolute;
+    bottom: -24px;
+    left: var(--space-5);
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-full);
+    border: 3px solid var(--color-pure-white);
+    overflow: hidden;
+    background-color: var(--color-canvas);
+  }
+
+  .provider-body {
+    padding: var(--space-6) var(--space-5) var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    flex-grow: 1;
+  }
+
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--space-2);
+  }
+
+  .prov-cat {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  .rating-badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .prov-name {
+    font-size: var(--text-xl);
+  }
+
+  .prov-name a:hover {
+    color: var(--color-swiss-accent);
+  }
+
+  .prov-tagline {
+    font-size: var(--text-xs);
+    color: var(--color-graphite);
+    line-height: 1.5;
+  }
+
+  .trust-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .prov-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--color-fog);
+    padding-top: var(--space-3);
+    margin-top: auto;
+  }
+
+  .loc {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+  }
+
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: var(--text-xs);
+  }
+</style>

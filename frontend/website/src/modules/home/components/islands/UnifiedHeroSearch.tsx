@@ -1,0 +1,228 @@
+import { createSignal } from 'solid-js';
+
+export default function UnifiedHeroSearch() {
+  const [activeTab, setActiveTab] = createSignal<'tours' | 'hotels' | 'vehicles'>('tours');
+  const [tourCategory, setTourCategory] = createSignal('all');
+  const [tourDestination, setTourDestination] = createSignal('all');
+  const [hotelType, setHotelType] = createSignal('all');
+  const [hotelCity, setHotelCity] = createSignal('all');
+  const [vehicleCategory, setVehicleCategory] = createSignal('all');
+
+  const handleTourSubmit = (e: Event) => {
+    e.preventDefault();
+    if (tourDestination() !== 'all') {
+      window.location.href = `/tours/destination/${tourDestination()}`;
+    } else if (tourCategory() !== 'all') {
+      window.location.href = `/tours/category/${tourCategory()}`;
+    } else {
+      window.location.href = '/tours';
+    }
+  };
+
+  const handleHotelSubmit = (e: Event) => {
+    e.preventDefault();
+    if (hotelCity() !== 'all') {
+      window.location.href = `/hotels/city/${hotelCity()}`;
+    } else if (hotelType() !== 'all') {
+      window.location.href = `/hotels/type/${hotelType()}`;
+    } else {
+      window.location.href = '/hotels';
+    }
+  };
+
+  const handleVehicleSubmit = (e: Event) => {
+    e.preventDefault();
+    if (vehicleCategory() !== 'all') {
+      window.location.href = `/vehicles/category/${vehicleCategory()}`;
+    } else {
+      window.location.href = '/vehicles';
+    }
+  };
+
+  return (
+    <div class="search-matrix-card">
+      <div class="matrix-tabs">
+        <button
+          type="button"
+          class={`matrix-tab ${activeTab() === 'tours' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tours')}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+          </svg>
+          Tours & Expeditions
+        </button>
+
+        <button
+          type="button"
+          class={`matrix-tab ${activeTab() === 'hotels' ? 'active' : ''}`}
+          onClick={() => setActiveTab('hotels')}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+          Hotels & Chalets
+        </button>
+
+        <button
+          type="button"
+          class={`matrix-tab ${activeTab() === 'vehicles' ? 'active' : ''}`}
+          onClick={() => setActiveTab('vehicles')}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="3" width="15" height="13"></rect>
+            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+            <circle cx="5.5" cy="18.5" r="2.5"></circle>
+            <circle cx="18.5" cy="18.5" r="2.5"></circle>
+          </svg>
+          Executive Fleet
+        </button>
+      </div>
+
+      {activeTab() === 'tours' && (
+        <form onSubmit={handleTourSubmit} class="search-form-row">
+          <div class="search-input-group">
+            <label for="tour-dest-select">Destination</label>
+            <select
+              id="tour-dest-select"
+              value={tourDestination()}
+              onChange={(e) => setTourDestination(e.currentTarget.value)}
+            >
+              <option value="all">All Global Regions</option>
+              <option value="swiss-alps">Swiss Alps & Zermatt</option>
+              <option value="kyoto">Kyoto Sanctuaries</option>
+              <option value="sylhet">Sylhet & Tea Valleys</option>
+              <option value="dolomites">Italian Dolomites</option>
+            </select>
+          </div>
+
+          <div class="search-input-group">
+            <label for="tour-cat-select">Expedition Style</label>
+            <select
+              id="tour-cat-select"
+              value={tourCategory()}
+              onChange={(e) => setTourCategory(e.currentTarget.value)}
+            >
+              <option value="all">All Categories</option>
+              <option value="adventure">High Altitude & Adventure</option>
+              <option value="cultural">Cultural Heritage</option>
+              <option value="wildlife">Wildlife & Nature</option>
+              <option value="luxury">Private Luxury</option>
+            </select>
+          </div>
+
+          <div class="search-input-group">
+            <label for="tour-guests-select">Travelers</label>
+            <select id="tour-guests-select">
+              <option value="2">2 Adults (Private)</option>
+              <option value="1">Solo Traveler</option>
+              <option value="4">Small Group (Up to 6)</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary search-submit-btn">
+            Explore Expeditions
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </form>
+      )}
+
+      {activeTab() === 'hotels' && (
+        <form onSubmit={handleHotelSubmit} class="search-form-row">
+          <div class="search-input-group">
+            <label for="hotel-city-select">City / Valley</label>
+            <select
+              id="hotel-city-select"
+              value={hotelCity()}
+              onChange={(e) => setHotelCity(e.currentTarget.value)}
+            >
+              <option value="all">All Destinations</option>
+              <option value="zermatt">Zermatt, Switzerland</option>
+              <option value="kyoto">Kyoto, Japan</option>
+              <option value="sreemangal">Sreemangal, Bangladesh</option>
+            </select>
+          </div>
+
+          <div class="search-input-group">
+            <label for="hotel-type-select">Property Type</label>
+            <select
+              id="hotel-type-select"
+              value={hotelType()}
+              onChange={(e) => setHotelType(e.currentTarget.value)}
+            >
+              <option value="all">All Architectural Types</option>
+              <option value="alpine-chalet">Alpine Chalet</option>
+              <option value="heritage-ryokan">Heritage Ryokan</option>
+              <option value="eco-villa">Eco Villa</option>
+              <option value="boutique-hotel">Boutique Hotel</option>
+            </select>
+          </div>
+
+          <div class="search-input-group">
+            <label for="hotel-room-select">Rooms & Guests</label>
+            <select id="hotel-room-select">
+              <option value="1-2">1 Room, 2 Guests</option>
+              <option value="1-1">1 Room, 1 Guest</option>
+              <option value="2-4">2 Rooms, 4 Guests</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary search-submit-btn">
+            Search Sanctuaries
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </form>
+      )}
+
+      {activeTab() === 'vehicles' && (
+        <form onSubmit={handleVehicleSubmit} class="search-form-row">
+          <div class="search-input-group">
+            <label for="vehicle-cat-select">Fleet Class</label>
+            <select
+              id="vehicle-cat-select"
+              value={vehicleCategory()}
+              onChange={(e) => setVehicleCategory(e.currentTarget.value)}
+            >
+              <option value="all">All Fleet Classes</option>
+              <option value="luxury-suv">Luxury SUV</option>
+              <option value="electric-sedan">Electric Sedan</option>
+              <option value="executive-van">Executive Van</option>
+            </select>
+          </div>
+
+          <div class="search-input-group">
+            <label for="vehicle-service-select">Service Model</label>
+            <select id="vehicle-service-select">
+              <option value="self">Self-Drive VIP</option>
+              <option value="chauffeur">Chauffeured Direct Transfer</option>
+            </select>
+          </div>
+
+          <div class="search-input-group">
+            <label for="vehicle-hub-select">Station Hub</label>
+            <select id="vehicle-hub-select">
+              <option value="all">Zurich / Geneva / Kyoto</option>
+              <option value="zurich">Zurich Airport (ZRH)</option>
+              <option value="kyoto">Kyoto Station / KIX</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary search-submit-btn">
+            Reserve Fleet
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}

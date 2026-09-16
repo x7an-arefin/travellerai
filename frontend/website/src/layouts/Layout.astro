@@ -1,0 +1,49 @@
+---
+import '@styles/global.css';
+import Header from '@shared/components/Header.astro';
+import Footer from '@shared/components/Footer.astro';
+import SEO from '@shared/components/SEO.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  ogImage?: string;
+  jsonLd?: Record<string, any> | Array<Record<string, any>>;
+}
+
+const { title, description, ogImage, jsonLd } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    
+    <!-- Preload Typography Fonts (Inter & IBM Plex Mono) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <SEO 
+      title={title}
+      description={description}
+      ogImage={ogImage}
+      jsonLd={jsonLd}
+    />
+  </head>
+  <body>
+    <Header />
+    <main id="main-content">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>
+
+<style>
+  #main-content {
+    flex: 1;
+  }
+</style>

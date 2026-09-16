@@ -1,0 +1,499 @@
+---
+import Layout from '@layouts/Layout.astro';
+import { getTours } from '@modules/tours/tours.controller';
+import TourBookingWidget from '@modules/tours/components/islands/TourBookingWidget';
+
+export async function getStaticPaths() {
+  const tours = await getTours();
+  return tours.map((tour) => ({
+    params: { slug: tour.slug },
+    props: { tour }
+  }));
+}
+
+const { tour } = Astro.props;
+
+// JSON-LD TouristTrip schema for Google Rich Snippets
+const tourJsonLd = {
+  '@type': 'TouristTrip',
+  'name': tour.title,
+  'description': tour.description,
+  'touristType': [tour.category],
+  'offers': {
+    '@type': 'Offer',
+    'price': tour.priceFrom,
+    'priceCurrency': tour.currency,
+    'availability': 'https://schema.org/InStock',
+    'validFrom': '2026-09-01'
+  },
+  'provider': {
+    '@type': 'Organization',
+    'name': tour.providerName
+  }
+};
+---
+
+<Layout 
+  title={tour.title}
+  description={tour.description}
+  ogImage={tour.featuredImage}
+  jsonLd={tourJsonLd}
+>
+  <article class="tour-detail-page">
+    <div class="container">
+      <!-- Breadcrumb Navigation (Jakob's Law & SEO) -->
+      <nav class="breadcrumb-nav" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span class="sep">/</span>
+        <a href="/tours">Tours</a>
+        <span class="sep">/</span>
+        <a href={`/tours/category/${tour.category.toLowerCase()}`}>{tour.category}</a>
+        <span class="sep">/</span>
+        <span class="current">{tour.title}</span>
+      </nav>
+
+      <!-- Hero Title Header -->
+      <header class="detail-header">
+        <div class="header-badges">
+          {tour.badge && <span class="badge badge-accent">{tour.badge}</span>}
+          <a href={`/tours/category/${tour.category.toLowerCase()}`} class="badge badge-neutral">{tour.category}</a>
+          <span class="badge badge-success">Verified Provider: {tour.providerName}</span>
+        </div>
+        <h1 class="tour-title">{tour.title}</h1>
+        <p class="tour-subtitle">{tour.subtitle}</p>
+      </header>
+
+      <!-- Asymmetric 2-Column Swiss Grid: Content (65%) vs Sticky Checkout Island (35%) -->
+      <div class="detail-layout">
+        <!-- Main Content Column -->
+        <div class="main-column">
+          <!-- Hero Gallery -->
+          <div class="hero-image-frame">
+            <img src={tour.featuredImage} alt={tour.title} />
+          </div>
+
+          <!-- Trip Overview Matrix -->
+          <div class="specs-bar">
+            <div class="spec-cell">
+              <span class="spec-label">Duration</span>
+              <span class="spec-value">{tour.durationDays} Days / {tour.durationNights} Nights</span>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Group Limit</span>
+              <span class="spec-value">Max {tour.groupSizeMax} Travelers</span>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Difficulty</span>
+              <span class="spec-value">{tour.difficulty}</span>
+            </div>
+            <div class="spec-cell">
+              <span class="spec-label">Rating</span>
+              <span class="spec-value">★ {tour.rating.toFixed(2)} ({tour.reviewsCount})</span>
+            </div>
+          </div>
+
+          <!-- Editorial Description -->
+          <section class="content-section">
+            <h2 class="section-title">Expedition Narrative</h2>
+            <p class="narrative-body">{tour.description}</p>
+          </section>
+
+          <!-- Highlights (Law of Focal Point) -->
+          <section class="content-section">
+            <h2 class="section-title">Key Highlights</h2>
+            <ul class="highlights-list">
+              {tour.highlights.map((h) => (
+                <li>
+                  <span class="check-icon">✓</span>
+                  <span>{h}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <!-- Inclusions & Exclusions Table -->
+          <section class="content-section">
+            <h2 class="section-title">What's Covered</h2>
+            <div class="inclusions-grid">
+              <div class="inclusions-box">
+                <h3 class="box-title inclusions">Inclusions</h3>
+                <ul>
+                  {tour.inclusions.map((inc) => (
+                    <li><span>+</span> {inc}</li>
+                  ))}
+                </ul>
+              </div>
+              <div class="inclusions-box">
+                <h3 class="box-title exclusions">Exclusions</h3>
+                <ul>
+                  {tour.exclusions.map((exc) => (
+                    <li><span>−</span> {exc}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Sticky SolidJS Booking Widget Island (Fitts's Law + Goal Gradient) -->
+        <aside class="sidebar-column">
+          <TourBookingWidget client:load tour={tour} />
+        </aside>
+      </div>
+    </div>
+  </article>
+</Layout>
+
+<style>
+  .tour-detail-page {
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-20);
+  }
+
+  .breadcrumb-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    margin-bottom: var(--space-6);
+  }
+
+  .breadcrumb-nav a {
+    color: var(--color-mist);
+  }
+
+  .breadcrumb-nav a:hover {
+    color: var(--color-ink);
+  }
+
+  .breadcrumb-nav .current {
+    color: var(--color-ink);
+    font-weight: 500;
+  }
+
+  .detail-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-8);
+  }
+
+  .header-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tour-title {
+    font-size: var(--text-4xl);
+    line-height: 1.15;
+  }
+
+  .tour-subtitle {
+    font-size: var(--text-lg);
+    color: var(--color-mist);
+  }
+
+  /* Asymmetric Swiss Layout (65% / 35%) */
+  .detail-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-10);
+  }
+
+  @media (min-width: 990px) {
+    .detail-layout {
+      grid-template-columns: 1.8fr 1fr;
+      align-items: start;
+    }
+  }
+
+  .hero-image-frame {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+    margin-bottom: var(--space-6);
+  }
+
+  .hero-image-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .specs-bar {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background-color: var(--color-stone);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: var(--space-8);
+  }
+
+  @media (min-width: 600px) {
+    .specs-bar {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  .spec-cell {
+    background-color: var(--color-pure-white);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .spec-label {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  .spec-value {
+    font-size: var(--text-sm);
+    font-weight: 700;
+    color: var(--color-ink);
+  }
+
+  .content-section {
+    padding-top: var(--space-8);
+    margin-top: var(--space-8);
+    border-top: 1px solid var(--color-stone);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .section-title {
+    font-size: var(--text-2xl);
+  }
+
+  .narrative-body {
+    font-size: var(--text-base);
+    line-height: 1.75;
+    color: var(--color-graphite);
+  }
+
+  .highlights-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .highlights-list li {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: var(--text-base);
+    color: var(--color-graphite);
+  }
+
+  .check-icon {
+    font-weight: 800;
+    color: var(--color-success);
+  }
+
+  .inclusions-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  @media (min-width: 640px) {
+    .inclusions-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .inclusions-box {
+    background-color: var(--color-fog);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+  }
+
+  .box-title {
+    font-size: var(--text-sm);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    margin-bottom: var(--space-3);
+  }
+
+  .inclusions-box ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: var(--text-xs);
+    color: var(--color-graphite);
+  }
+
+  /* Global Styles for Island Widget */
+  :global(.sticky-booking-card) {
+    position: sticky;
+    top: 96px;
+    background-color: var(--color-pure-white);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-card);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  :global(.booking-price-header) {
+    border-bottom: 1px solid var(--color-fog);
+    padding-bottom: var(--space-4);
+  }
+
+  :global(.price-eyebrow) {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  :global(.price-display) {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+    margin-top: 2px;
+  }
+
+  :global(.price-display .currency) {
+    font-size: var(--text-lg);
+    font-weight: 700;
+  }
+
+  :global(.price-display .amount) {
+    font-size: var(--text-3xl);
+    font-weight: 800;
+    font-family: var(--font-display);
+  }
+
+  :global(.price-display .unit) {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    margin-left: 4px;
+  }
+
+  :global(.guarantee-note) {
+    font-size: 11px;
+    color: var(--color-success);
+    font-weight: 500;
+    margin-top: 4px;
+  }
+
+  :global(.booking-widget-form) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  :global(.form-field) {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  :global(.form-field label) {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  :global(.form-field input),
+  :global(.form-field select) {
+    padding: 10px 12px;
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    background-color: var(--color-canvas);
+  }
+
+  :global(.addons-container) {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background-color: var(--color-fog);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+  }
+
+  :global(.addons-title) {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  :global(.addon-checkbox) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--color-graphite);
+    cursor: pointer;
+  }
+
+  :global(.price-breakdown) {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    border-top: 1px solid var(--color-fog);
+    padding-top: var(--space-3);
+  }
+
+  :global(.price-breakdown .row) {
+    display: flex;
+    justify-content: space-between;
+    color: var(--color-mist);
+  }
+
+  :global(.price-breakdown .total-row) {
+    color: var(--color-ink);
+    font-size: var(--text-sm);
+    margin-top: 4px;
+  }
+
+  :global(.btn-block) {
+    width: 100%;
+    padding: 14px;
+    font-size: var(--text-sm);
+  }
+
+  :global(.terms-micro) {
+    font-size: 11px;
+    color: var(--color-mist);
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  :global(.provider-trust-box) {
+    background-color: var(--color-fog);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  :global(.pt-name) {
+    font-weight: 700;
+    color: var(--color-ink);
+  }
+
+  :global(.pt-status) {
+    color: var(--color-success);
+  }
+</style>

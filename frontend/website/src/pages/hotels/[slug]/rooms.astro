@@ -1,0 +1,246 @@
+---
+import Layout from '@layouts/Layout.astro';
+import { getHotels } from '@modules/hotels/hotels.controller';
+
+export async function getStaticPaths() {
+  const hotels = await getHotels();
+  return hotels.map((hotel) => ({
+    params: { slug: hotel.slug },
+    props: { hotel }
+  }));
+}
+
+const { hotel } = Astro.props;
+
+const roomTypes = [
+  {
+    name: 'Matterhorn Panorama Suite',
+    description: 'Private balcony facing the peak, king bed with organic down duvet, free-standing copper soaking tub.',
+    size: '65 m²',
+    capacity: '2 Adults',
+    rate: hotel.pricePerNight,
+    amenities: ['Matterhorn View Balcony', 'Fireplace', 'Complimentary Breakfast', 'High-Speed Wi-Fi']
+  },
+  {
+    name: 'Alpine Wellness Suite with Private Sauna',
+    description: 'Cedarwood dry sauna inside the room, direct mountain view, heated slate floors.',
+    size: '80 m²',
+    capacity: '2 Adults, 1 Child',
+    rate: Math.round(hotel.pricePerNight * 1.35),
+    amenities: ['Private In-Room Sauna', 'Whirlpool Spa', 'Nespresso Bar', 'Ski Storage Locker']
+  },
+  {
+    name: 'Executive Duplex Chalet Penthouse',
+    description: 'Two-level luxury penthouse with vaulted cedar ceilings, gourmet kitchen, and 360° alpine vistas.',
+    size: '140 m²',
+    capacity: '4 Adults',
+    rate: Math.round(hotel.pricePerNight * 2.1),
+    amenities: ['Duplex Penthouse', 'Private Chef Service', 'Heated Outdoor Jacuzzi', 'VIP Airport Transfer']
+  }
+];
+---
+
+<Layout 
+  title={`${hotel.name} — Room Inventory & Rates`}
+  description={`Explore all available room suites and seasonal rate plans at ${hotel.name}.`}
+>
+  <div class="rooms-page">
+    <div class="container">
+      <nav class="breadcrumb-nav">
+        <a href="/">Home</a> / <a href="/hotels">Hotels</a> / <a href={`/hotels/${hotel.slug}`}>{hotel.name}</a> / <span>Rooms</span>
+      </nav>
+
+      <header class="rooms-header">
+        <span class="editorial-tag">Live Inventory</span>
+        <h1 class="page-title">{hotel.name} — Available Suites</h1>
+        <p class="page-lead">
+          All room suites feature direct property management system connection and guaranteed real-time availability.
+        </p>
+      </header>
+
+      <div class="rooms-list">
+        {roomTypes.map((room) => (
+          <article class="room-card">
+            <div class="room-info">
+              <div class="room-badges">
+                <span class="badge badge-neutral">{room.size}</span>
+                <span class="badge badge-neutral">{room.capacity}</span>
+              </div>
+              <h2 class="room-name">{room.name}</h2>
+              <p class="room-desc">{room.description}</p>
+              
+              <div class="room-amenities">
+                {room.amenities.map(a => (
+                  <span class="amenity-tag">✓ {a}</span>
+                ))}
+              </div>
+            </div>
+
+            <div class="room-pricing">
+              <span class="rate-lbl">Nightly Rate</span>
+              <div class="price-val">
+                <span class="cur">$</span>
+                <span class="num">{room.rate}</span>
+                <span class="tax">USD</span>
+              </div>
+              <a href={`/hotels/${hotel.slug}`} class="btn btn-primary btn-block">
+                Select Suite
+              </a>
+              <span class="cancellation-info">✓ Free cancellation available</span>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .rooms-page {
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-20);
+  }
+
+  .breadcrumb-nav {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    margin-bottom: var(--space-4);
+  }
+
+  .breadcrumb-nav a {
+    color: var(--color-mist);
+  }
+
+  .rooms-header {
+    margin-bottom: var(--space-10);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .page-title {
+    font-size: var(--text-4xl);
+  }
+
+  .page-lead {
+    font-size: var(--text-base);
+    color: var(--color-mist);
+    max-width: 620px;
+  }
+
+  .rooms-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .room-card {
+    background-color: var(--color-pure-white);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  @media (min-width: 768px) {
+    .room-card {
+      grid-template-columns: 1fr 280px;
+      align-items: center;
+    }
+  }
+
+  .room-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .room-badges {
+    display: flex;
+    gap: 8px;
+  }
+
+  .room-name {
+    font-size: var(--text-2xl);
+  }
+
+  .room-desc {
+    font-size: var(--text-sm);
+    color: var(--color-graphite);
+    line-height: 1.6;
+  }
+
+  .room-amenities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .amenity-tag {
+    font-size: 11px;
+    color: var(--color-graphite);
+    background-color: var(--color-fog);
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+  }
+
+  .room-pricing {
+    border-top: 1px solid var(--color-stone);
+    padding-top: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  @media (min-width: 768px) {
+    .room-pricing {
+      border-top: none;
+      border-left: 1px solid var(--color-stone);
+      padding-top: 0;
+      padding-left: var(--space-6);
+    }
+  }
+
+  .rate-lbl {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  .price-val {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+  }
+
+  .price-val .cur {
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .price-val .num {
+    font-size: var(--text-3xl);
+    font-weight: 800;
+  }
+
+  .price-val .tax {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    margin-left: 4px;
+  }
+
+  .btn-block {
+    width: 100%;
+    text-align: center;
+  }
+
+  .cancellation-info {
+    font-size: 11px;
+    color: var(--color-success);
+    text-align: center;
+  }
+</style>

@@ -1,0 +1,116 @@
+---
+import Layout from '@layouts/Layout.astro';
+---
+
+<Layout 
+  title="About TravellerAI — The Fair Travel Marketplace" 
+  description="We empower independent guides, chalets, and transport fleets to run on their own terms, while providing travelers with transparent pricing and direct operator access."
+>
+  <div class="about-page">
+    <div class="container narrow">
+      <span class="editorial-tag">Brand Manifesto</span>
+      <h1 class="page-title">The architecture of trust in modern travel.</h1>
+      
+      <div class="prose-content">
+        <p class="lead-p">
+          Global travel booking has become monopolized by giant aggregator engines that demand exorbitant 25–35% commissions from local guides and family-run chalets, while obscuring direct contact and inflating traveler fees.
+        </p>
+
+        <p>
+          <strong>TravellerAI was founded to dismantle that friction.</strong> We build unified open commerce infrastructure that lets independent operators showcase authentic high-altitude expeditions, secluded onsen ryokans, and executive transport fleets directly to global travelers.
+        </p>
+
+        <h2>The Core Pillars</h2>
+        <div class="pillars-grid">
+          <div class="pillar-card">
+            <h3>Direct Operator Contact</h3>
+            <p>Every itinerary is verified with the actual mountain guide, chalet host, or fleet dispatcher managing your departure.</p>
+          </div>
+          <div class="pillar-card">
+            <h3>Zero Commission Gouging</h3>
+            <p>Providers keep their earnings. Fair, transparent flat software fees instead of predatory margin cuts.</p>
+          </div>
+          <div class="pillar-card">
+            <h3>Architectural Precision</h3>
+            <p>Swiss Modern discipline: zero decorative noise, high readability, and complete operational transparency.</p>
+          </div>
+        </div>
+
+        <h2>Leadership & Governance</h2>
+        <p>
+          Headquartered globally with edge infrastructure deployed across distributed serverless regions. Maintained under strict engineering, safety, and payment security standards.
+        </p>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .about-page {
+    padding-top: var(--space-16);
+    padding-bottom: var(--space-24);
+  }
+
+  .narrow {
+    max-width: var(--container-narrow);
+  }
+
+  .page-title {
+    font-size: var(--text-hero);
+    line-height: 1.1;
+    margin-top: var(--space-3);
+    margin-bottom: var(--space-10);
+  }
+
+  .prose-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    font-size: var(--text-base);
+    line-height: 1.75;
+    color: var(--color-graphite);
+  }
+
+  .lead-p {
+    font-size: var(--text-lg);
+    color: var(--color-ink);
+    font-weight: 500;
+  }
+
+  .prose-content h2 {
+    font-size: var(--text-2xl);
+    margin-top: var(--space-6);
+  }
+
+  .pillars-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+    margin: var(--space-4) 0;
+  }
+
+  @media (min-width: 640px) {
+    .pillars-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .pillar-card {
+    background-color: var(--color-fog);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .pillar-card h3 {
+    font-size: var(--text-sm);
+  }
+
+  .pillar-card p {
+    font-size: var(--text-xs);
+    line-height: 1.5;
+  }
+</style>

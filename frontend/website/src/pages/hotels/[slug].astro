@@ -1,0 +1,275 @@
+---
+import Layout from '@layouts/Layout.astro';
+import { getHotels } from '@modules/hotels/hotels.controller';
+import HotelBookingWidget from '@modules/hotels/components/islands/HotelBookingWidget';
+
+export async function getStaticPaths() {
+  const hotels = await getHotels();
+  return hotels.map((hotel) => ({
+    params: { slug: hotel.slug },
+    props: { hotel }
+  }));
+}
+
+const { hotel } = Astro.props;
+
+const hotelJsonLd = {
+  '@type': 'LodgingBusiness',
+  'name': hotel.name,
+  'description': hotel.description,
+  'address': {
+    '@type': 'PostalAddress',
+    'streetAddress': hotel.address,
+    'addressLocality': hotel.city,
+    'addressCountry': hotel.country
+  },
+  'starRating': {
+    '@type': 'Rating',
+    'ratingValue': hotel.starRating
+  },
+  'priceRange': `$${hotel.pricePerNight} - $${hotel.pricePerNight * 2}`
+};
+---
+
+<Layout 
+  title={hotel.name}
+  description={hotel.description}
+  ogImage={hotel.featuredImage}
+  jsonLd={hotelJsonLd}
+>
+  <div class="hotel-detail-page">
+    <div class="container">
+      <nav class="breadcrumb-nav">
+        <a href="/">Home</a> / <a href="/hotels">Hotels</a> / <a href={`/hotels/city/${hotel.city.toLowerCase()}`}>{hotel.city}</a> / <span>{hotel.name}</span>
+      </nav>
+
+      <header class="hotel-header">
+        <div class="badges-row">
+          <a href={`/hotels/type/${hotel.propertyType.toLowerCase().replace(/\s+/g, '-')}`} class="badge badge-neutral">{hotel.propertyType}</a>
+          <span class="star-rating">{'★'.repeat(hotel.starRating)}</span>
+          <a href={`/hotels/${hotel.slug}/rooms`} class="badge badge-neutral">View All {hotel.roomTypesCount} Rooms →</a>
+        </div>
+        <h1 class="hotel-name">{hotel.name}</h1>
+        <p class="hotel-address">{hotel.address} • {hotel.city}, {hotel.country}</p>
+      </header>
+
+      <div class="hotel-gallery">
+        <img src={hotel.featuredImage} alt={hotel.name} class="featured-img" />
+      </div>
+
+      <div class="hotel-layout">
+        <div class="main-info">
+          <section class="section-block">
+            <h2>The Property Experience</h2>
+            <p class="desc-text">{hotel.description}</p>
+          </section>
+
+          <section class="section-block">
+            <h2>Signature Amenities</h2>
+            <div class="amenities-grid">
+              {hotel.amenities.map((item) => (
+                <div class="amenity-item">
+                  <span class="dot">✦</span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <aside class="hotel-sidebar">
+          <!-- SolidJS Island: Interactive Hotel Booking Widget -->
+          <HotelBookingWidget client:load hotel={hotel} />
+        </aside>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .hotel-detail-page {
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-20);
+  }
+
+  .breadcrumb-nav {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    margin-bottom: var(--space-4);
+  }
+
+  .breadcrumb-nav a {
+    color: var(--color-mist);
+  }
+
+  .hotel-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-6);
+  }
+
+  .badges-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .star-rating {
+    color: #f59e0b;
+    font-size: 12px;
+  }
+
+  .hotel-name {
+    font-size: var(--text-4xl);
+  }
+
+  .hotel-address {
+    font-size: var(--text-sm);
+    color: var(--color-mist);
+  }
+
+  .hotel-gallery {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    margin-bottom: var(--space-10);
+  }
+
+  .featured-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .hotel-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-10);
+  }
+
+  @media (min-width: 960px) {
+    .hotel-layout {
+      grid-template-columns: 1.8fr 1fr;
+      align-items: start;
+    }
+  }
+
+  .section-block {
+    margin-bottom: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .desc-text {
+    font-size: var(--text-base);
+    line-height: 1.75;
+  }
+
+  .amenities-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  .amenity-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-sm);
+  }
+
+  .amenity-item .dot {
+    color: var(--color-swiss-accent);
+  }
+
+  /* Global Styles for Island Hotel Booking Box */
+  :global(.booking-box) {
+    position: sticky;
+    top: 96px;
+    background-color: var(--color-pure-white);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-card);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  :global(.price-header .label) {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  :global(.price .val) {
+    font-size: var(--text-3xl);
+    font-weight: 800;
+  }
+
+  :global(.price .sub) {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    margin-left: 4px;
+  }
+
+  :global(.input-stack) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  :global(.input-grp) {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  :global(.input-grp label) {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  :global(.input-grp input),
+  :global(.input-grp select) {
+    padding: 10px 12px;
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-md);
+    background-color: var(--color-canvas);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+  }
+
+  :global(.rate-options-row) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  :global(.rate-pill-btn) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    padding: 8px 10px;
+    background-color: var(--color-fog);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+  }
+
+  :global(.rate-pill-btn.active) {
+    border-color: var(--color-ink);
+    background-color: var(--color-canvas);
+    font-weight: 600;
+  }
+
+  :global(.rate-pill-btn input) {
+    display: none;
+  }
+</style>

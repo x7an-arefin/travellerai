@@ -1,0 +1,72 @@
+import type { HotelProperty } from './hotels.model';
+
+export const MOCK_HOTELS: HotelProperty[] = [
+  {
+    id: 'hotel-001',
+    slug: 'the-matterhorn-sanctuary',
+    name: 'The Matterhorn Sanctuary & Spa Chalet',
+    propertyType: 'Alpine Chalet',
+    starRating: 5,
+    city: 'Zermatt',
+    country: 'Switzerland',
+    address: 'Oberdorfstrasse 44, 3920 Zermatt',
+    featuredImage: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=1200&auto=format&fit=crop',
+    galleryImages: [
+      'https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=1200&auto=format&fit=crop'
+    ],
+    pricePerNight: 620,
+    currency: 'USD',
+    rating: 4.97,
+    reviewsCount: 88,
+    description: 'Car-free luxury retreat with unobstructed, floor-to-ceiling panoramas of the Matterhorn. Hand-chiseled Valais stone, cedar barrel sauna, and thermal infinity pool.',
+    amenities: ['Matterhorn Views', 'Thermal Spa & Sauna', 'Ski-in / Ski-out', 'Michelin Star Dining', 'Free High-Speed Wi-Fi', 'Complimentary Electric Shuttle'],
+    roomTypesCount: 14,
+    providerName: 'Sanctuary Alpine Resorts',
+    instantConfirmation: true,
+    freeCancellation: true
+  },
+  {
+    id: 'hotel-002',
+    slug: 'gion-suiten-ryokan',
+    name: 'Gion Suiten Heritage Onsen Ryokan',
+    propertyType: 'Heritage Ryokan',
+    starRating: 5,
+    city: 'Kyoto',
+    country: 'Japan',
+    address: 'Higashiyama-ku, Kyoto 605-0074',
+    featuredImage: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?q=80&w=1200&auto=format&fit=crop',
+    galleryImages: [],
+    pricePerNight: 480,
+    currency: 'USD',
+    rating: 4.99,
+    reviewsCount: 124,
+    description: 'Dating back to the late Edo period, this intimate 12-suite sanctuary features cypress soaking tubs fed by natural mineral springs and serene moss rock gardens.',
+    amenities: ['Private Hinoki Onsen', 'Kaiseki In-Room Dining', 'Zen Courtyard Garden', 'Tea Ceremony Pavilion', 'Yukata & Geta Provided'],
+    roomTypesCount: 6,
+    providerName: 'Kyoto Imperial Lodges',
+    instantConfirmation: true,
+    freeCancellation: false
+  },
+  {
+    id: 'hotel-003',
+    slug: 'sylhet-heritage-tea-bungalow',
+    name: 'Grand Sultan Tea Resort & Golf',
+    propertyType: 'Eco Villa',
+    starRating: 5,
+    city: 'Sreemangal',
+    country: 'Bangladesh',
+    address: 'Radhanagar, Sreemangal, Moulvibazar',
+    featuredImage: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=1200&auto=format&fit=crop',
+    galleryImages: [],
+    pricePerNight: 195,
+    currency: 'USD',
+    rating: 4.88,
+    reviewsCount: 210,
+    description: 'Surrounded by lush emerald tea gardens and ancient canopy trees, offering five-star luxury, heated infinity pools, 9-hole golf course, and wildlife tours.',
+    amenities: ['Infinity Swimming Pool', 'Golf Driving Range', 'Spa & Wellness', 'Organic Tea Garden Walk', 'Multi-cuisine Restaurant'],
+    roomTypesCount: 18,
+    providerName: 'Bengal Heritage Stays',
+    instantConfirmation: true,
+    freeCancellation: true
+  }
+];

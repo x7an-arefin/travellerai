@@ -1,0 +1,74 @@
+---
+import Layout from '@layouts/Layout.astro';
+---
+
+<Layout title="Refund & Cancellation Policy — TravellerAI" description="Details on free cancellations, force majeure, and refund processing.">
+  <div class="legal-page">
+    <div class="container narrow">
+      <span class="editorial-tag">Trust & Protections</span>
+      <h1 class="page-title">Refund & Cancellation Policy</h1>
+      <p class="updated-date">Effective Date: September 2026</p>
+
+      <div class="prose-body">
+        <h2>1. Standard Tour Cancellations</h2>
+        <p>
+          Cancellations received 30 or more days before departure are entitled to a 100% full refund with zero cancellation penalty fees. Cancellations between 14 and 29 days receive a 50% refund.
+        </p>
+
+        <h2>2. Hotel & Accommodation Stays</h2>
+        <p>
+          Flexible rate plans may be cancelled free of charge up to 48 hours prior to 15:00 local property time on the check-in date. Non-refundable saver rates are non-cancellable once confirmed.
+        </p>
+
+        <h2>3. Vehicle Hire & Chauffeur Transfers</h2>
+        <p>
+          Fleet bookings may be cancelled without charge up to 48 hours before scheduled pickup time.
+        </p>
+
+        <h2>4. Force Majeure & Weather Closures</h2>
+        <p>
+          If an alpine guide or fleet dispatcher cancels an itinerary due to extreme weather or safety directives, travelers receive a 100% full escrow refund immediately.
+        </p>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .legal-page {
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-24);
+  }
+
+  .narrow {
+    max-width: var(--container-narrow);
+  }
+
+  .page-title {
+    font-size: var(--text-hero);
+    line-height: 1.1;
+    margin: var(--space-2) 0;
+  }
+
+  .updated-date {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    font-family: var(--font-mono);
+    margin-bottom: var(--space-8);
+  }
+
+  .prose-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    font-size: var(--text-base);
+    line-height: 1.75;
+    color: var(--color-graphite);
+  }
+
+  .prose-body h2 {
+    font-size: var(--text-2xl);
+    color: var(--color-ink);
+    margin-top: var(--space-4);
+  }
+</style>

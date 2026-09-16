@@ -1,0 +1,69 @@
+---
+import Layout from '@layouts/Layout.astro';
+---
+
+<Layout title="Privacy Policy — TravellerAI" description="TravellerAI data protection standards and GDPR compliance.">
+  <div class="legal-page">
+    <div class="container narrow">
+      <span class="editorial-tag">Compliance Standards</span>
+      <h1 class="page-title">Privacy & Data Governance</h1>
+      <p class="updated-date">Effective Date: September 2026</p>
+
+      <div class="prose-body">
+        <h2>1. Data Minimization Philosophy</h2>
+        <p>
+          TravellerAI collects only the minimum personal identification necessary to execute certified departure reservations, flight-tracked transfers, and hotel PMS locks. We never sell traveler behavioral datasets to third-party ad networks.
+        </p>
+
+        <h2>2. Information Shared with Local Operators</h2>
+        <p>
+          When you reserve an itinerary, your name, contact phone, and any specified dietary or medical requirements are securely transmitted to the licensed provider executing your trip. Providers are bound by strict non-disclosure and data privacy standards.
+        </p>
+
+        <h2>3. Security & Financial Data</h2>
+        <p>
+          All credit card authorizations and bank transfers are processed via Level 1 PCI-DSS certified edge gateways. Payment card credentials are never stored on TravellerAI application servers.
+        </p>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .legal-page {
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-24);
+  }
+
+  .narrow {
+    max-width: var(--container-narrow);
+  }
+
+  .page-title {
+    font-size: var(--text-hero);
+    line-height: 1.1;
+    margin: var(--space-2) 0;
+  }
+
+  .updated-date {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    font-family: var(--font-mono);
+    margin-bottom: var(--space-8);
+  }
+
+  .prose-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    font-size: var(--text-base);
+    line-height: 1.75;
+    color: var(--color-graphite);
+  }
+
+  .prose-body h2 {
+    font-size: var(--text-2xl);
+    color: var(--color-ink);
+    margin-top: var(--space-4);
+  }
+</style>

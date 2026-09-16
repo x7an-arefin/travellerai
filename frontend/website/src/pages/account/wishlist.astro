@@ -1,0 +1,86 @@
+---
+import Layout from '@layouts/Layout.astro';
+import { getTours } from '@modules/tours/tours.controller';
+import TourCard from '@modules/tours/components/TourCard.astro';
+
+const tours = await getTours();
+---
+
+<Layout title="Saved Wishlist — TravellerAI" description="View your bookmarked alpine expeditions and luxury hotel stays.">
+  <div class="account-page">
+    <div class="container">
+      <header class="account-header">
+        <h1 class="page-title">Saved Wishlist</h1>
+        <nav class="account-nav-tabs">
+          <a href="/account" class="tab-btn">Overview</a>
+          <a href="/account/bookings" class="tab-btn">Tours (1)</a>
+          <a href="/account/reservations" class="tab-btn">Hotels (1)</a>
+          <a href="/account/rentals" class="tab-btn">Rentals (1)</a>
+          <a href="/account/wishlist" class="tab-btn active">Wishlist ({tours.length})</a>
+        </nav>
+      </header>
+
+      <div class="tours-grid">
+        {tours.map(t => (
+          <TourCard tour={t} />
+        ))}
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .account-page {
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-24);
+  }
+
+  .account-header {
+    margin-bottom: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .page-title {
+    font-size: var(--text-3xl);
+  }
+
+  .account-nav-tabs {
+    display: flex;
+    gap: var(--space-2);
+    border-bottom: 1px solid var(--color-stone);
+    padding-bottom: var(--space-2);
+  }
+
+  .tab-btn {
+    padding: 8px 16px;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    color: var(--color-mist);
+  }
+
+  .tab-btn.active {
+    color: var(--color-ink);
+    background-color: var(--color-fog);
+  }
+
+  .tours-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  @media (min-width: 768px) {
+    .tours-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .tours-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+</style>

@@ -1,0 +1,193 @@
+---
+import Layout from '@layouts/Layout.astro';
+import { getBlogPosts } from '@modules/blog/blog.model';
+
+export async function getStaticPaths() {
+  const posts = await getBlogPosts();
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: { post }
+  }));
+}
+
+const { post } = Astro.props;
+
+const blogJsonLd = {
+  '@type': 'BlogPosting',
+  'headline': post.title,
+  'description': post.subtitle,
+  'image': post.featuredImage,
+  'author': {
+    '@type': 'Person',
+    'name': post.author
+  },
+  'datePublished': post.publishedAt
+};
+---
+
+<Layout 
+  title={post.title}
+  description={post.subtitle}
+  ogImage={post.featuredImage}
+  ogType="article"
+  jsonLd={blogJsonLd}
+>
+  <article class="blog-article-page">
+    <div class="container narrow">
+      <nav class="breadcrumb-nav">
+        <a href="/">Home</a> / <a href="/blog">Dispatch</a> / <span>{post.title}</span>
+      </nav>
+
+      <header class="article-header">
+        <span class="badge badge-accent">{post.category}</span>
+        <h1 class="article-h1">{post.title}</h1>
+        <p class="article-sub">{post.subtitle}</p>
+
+        <div class="author-meta-box">
+          <img src={post.authorAvatar} alt={post.author} class="author-img" />
+          <div class="meta-txt">
+            <span class="name">{post.author}</span>
+            <span class="role">{post.authorRole} • Published {post.publishedAt} • {post.readTime}</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="featured-img-wrap">
+        <img src={post.featuredImage} alt={post.title} />
+      </div>
+
+      <div class="article-content">
+        {post.content.map((paragraph) => (
+          <p>{paragraph}</p>
+        ))}
+      </div>
+
+      <div class="article-footer-share">
+        <span class="share-lbl">Share Dispatch:</span>
+        <div class="share-btns">
+          <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText(window.location.href); alert('Article URL copied to clipboard!');">
+            Copy Link
+          </button>
+          <a href="/blog" class="btn btn-primary btn-sm">
+            ← Back to All Articles
+          </a>
+        </div>
+      </div>
+    </div>
+  </article>
+</Layout>
+
+<style>
+  .blog-article-page {
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-24);
+  }
+
+  .narrow {
+    max-width: var(--container-narrow);
+  }
+
+  .breadcrumb-nav {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    margin-bottom: var(--space-6);
+  }
+
+  .breadcrumb-nav a {
+    color: var(--color-mist);
+  }
+
+  .article-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin-bottom: var(--space-8);
+  }
+
+  .article-h1 {
+    font-size: var(--text-hero);
+    line-height: 1.1;
+  }
+
+  .article-sub {
+    font-size: var(--text-lg);
+    color: var(--color-mist);
+    line-height: 1.5;
+  }
+
+  .author-meta-box {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    border-top: 1px solid var(--color-stone);
+    border-bottom: 1px solid var(--color-stone);
+    padding: var(--space-4) 0;
+    margin-top: var(--space-2);
+  }
+
+  .author-img {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+  }
+
+  .meta-txt {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .name {
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .role {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+  }
+
+  .featured-img-wrap {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    margin-bottom: var(--space-10);
+  }
+
+  .featured-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .article-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    font-size: var(--text-lg);
+    line-height: 1.8;
+    color: var(--color-graphite);
+  }
+
+  .article-footer-share {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--color-stone);
+    padding-top: var(--space-8);
+    margin-top: var(--space-12);
+  }
+
+  .share-lbl {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  .share-btns {
+    display: flex;
+    gap: var(--space-3);
+  }
+</style>

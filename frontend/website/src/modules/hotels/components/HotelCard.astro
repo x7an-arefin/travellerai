@@ -1,0 +1,235 @@
+---
+import type { HotelProperty } from '../hotels.model';
+
+interface Props {
+  hotel: HotelProperty;
+}
+
+const { hotel } = Astro.props;
+---
+
+<article class="hotel-card" data-hotel-id={hotel.id}>
+  <div class="card-media">
+    <img 
+      src={hotel.featuredImage} 
+      alt={hotel.name}
+      loading="lazy"
+      decoding="async"
+      width="600"
+      height="400"
+    />
+    <div class="media-overlay">
+      <span class="badge badge-neutral property-type-badge">{hotel.propertyType}</span>
+      {hotel.freeCancellation && (
+        <span class="badge badge-success cancellation-badge">Free Cancellation</span>
+      )}
+    </div>
+  </div>
+
+  <div class="card-body">
+    <div class="meta-row">
+      <div class="location-stars">
+        <span class="location-name">{hotel.city}, {hotel.country}</span>
+        <span class="star-rating">{'★'.repeat(hotel.starRating)}</span>
+      </div>
+      <div class="rating-box">
+        <span class="score">{hotel.rating.toFixed(1)}</span>
+      </div>
+    </div>
+
+    <h3 class="card-title">
+      <a href={`/hotels/${hotel.slug}`}>{hotel.name}</a>
+    </h3>
+
+    <p class="card-address">{hotel.address}</p>
+
+    <div class="amenities-pills">
+      {hotel.amenities.slice(0, 3).map((amenity) => (
+        <span class="amenity-pill">{amenity}</span>
+      ))}
+      {hotel.amenities.length > 3 && (
+        <span class="amenity-pill more">+{hotel.amenities.length - 3} more</span>
+      )}
+    </div>
+
+    <div class="card-footer">
+      <div class="price-block">
+        <span class="night-label">Nightly Rate</span>
+        <div class="price-val">
+          <span class="currency">$</span>
+          <span class="num">{hotel.pricePerNight}</span>
+          <span class="tax-info">excl. taxes</span>
+        </div>
+      </div>
+
+      <a href={`/hotels/${hotel.slug}`} class="btn btn-secondary btn-sm">
+        View Rooms ({hotel.roomTypesCount})
+      </a>
+    </div>
+  </div>
+</article>
+
+<style>
+  .hotel-card {
+    background-color: var(--color-pure-white);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  }
+
+  .hotel-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
+    border-color: var(--color-graphite);
+  }
+
+  .card-media {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background-color: var(--color-fog);
+  }
+
+  .card-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease-out;
+  }
+
+  .hotel-card:hover .card-media img {
+    transform: scale(1.04);
+  }
+
+  .media-overlay {
+    position: absolute;
+    inset: 0;
+    padding: var(--space-3);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: linear-gradient(180deg, rgba(0,0,0,0.35) 0%, transparent 40%);
+  }
+
+  .card-body {
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: var(--space-3);
+  }
+
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .location-stars {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .location-name {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--color-graphite);
+  }
+
+  .star-rating {
+    color: #f59e0b;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  .rating-box {
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+  }
+
+  .card-title {
+    font-size: var(--text-lg);
+    line-height: 1.3;
+    font-weight: 700;
+  }
+
+  .card-title a:hover {
+    color: var(--color-swiss-accent);
+  }
+
+  .card-address {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+  }
+
+  .amenities-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .amenity-pill {
+    font-size: 11px;
+    background-color: var(--color-fog);
+    color: var(--color-graphite);
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-stone);
+  }
+
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: var(--space-4);
+    margin-top: auto;
+    border-top: 1px solid var(--color-fog);
+  }
+
+  .night-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-mist);
+    display: block;
+  }
+
+  .price-val {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+  }
+
+  .price-val .currency {
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  .price-val .num {
+    font-size: var(--text-xl);
+    font-weight: 800;
+    font-family: var(--font-display);
+  }
+
+  .price-val .tax-info {
+    font-size: 11px;
+    color: var(--color-mist);
+    margin-left: 4px;
+  }
+
+  .btn-sm {
+    padding: 8px 14px;
+    font-size: var(--text-xs);
+  }
+</style>

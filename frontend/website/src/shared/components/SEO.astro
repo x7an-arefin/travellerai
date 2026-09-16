@@ -1,0 +1,78 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  canonicalUrl?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article' | 'product';
+  jsonLd?: Record<string, any> | Array<Record<string, any>>;
+}
+
+const {
+  title,
+  description,
+  canonicalUrl = Astro.url.href,
+  ogImage = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=1200&auto=format&fit=crop',
+  ogType = 'website',
+  jsonLd
+} = Astro.props;
+
+const siteTitle = `${title} | TravellerAI — Trusted Travel Marketplace`;
+
+// Default WebSite & Organization Schema for Rich Google Snippets
+const baseSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': 'https://travellerai.com/#organization',
+      'name': 'TravellerAI',
+      'url': 'https://travellerai.com',
+      'logo': 'https://travellerai.com/logo.png',
+      'description': 'The unified multi-provider marketplace for independent tours, curated hotels, and premium vehicle fleet.',
+      'contactPoint': {
+        '@type': 'ContactPoint',
+        'telephone': '+1-800-555-8728',
+        'contactType': 'customer service',
+        'areaServed': 'Worldwide',
+        'availableLanguage': ['English', 'German', 'French', 'Japanese']
+      }
+    },
+    {
+      '@type': 'WebSite',
+      '@id': 'https://travellerai.com/#website',
+      'url': 'https://travellerai.com',
+      'name': 'TravellerAI',
+      'publisher': {
+        '@id': 'https://travellerai.com/#organization'
+      }
+    },
+    ...(Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [])
+  ]
+};
+---
+
+<!-- Primary Meta Tags -->
+<title>{siteTitle}</title>
+<meta name="title" content={siteTitle} />
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalUrl} />
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+
+<!-- Open Graph / Facebook / LinkedIn (Click Engineering Optimized) -->
+<meta property="og:type" content={ogType} />
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:title" content={siteTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:site_name" content="TravellerAI" />
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:url" content={canonicalUrl} />
+<meta property="twitter:title" content={siteTitle} />
+<meta property="twitter:description" content={description} />
+<meta property="twitter:image" content={ogImage} />
+
+<!-- Structured Data JSON-LD -->
+<script type="application/ld+json" set:html={JSON.stringify(baseSchema)} />

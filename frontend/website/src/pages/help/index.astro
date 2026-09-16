@@ -1,0 +1,122 @@
+---
+import Layout from '@layouts/Layout.astro';
+---
+
+<Layout 
+  title="Help Center & Knowledge Base — TravellerAI" 
+  description="Find answers regarding booking guarantees, operator vetting, escrow payments, and cancellations."
+>
+  <div class="help-page">
+    <div class="container narrow">
+      <div class="page-header">
+        <span class="editorial-tag">Support Center</span>
+        <h1 class="page-title">Frequently Asked Questions</h1>
+        <p class="page-lead">
+          Everything you need to know about our multi-provider marketplace architecture and traveler protection policies.
+        </p>
+      </div>
+
+      <div class="faq-accordion-stack">
+        <div class="faq-item">
+          <h3>How does direct booking with operators work?</h3>
+          <p>
+            TravellerAI provides the verified technological platform connecting travelers directly with licensed local mountain guides, boutique hoteliers, and fleet operators. When you book, your payment is held securely in escrow until departure or check-in.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h3>What is the Free Cancellation Policy?</h3>
+          <p>
+            Tours marked with Free Cancellation allow full refunds up to 30 days before the scheduled departure date. Hotel reservations can be cancelled up to 48 hours prior to check-in with zero penalty.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h3>How are independent travel operators vetted?</h3>
+          <p>
+            All providers must submit government business licenses, guide certifications (e.g. IFMGA/UIAGM for alpine guides), and comprehensive commercial liability insurance before publishing listings.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h3>What happens in the event of extreme weather?</h3>
+          <p>
+            If a mountain guide cancels a high-altitude expedition due to safety conditions, travelers are offered an immediate complimentary reschedule or 100% full refund from escrow.
+          </p>
+        </div>
+      </div>
+
+      <div class="need-more-box">
+        <h3>Still have questions?</h3>
+        <p>Our concierge desk is available 24 hours a day.</p>
+        <a href="/contact" class="btn btn-primary">Contact Concierge Desk →</a>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .help-page {
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-24);
+  }
+
+  .narrow {
+    max-width: var(--container-narrow);
+  }
+
+  .page-header {
+    margin-bottom: var(--space-10);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .page-title {
+    font-size: var(--text-4xl);
+  }
+
+  .page-lead {
+    font-size: var(--text-base);
+    color: var(--color-mist);
+  }
+
+  .faq-accordion-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .faq-item {
+    background-color: var(--color-pure-white);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .faq-item h3 {
+    font-size: var(--text-lg);
+  }
+
+  .faq-item p {
+    font-size: var(--text-sm);
+    color: var(--color-graphite);
+    line-height: 1.65;
+  }
+
+  .need-more-box {
+    margin-top: var(--space-12);
+    background-color: var(--color-fog);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-3);
+  }
+</style>

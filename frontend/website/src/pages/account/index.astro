@@ -1,0 +1,187 @@
+---
+import Layout from '@layouts/Layout.astro';
+---
+
+<Layout 
+  title="Traveler Account Dashboard" 
+  description="Manage all your verified departures, hotel reservations, and fleet vouchers in one unified portal."
+>
+  <div class="account-page">
+    <div class="container">
+      <header class="account-header">
+        <div class="user-profile-row">
+          <div class="avatar-circle">SA</div>
+          <div>
+            <span class="editorial-tag">Verified Traveler</span>
+            <h1 class="user-name">Sultanul Arefin</h1>
+            <p class="user-email">arefin@travellerai.com • Member since 2026</p>
+          </div>
+        </div>
+
+        <nav class="account-nav-tabs">
+          <a href="/account" class="tab-btn active">Overview</a>
+          <a href="/account/bookings" class="tab-btn">Tours (1)</a>
+          <a href="/account/reservations" class="tab-btn">Hotels (1)</a>
+          <a href="/account/rentals" class="tab-btn">Rentals (1)</a>
+          <a href="/account/wishlist" class="tab-btn">Wishlist (4)</a>
+        </nav>
+      </header>
+
+      <!-- Active Reservations Summary Grid -->
+      <div class="account-dashboard-grid">
+        <div class="dash-card">
+          <div class="card-top">
+            <span class="badge badge-accent">Upcoming Tour</span>
+            <span class="date-lbl">Oct 12 – 18, 2026</span>
+          </div>
+          <h3>Swiss Alpine Odyssey & Glacier Express</h3>
+          <p>Departure with Helvetia Alpine Expeditions (Zermatt)</p>
+          <div class="card-actions">
+            <a href="/account/bookings" class="btn btn-secondary btn-sm">View Tour Voucher →</a>
+          </div>
+        </div>
+
+        <div class="dash-card">
+          <div class="card-top">
+            <span class="badge badge-neutral">Upcoming Stay</span>
+            <span class="date-lbl">Oct 14 – 18, 2026</span>
+          </div>
+          <h3>The Matterhorn Sanctuary & Spa Chalet</h3>
+          <p>Matterhorn Panorama Suite (4 Nights)</p>
+          <div class="card-actions">
+            <a href="/account/reservations" class="btn btn-secondary btn-sm">Digital Check-in QR →</a>
+          </div>
+        </div>
+
+        <div class="dash-card">
+          <div class="card-top">
+            <span class="badge badge-neutral">Active Vehicle Hire</span>
+            <span class="date-lbl">Oct 15 – 18, 2026</span>
+          </div>
+          <h3>Range Rover Autobiography P530</h3>
+          <p>Zurich Airport Terminal VIP Pickup</p>
+          <div class="card-actions">
+            <a href="/account/rentals" class="btn btn-secondary btn-sm">Inspection Record →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .account-page {
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-24);
+  }
+
+  .account-header {
+    margin-bottom: var(--space-10);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .user-profile-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .avatar-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-full);
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-xl);
+    font-weight: 800;
+  }
+
+  .user-name {
+    font-size: var(--text-3xl);
+  }
+
+  .user-email {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+  }
+
+  .account-nav-tabs {
+    display: flex;
+    gap: var(--space-2);
+    border-bottom: 1px solid var(--color-stone);
+    padding-bottom: var(--space-2);
+    overflow-x: auto;
+  }
+
+  .tab-btn {
+    padding: 8px 16px;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    color: var(--color-mist);
+    transition: all var(--transition-fast);
+  }
+
+  .tab-btn:hover {
+    color: var(--color-ink);
+    background-color: var(--color-fog);
+  }
+
+  .tab-btn.active {
+    color: var(--color-ink);
+    background-color: var(--color-fog);
+  }
+
+  .account-dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  @media (min-width: 768px) {
+    .account-dashboard-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .dash-card {
+    background-color: var(--color-pure-white);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .date-lbl {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--color-mist);
+  }
+
+  .dash-card h3 {
+    font-size: var(--text-lg);
+  }
+
+  .dash-card p {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+  }
+
+  .card-actions {
+    margin-top: auto;
+    padding-top: var(--space-4);
+  }
+</style>

@@ -1,0 +1,85 @@
+---
+import Layout from '@layouts/Layout.astro';
+import { getVehicles } from '@modules/vehicles/vehicles.controller';
+import VehicleSearch from '@modules/vehicles/components/islands/VehicleSearch';
+
+export async function getStaticPaths() {
+  const categories = ['luxury-suv', 'electric-sedan', 'executive-van'];
+  const allVehicles = await getVehicles();
+  
+  return categories.map((category) => ({
+    params: { category },
+    props: { 
+      category,
+      vehicles: allVehicles
+    }
+  }));
+}
+
+const { category, vehicles } = Astro.props;
+
+const categoryTitles: Record<string, string> = {
+  'luxury-suv': 'Luxury All-Terrain SUVs (Range Rover & Defender)',
+  'electric-sedan': 'High-Performance Electric Sedans (Porsche Taycan)',
+  'executive-van': 'Executive VIP Passenger Vans (Mercedes V-Class)'
+};
+
+const title = categoryTitles[category] || `${category} Fleet`;
+---
+
+<Layout 
+  title={`${title} | Executive Fleet`}
+  description={`Rent premium ${category} vehicles directly from licensed fleet operators with comprehensive zero-excess coverage.`}
+>
+  <div class="fleet-page">
+    <div class="container">
+      <nav class="breadcrumb-nav">
+        <a href="/">Home</a> / <a href="/vehicles">Fleet</a> / <span>{category}</span>
+      </nav>
+
+      <div class="page-header">
+        <span class="editorial-tag">Fleet Specification</span>
+        <h1 class="page-title">{title}</h1>
+        <p class="page-lead">
+          Pre-conditioned airport terminal delivery with GPS tracking, winter tires, and concierge baggage handling.
+        </p>
+      </div>
+
+      <VehicleSearch client:load initialVehicles={vehicles} currentCategory={category} />
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .fleet-page {
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-20);
+  }
+
+  .breadcrumb-nav {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    margin-bottom: var(--space-4);
+  }
+
+  .breadcrumb-nav a {
+    color: var(--color-mist);
+  }
+
+  .page-header {
+    margin-bottom: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .page-title {
+    font-size: var(--text-4xl);
+  }
+
+  .page-lead {
+    font-size: var(--text-base);
+    color: var(--color-mist);
+    max-width: 620px;
+  }
+</style>

@@ -1,0 +1,92 @@
+:root {
+  /* ==========================================================================
+     TravellerAI Design System — Swiss Modern + Monochrome Hybrid Tokens
+     ========================================================================== */
+
+  /* --- Neutral Scale (The Full Brand Palette) --- */
+  --color-canvas: #fafafa;      /* Primary canvas background */
+  --color-fog: #f4f4f5;         /* Muted section, card surface, skeleton base */
+  --color-stone: #e4e4e7;       /* Borders, dividers, input strokes */
+  --color-mist: #71717a;        /* Secondary text, metadata, subtle captions */
+  --color-graphite: #3f3f46;    /* Secondary emphasis, dark borders, active indicators */
+  --color-charcoal: #27272a;    /* Raised dark surfaces, hover states on ink */
+  --color-ink: #111111;         /* Primary text, high-contrast actions, hero anchors */
+  --color-pure-white: #ffffff;
+  --color-pure-black: #000000;
+
+  /* --- Dark Mode Surface Elevation --- */
+  --color-dark-base: #0a0a0a;
+  --color-dark-surface-1: #111111;
+  --color-dark-surface-2: #1c1c1e;
+  --color-dark-surface-3: #27272a;
+  --color-dark-text-primary: #fafafa;
+  --color-dark-text-secondary: #a1a1aa;
+  --color-dark-borders: #3f3f46;
+
+  /* --- Semantic Color (Strictly for System Feedback & Verification) --- */
+  --color-success: #16a34a;
+  --color-success-bg: #f0fdf4;
+  --color-warning: #d97706;
+  --color-warning-bg: #fffbeb;
+  --color-error: #dc2626;
+  --color-error-bg: #fef2f2;
+  --color-info: #2563eb;
+  --color-info-bg: #eff6ff;
+  --color-swiss-accent: #ff3300; /* Swiss signature contrast accent for urgent badge/hot spot */
+
+  /* --- Typography --- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: 'Inter', sans-serif;
+  --font-accent: 'Instrument Serif', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* Modular Scale (1.250 Major Third) */
+  --text-xs: 0.75rem;    /* 12px */
+  --text-sm: 0.875rem;   /* 14px */
+  --text-base: 1rem;     /* 16px */
+  --text-lg: 1.125rem;   /* 18px */
+  --text-xl: 1.25rem;    /* 20px */
+  --text-2xl: 1.5rem;    /* 24px */
+  --text-3xl: 1.875rem;  /* 30px */
+  --text-4xl: 2.25rem;   /* 36px */
+  --text-5xl: 3rem;      /* 48px */
+  --text-6xl: 3.75rem;   /* 60px */
+  --text-hero: clamp(2.5rem, 6vw, 5rem);
+
+  /* --- 8pt Grid Spacing System --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* --- Concentric Border Radii --- */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* --- Elevation & Shadows --- */
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-hover: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  /* --- Layout Constraints --- */
+  --container-max: 1280px;
+  --container-narrow: 840px;
+  --header-height: 72px;
+
+  /* --- Transitions & Animations --- */
+  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 150ms var(--ease-standard);
+  --transition-normal: 250ms var(--ease-standard);
+}

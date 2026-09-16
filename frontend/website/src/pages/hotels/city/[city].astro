@@ -1,0 +1,85 @@
+---
+import Layout from '@layouts/Layout.astro';
+import { getHotels } from '@modules/hotels/hotels.controller';
+import HotelSearch from '@modules/hotels/components/islands/HotelSearch';
+
+export async function getStaticPaths() {
+  const cities = ['zermatt', 'kyoto', 'sreemangal'];
+  const allHotels = await getHotels();
+  
+  return cities.map((city) => ({
+    params: { city },
+    props: { 
+      city,
+      hotels: allHotels
+    }
+  }));
+}
+
+const { city, hotels } = Astro.props;
+
+const cityNames: Record<string, string> = {
+  zermatt: 'Zermatt, Switzerland',
+  kyoto: 'Kyoto, Japan',
+  sreemangal: 'Sreemangal, Bangladesh'
+};
+
+const cityName = cityNames[city] || city;
+---
+
+<Layout 
+  title={`Hotels & Stays in ${cityName} | TravellerAI`}
+  description={`Book curated chalets, ryokans, and boutique hotels in ${cityName}. Direct rates with no hidden fees.`}
+>
+  <div class="hotels-page">
+    <div class="container">
+      <nav class="breadcrumb-nav">
+        <a href="/">Home</a> / <a href="/hotels">Hotels</a> / <span>{cityName}</span>
+      </nav>
+
+      <div class="page-header">
+        <span class="editorial-tag">City & Valley Stays</span>
+        <h1 class="page-title">Accommodations in {cityName}</h1>
+        <p class="page-lead">
+          Verified boutique lodgings with instant confirmation and live property management system integration.
+        </p>
+      </div>
+
+      <HotelSearch client:load initialHotels={hotels} currentCity={city} />
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .hotels-page {
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-20);
+  }
+
+  .breadcrumb-nav {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    margin-bottom: var(--space-4);
+  }
+
+  .breadcrumb-nav a {
+    color: var(--color-mist);
+  }
+
+  .page-header {
+    margin-bottom: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .page-title {
+    font-size: var(--text-4xl);
+  }
+
+  .page-lead {
+    font-size: var(--text-base);
+    color: var(--color-mist);
+    max-width: 620px;
+  }
+</style>

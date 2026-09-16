@@ -1,0 +1,214 @@
+---
+import Layout from '@layouts/Layout.astro';
+import { getVehicles } from '@modules/vehicles/vehicles.controller';
+import VehicleBookingWidget from '@modules/vehicles/components/islands/VehicleBookingWidget';
+
+export async function getStaticPaths() {
+  const vehicles = await getVehicles();
+  return vehicles.map((vehicle) => ({
+    params: { slug: vehicle.slug },
+    props: { vehicle }
+  }));
+}
+
+const { vehicle } = Astro.props;
+
+const vehicleJsonLd = {
+  '@type': 'RentalCarReservation',
+  'reservationFor': {
+    '@type': 'Car',
+    'name': `${vehicle.make} ${vehicle.model}`,
+    'modelDate': vehicle.year,
+    'seatingCapacity': vehicle.seats,
+    'vehicleTransmission': vehicle.transmission
+  },
+  'price': vehicle.dailyRate,
+  'priceCurrency': vehicle.currency
+};
+---
+
+<Layout 
+  title={`${vehicle.make} ${vehicle.model} Hire`}
+  description={`Rent the ${vehicle.make} ${vehicle.model} in ${vehicle.cityLocation}. ${vehicle.seats} seats, ${vehicle.transmission}, ${vehicle.protectionTierIncluded}.`}
+  ogImage={vehicle.featuredImage}
+  jsonLd={vehicleJsonLd}
+>
+  <div class="vehicle-detail-page">
+    <div class="container">
+      <nav class="breadcrumb-nav">
+        <a href="/">Home</a> / <a href="/vehicles">Fleet</a> / <a href={`/vehicles/category/${vehicle.category.toLowerCase().replace(/\s+/g, '-')}`}>{vehicle.category}</a> / <span>{vehicle.make} {vehicle.model}</span>
+      </nav>
+
+      <header class="vehicle-header">
+        <div class="badges-row">
+          <a href={`/vehicles/category/${vehicle.category.toLowerCase().replace(/\s+/g, '-')}`} class="badge badge-neutral">{vehicle.category}</a>
+          <span class="badge badge-neutral">ACRISS: {vehicle.acrissCode}</span>
+          {vehicle.chauffeurAvailable && <span class="badge badge-accent">Chauffeur Available</span>}
+        </div>
+        <h1 class="vehicle-title">{vehicle.make} {vehicle.model} ({vehicle.year})</h1>
+        <p class="vehicle-depot">Station Hub: {vehicle.cityLocation} • Operated by {vehicle.providerName}</p>
+      </header>
+
+      <div class="vehicle-gallery">
+        <img src={vehicle.featuredImage} alt={`${vehicle.make} ${vehicle.model}`} class="featured-img" />
+      </div>
+
+      <div class="vehicle-layout">
+        <div class="main-info">
+          <section class="section-block">
+            <h2>Vehicle Technical Specifications</h2>
+            <div class="tech-specs-grid">
+              <div class="tech-card">
+                <span class="tech-lbl">Seating Capacity</span>
+                <span class="tech-val">{vehicle.seats} Adults</span>
+              </div>
+              <div class="tech-card">
+                <span class="tech-lbl">Luggage Capacity</span>
+                <span class="tech-val">{vehicle.luggageCount} Large Cases</span>
+              </div>
+              <div class="tech-card">
+                <span class="tech-lbl">Transmission</span>
+                <span class="tech-val">{vehicle.transmission}</span>
+              </div>
+              <div class="tech-card">
+                <span class="tech-lbl">Powertrain</span>
+                <span class="tech-val">{vehicle.fuelType}</span>
+              </div>
+              <div class="tech-card">
+                <span class="tech-lbl">Mileage Allowance</span>
+                <span class="tech-val">{vehicle.unlimitedMileage ? 'Unlimited Kilometers' : '300 km/day'}</span>
+              </div>
+              <div class="tech-card">
+                <span class="tech-lbl">Included Protection</span>
+                <span class="tech-val">{vehicle.protectionTierIncluded}</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="section-block">
+            <h2>Delivery & Concierge Logistics</h2>
+            <p class="desc-text">
+              Direct airport terminal meet-and-greet included. Your vehicle is fully pre-conditioned, sanitized, and parked directly adjacent to VIP Arrivals. Digital check-in with instant damage scan via TravellerAI Inspection Engine.
+            </p>
+          </section>
+        </div>
+
+        <aside class="vehicle-sidebar">
+          <!-- SolidJS Island: Interactive Vehicle Booking Widget -->
+          <VehicleBookingWidget client:load vehicle={vehicle} />
+        </aside>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .vehicle-detail-page {
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-20);
+  }
+
+  .breadcrumb-nav {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    margin-bottom: var(--space-4);
+  }
+
+  .breadcrumb-nav a {
+    color: var(--color-mist);
+  }
+
+  .vehicle-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-6);
+  }
+
+  .badges-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .vehicle-title {
+    font-size: var(--text-4xl);
+  }
+
+  .vehicle-depot {
+    font-size: var(--text-sm);
+    color: var(--color-mist);
+  }
+
+  .vehicle-gallery {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    margin-bottom: var(--space-10);
+  }
+
+  .featured-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .vehicle-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-10);
+  }
+
+  @media (min-width: 960px) {
+    .vehicle-layout {
+      grid-template-columns: 1.8fr 1fr;
+      align-items: start;
+    }
+  }
+
+  .section-block {
+    margin-bottom: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .tech-specs-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  @media (min-width: 600px) {
+    .tech-specs-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .tech-card {
+    background-color: var(--color-fog);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .tech-lbl {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  .tech-val {
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .desc-text {
+    font-size: var(--text-base);
+    line-height: 1.75;
+  }
+</style>

@@ -1,0 +1,205 @@
+---
+import { environment } from '@environments/environment';
+
+const currentPath = Astro.url.pathname;
+
+const navItems = [
+  { href: '/destinations', label: 'Destinations' },
+  { href: '/tours', label: 'Expeditions', badge: 'Curated' },
+  { href: '/hotels', label: 'Sanctuaries' },
+  { href: '/vehicles', label: 'Fleet & Transfers' },
+  { href: '/providers', label: 'Operators' },
+  { href: '/blog', label: 'Dispatch' },
+];
+---
+
+<header class="site-header">
+  <div class="container header-inner">
+    <!-- Brand Logo: Swiss Modern Bold Typography -->
+    <a href="/" class="brand-logo" aria-label="TravellerAI Home">
+      <span class="logo-mark">TRAVELLER</span><span class="logo-ai">AI</span>
+    </a>
+
+    <!-- Primary Navigation: Serial Position Effect (Key links first and last) -->
+    <nav class="desktop-nav" aria-label="Main Navigation">
+      <ul class="nav-list">
+        {navItems.map((item) => {
+          const isActive = currentPath === item.href || (item.href !== '/' && currentPath.startsWith(item.href));
+          return (
+            <li class="nav-item">
+              <a 
+                href={item.href} 
+                class:list={['nav-link', { active: isActive }]}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                {item.label}
+                {item.badge && <span class="nav-pill">{item.badge}</span>}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+
+    <!-- Header Actions & Utility: Currency, Mode Badge & Auth Actions -->
+    <div class="header-actions">
+      <!-- Data Mode Indicator for pair-programming & demo visibility -->
+      <div class="mode-indicator" title={`Running in ${environment.dataMode.toUpperCase()} mode`}>
+        <span class="mode-dot"></span>
+        <span class="mode-text">{environment.dataMode === 'mock' ? 'MOCK' : 'API'}</span>
+      </div>
+
+      <div class="auth-buttons">
+        <a href="/account" class="btn btn-secondary btn-sm auth-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          Account
+        </a>
+        <a href="/auth/login" class="btn btn-primary btn-sm login-btn">
+          Sign In
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: rgba(250, 250, 250, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--color-stone);
+    height: var(--header-height);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+  }
+
+  .brand-logo {
+    display: flex;
+    align-items: baseline;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    color: var(--color-ink);
+  }
+
+  .logo-mark {
+    letter-spacing: -0.03em;
+  }
+
+  .logo-ai {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-swiss-accent);
+    margin-left: 2px;
+  }
+
+  .desktop-nav {
+    display: none;
+  }
+
+  @media (min-width: 990px) {
+    .desktop-nav {
+      display: block;
+    }
+  }
+
+  .nav-list {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    list-style: none;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-graphite);
+    padding: 6px 0;
+    position: relative;
+    transition: color var(--transition-fast);
+  }
+
+  .nav-link:hover {
+    color: var(--color-ink);
+  }
+
+  .nav-link.active {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+
+  .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--color-ink);
+  }
+
+  .nav-pill {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: var(--radius-sm);
+    background-color: var(--color-fog);
+    color: var(--color-mist);
+    border: 1px solid var(--color-stone);
+    text-transform: uppercase;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .mode-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    background-color: var(--color-fog);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-full);
+    color: var(--color-mist);
+  }
+
+  .mode-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--color-success);
+    box-shadow: 0 0 6px var(--color-success);
+  }
+
+  .auth-buttons {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .btn-sm {
+    padding: 8px 14px;
+    font-size: var(--text-xs);
+  }
+</style>

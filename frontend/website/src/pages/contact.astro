@@ -1,0 +1,187 @@
+---
+import Layout from '@layouts/Layout.astro';
+import { environment } from '@environments/environment';
+---
+
+<Layout 
+  title="Contact & Concierge Desk" 
+  description="Get in touch with the TravellerAI Concierge Desk, provider onboarding team, or media relations."
+>
+  <div class="contact-page">
+    <div class="container narrow">
+      <span class="editorial-tag">Global Concierge</span>
+      <h1 class="page-title">Direct Inquiries & Support</h1>
+      <p class="page-lead">
+        Our dedicated global concierge desk operates 24/7 for urgent departure logistics, custom itinerary requests, and provider onboarding.
+      </p>
+
+      <div class="contact-grid">
+        <div class="contact-card">
+          <h3>Traveler Concierge</h3>
+          <p>For inquiries regarding active reservations, private guide matching, and custom quotes.</p>
+          <a href={`mailto:${environment.contactEmail}`} class="contact-link">{environment.contactEmail}</a>
+          <span class="contact-meta">{environment.supportPhone}</span>
+        </div>
+
+        <div class="contact-card">
+          <h3>Operator Partnerships</h3>
+          <p>For independent guides, boutique hoteliers, and fleet owners seeking verified listing access.</p>
+          <a href="mailto:partners@travellerai.com" class="contact-link">partners@travellerai.com</a>
+          <span class="contact-meta">Response within 24 business hours</span>
+        </div>
+      </div>
+
+      <form class="contact-form" onsubmit="event.preventDefault(); alert('Inquiry received. A concierge specialist will respond within 4 hours.');">
+        <h2>Send a Direct Message</h2>
+        <div class="form-row">
+          <div class="form-field">
+            <label for="c-name">Your Full Name</label>
+            <input id="c-name" type="text" required placeholder="Sultanul Arefin" />
+          </div>
+          <div class="form-field">
+            <label for="c-email">Email Address</label>
+            <input id="c-email" type="email" required placeholder="arefin@example.com" />
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="c-subject">Subject</label>
+          <select id="c-subject">
+            <option>Custom Expedition Inquiry</option>
+            <option>Hotel & Chalet Booking Assistance</option>
+            <option>Fleet / Airport Transfer Logistics</option>
+            <option>Provider Portal & Verification</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="c-msg">Message</label>
+          <textarea id="c-msg" rows="5" required placeholder="Describe your travel requirements or partnership interest..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+          Transmit Message to Concierge
+        </button>
+      </form>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .contact-page {
+    padding-top: var(--space-16);
+    padding-bottom: var(--space-24);
+  }
+
+  .narrow {
+    max-width: var(--container-narrow);
+  }
+
+  .page-title {
+    font-size: var(--text-hero);
+    line-height: 1.1;
+    margin-top: var(--space-3);
+  }
+
+  .page-lead {
+    font-size: var(--text-lg);
+    color: var(--color-mist);
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-10);
+  }
+
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+    margin-bottom: var(--space-12);
+  }
+
+  @media (min-width: 640px) {
+    .contact-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .contact-card {
+    background-color: var(--color-fog);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .contact-card h3 {
+    font-size: var(--text-base);
+  }
+
+  .contact-card p {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+  }
+
+  .contact-link {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-ink);
+    margin-top: var(--space-2);
+  }
+
+  .contact-meta {
+    font-size: 11px;
+    color: var(--color-mist);
+  }
+
+  .contact-form {
+    background-color: var(--color-pure-white);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .contact-form h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  @media (min-width: 600px) {
+    .form-row {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-field label {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  .form-field input,
+  .form-field select,
+  .form-field textarea {
+    padding: 12px;
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-md);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    background-color: var(--color-canvas);
+  }
+</style>

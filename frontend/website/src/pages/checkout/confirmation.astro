@@ -1,0 +1,209 @@
+---
+import Layout from '@layouts/Layout.astro';
+
+const url = new URL(Astro.request.url);
+const type = url.searchParams.get('type') || 'tour';
+
+const titles: Record<string, string> = {
+  tour: 'Swiss Alpine Odyssey & Glacier Express',
+  hotel: 'The Matterhorn Sanctuary & Spa Chalet',
+  vehicle: 'Range Rover Autobiography P530'
+};
+
+const bookingTitle = titles[type] || 'Confirmed Booking';
+---
+
+<Layout 
+  title="Booking Confirmed — Voucher Ready" 
+  description="Your reservation has been confirmed with the independent operator."
+>
+  <div class="confirmation-page">
+    <div class="container narrow">
+      <div class="success-header">
+        <div class="success-icon-badge">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <span class="editorial-tag">Reservation Guaranteed</span>
+        <h1 class="page-title">You're going on an expedition.</h1>
+        <p class="page-lead">
+          Confirmation code <strong>#TRAV-2026-9481</strong> has been dispatched to your email and verified on the operator ledger.
+        </p>
+      </div>
+
+      <!-- Voucher Folio Card -->
+      <div class="voucher-card">
+        <div class="voucher-top">
+          <div>
+            <span class="v-type">{type.toUpperCase()} RESERVATION FOLIO</span>
+            <h2 class="v-title">{bookingTitle}</h2>
+          </div>
+          <div class="qr-mock">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v3h-3v-3zm-5 5h3v3h-3v-3zm5 0h3v3h-3v-3zm-3-3h3v3h-3v-3zm-2-2h3v3h-3v-3z"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="voucher-grid">
+          <div class="v-cell">
+            <span class="v-lbl">Primary Guest</span>
+            <span class="v-val">Sultanul Arefin</span>
+          </div>
+          <div class="v-cell">
+            <span class="v-lbl">Departure / Check-in</span>
+            <span class="v-val">October 14, 2026</span>
+          </div>
+          <div class="v-cell">
+            <span class="v-lbl">Status</span>
+            <span class="v-val status-confirmed">✓ Escrow Confirmed</span>
+          </div>
+          <div class="v-cell">
+            <span class="v-lbl">Operator Direct Line</span>
+            <span class="v-val">+41 27 966 8100</span>
+          </div>
+        </div>
+
+        <div class="voucher-actions">
+          <button class="btn btn-primary" onclick="window.print()">
+            Print Official Voucher
+          </button>
+          <a href="/account/bookings" class="btn btn-secondary">
+            View in Traveler Dashboard →
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .confirmation-page {
+    padding-top: var(--space-16);
+    padding-bottom: var(--space-24);
+  }
+
+  .narrow {
+    max-width: var(--container-narrow);
+  }
+
+  .success-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-10);
+  }
+
+  .success-icon-badge {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-full);
+    background-color: var(--color-success-bg);
+    color: var(--color-success);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(22, 163, 74, 0.3);
+    margin-bottom: var(--space-2);
+  }
+
+  .page-title {
+    font-size: var(--text-hero);
+    line-height: 1.1;
+  }
+
+  .page-lead {
+    font-size: var(--text-base);
+    color: var(--color-mist);
+    max-width: 540px;
+  }
+
+  .page-lead strong {
+    color: var(--color-ink);
+  }
+
+  .voucher-card {
+    background-color: var(--color-pure-white);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-card);
+    padding: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .voucher-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--color-stone);
+    padding-bottom: var(--space-6);
+  }
+
+  .v-type {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-swiss-accent);
+    font-weight: 700;
+  }
+
+  .v-title {
+    font-size: var(--text-2xl);
+    margin-top: 4px;
+  }
+
+  .qr-mock {
+    color: var(--color-ink);
+  }
+
+  .voucher-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  @media (min-width: 600px) {
+    .voucher-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .v-cell {
+    background-color: var(--color-fog);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .v-lbl {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  .v-val {
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .status-confirmed {
+    color: var(--color-success);
+  }
+
+  .voucher-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-fog);
+  }
+</style>

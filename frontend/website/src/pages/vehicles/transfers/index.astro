@@ -1,0 +1,231 @@
+---
+import Layout from '@layouts/Layout.astro';
+import { getTransfers } from '@modules/transfers/transfers.model';
+
+const transfers = await getTransfers();
+---
+
+<Layout 
+  title="Chauffeured VIP Airport & Alpine Transfers" 
+  description="Fixed-rate private airport transfers between major European and Asian transport hubs and mountain destinations."
+>
+  <div class="transfers-page">
+    <div class="container">
+      <nav class="breadcrumb-nav">
+        <a href="/">Home</a> / <a href="/vehicles">Fleet</a> / <span>Transfers</span>
+      </nav>
+
+      <div class="page-header">
+        <span class="editorial-tag">Door-to-Door Logistics</span>
+        <h1 class="page-title">Fixed-Rate VIP Transfers</h1>
+        <p class="page-lead">
+          Guaranteed fixed rates with flight-tracking meet & greet, toll fees, and luxury luggage assistance included.
+        </p>
+      </div>
+
+      <div class="transfers-list">
+        {transfers.map((t) => (
+          <article class="transfer-card">
+            <div class="transfer-media">
+              <img src={t.featuredImage} alt={`${t.origin} to ${t.destination}`} />
+            </div>
+
+            <div class="transfer-content">
+              <div class="route-badge-row">
+                <span class="badge badge-neutral">{t.vehicleClass}</span>
+                <span class="badge badge-accent">Fixed Rate Guarantee</span>
+              </div>
+
+              <h2 class="route-title">
+                <a href={`/vehicles/transfers/${t.slug}`}>
+                  {t.origin} <span>→</span> {t.destination}
+                </a>
+              </h2>
+
+              <div class="route-specs">
+                <span>⏱ ~{t.durationMinutes} Minutes</span>
+                <span>•</span>
+                <span>📍 {t.distanceKm} km</span>
+                <span>•</span>
+                <span>🚘 {t.vehicleModel}</span>
+              </div>
+
+              <div class="inclusions-row">
+                {t.includedAmenities.map(a => (
+                  <span class="inc-tag">✓ {a}</span>
+                ))}
+              </div>
+
+              <div class="transfer-footer">
+                <div class="price-box">
+                  <span class="lbl">Fixed Route Price</span>
+                  <div class="price">
+                    <span class="cur">$</span>
+                    <span class="num">{t.fixedRate}</span>
+                    <span class="unit">USD (All In)</span>
+                  </div>
+                </div>
+
+                <a href={`/vehicles/transfers/${t.slug}`} class="btn btn-primary btn-sm">
+                  Book Private Transfer
+                </a>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .transfers-page {
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-20);
+  }
+
+  .breadcrumb-nav {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    margin-bottom: var(--space-4);
+  }
+
+  .breadcrumb-nav a {
+    color: var(--color-mist);
+  }
+
+  .page-header {
+    margin-bottom: var(--space-10);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .page-title {
+    font-size: var(--text-4xl);
+  }
+
+  .page-lead {
+    font-size: var(--text-base);
+    color: var(--color-mist);
+    max-width: 620px;
+  }
+
+  .transfers-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .transfer-card {
+    background-color: var(--color-pure-white);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  @media (min-width: 800px) {
+    .transfer-card {
+      grid-template-columns: 360px 1fr;
+    }
+  }
+
+  .transfer-media {
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+  }
+
+  .transfer-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .transfer-content {
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .route-badge-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .route-title {
+    font-size: var(--text-2xl);
+  }
+
+  .route-title a:hover {
+    color: var(--color-swiss-accent);
+  }
+
+  .route-specs {
+    display: flex;
+    gap: 8px;
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+  }
+
+  .inclusions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .inc-tag {
+    font-size: 11px;
+    background-color: var(--color-fog);
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    color: var(--color-graphite);
+  }
+
+  .transfer-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--color-fog);
+    padding-top: var(--space-4);
+    margin-top: auto;
+  }
+
+  .lbl {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--color-mist);
+    display: block;
+  }
+
+  .price {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+  }
+
+  .price .cur {
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .price .num {
+    font-size: var(--text-2xl);
+    font-weight: 800;
+  }
+
+  .price .unit {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    margin-left: 4px;
+  }
+
+  .btn-sm {
+    padding: 8px 16px;
+  }
+</style>

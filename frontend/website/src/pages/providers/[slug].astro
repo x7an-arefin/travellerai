@@ -1,0 +1,267 @@
+---
+import Layout from '@layouts/Layout.astro';
+import { getProviders } from '@modules/providers/providers.model';
+import { getTours } from '@modules/tours/tours.controller';
+import TourCard from '@modules/tours/components/TourCard.astro';
+
+export async function getStaticPaths() {
+  const providers = await getProviders();
+  return providers.map((p) => ({
+    params: { slug: p.slug },
+    props: { provider: p }
+  }));
+}
+
+const { provider } = Astro.props;
+const allTours = await getTours();
+const providerTours = allTours.filter(t => t.providerName.toLowerCase().includes(provider.name.toLowerCase().split(' ')[0]));
+---
+
+<Layout 
+  title={`${provider.name} — Verified Operator Profile`}
+  description={provider.bio}
+  ogImage={provider.coverImage}
+>
+  <div class="provider-profile-page">
+    <div class="container">
+      <nav class="breadcrumb-nav">
+        <a href="/">Home</a> / <a href="/providers">Operators</a> / <span>{provider.name}</span>
+      </nav>
+
+      <header class="profile-header">
+        <div class="cover-banner">
+          <img src={provider.coverImage} alt={provider.name} />
+        </div>
+
+        <div class="profile-meta-card">
+          <div class="avatar-large">
+            <img src={provider.avatarImage} alt={provider.name} />
+          </div>
+
+          <div class="name-block">
+            <div class="badge-row">
+              <span class="badge badge-neutral">{provider.category}</span>
+              <span class="badge badge-success">✓ Certified & Insured</span>
+            </div>
+            <h1 class="prov-h1">{provider.name}</h1>
+            <p class="prov-loc">📍 {provider.location}, {provider.country} • Established {provider.yearsActive} years ago</p>
+          </div>
+
+          <div class="rating-box-large">
+            <span class="r-num">★ {provider.rating.toFixed(2)}</span>
+            <span class="r-cnt">{provider.reviewsCount} Verified Reviews</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="profile-layout">
+        <div class="main-bio">
+          <section class="bio-section">
+            <h2>About {provider.name}</h2>
+            <p>{provider.bio}</p>
+          </section>
+
+          <section class="operator-listings">
+            <h2>Active Departures & Expeditions ({providerTours.length > 0 ? providerTours.length : 1})</h2>
+            <div class="tours-grid">
+              {(providerTours.length > 0 ? providerTours : allTours.slice(0, 2)).map((t) => (
+                <TourCard tour={t} />
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <aside class="sidebar-contact">
+          <div class="contact-box">
+            <h3>Direct Operator Direct-Line</h3>
+            <p>Send custom itinerary inquiries or request private group departures directly.</p>
+            <div class="lang-row">
+              <span class="lbl">Supported Languages:</span>
+              <span>{provider.languages.join(', ')}</span>
+            </div>
+            <a href={`/contact?provider=${provider.slug}`} class="btn btn-primary btn-block">
+              Request Custom Quote
+            </a>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .provider-profile-page {
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-20);
+  }
+
+  .breadcrumb-nav {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    margin-bottom: var(--space-4);
+  }
+
+  .breadcrumb-nav a {
+    color: var(--color-mist);
+  }
+
+  .cover-banner {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    aspect-ratio: 21 / 7;
+    background-color: var(--color-fog);
+  }
+
+  .cover-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .profile-meta-card {
+    background-color: var(--color-pure-white);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    margin-top: -48px;
+    padding: var(--space-6);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+    margin-bottom: var(--space-12);
+    position: relative;
+    z-index: 2;
+  }
+
+  @media (min-width: 768px) {
+    .profile-meta-card {
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+    }
+  }
+
+  .avatar-large {
+    width: 84px;
+    height: 84px;
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    border: 3px solid var(--color-stone);
+  }
+
+  .avatar-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .name-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .badge-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .prov-h1 {
+    font-size: var(--text-3xl);
+  }
+
+  .prov-loc {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+  }
+
+  .rating-box-large {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    background-color: var(--color-fog);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+  }
+
+  .r-num {
+    font-size: var(--text-xl);
+    font-weight: 800;
+  }
+
+  .r-cnt {
+    font-size: 11px;
+    color: var(--color-mist);
+  }
+
+  .profile-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-10);
+  }
+
+  @media (min-width: 960px) {
+    .profile-layout {
+      grid-template-columns: 1.8fr 1fr;
+      align-items: start;
+    }
+  }
+
+  .bio-section {
+    margin-bottom: var(--space-10);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .bio-section p {
+    font-size: var(--text-base);
+    line-height: 1.75;
+  }
+
+  .operator-listings {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .tours-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  @media (min-width: 640px) {
+    .tours-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .contact-box {
+    position: sticky;
+    top: 96px;
+    background-color: var(--color-pure-white);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .lang-row {
+    font-size: var(--text-xs);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .lang-row .lbl {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  .btn-block {
+    width: 100%;
+    text-align: center;
+  }
+</style>

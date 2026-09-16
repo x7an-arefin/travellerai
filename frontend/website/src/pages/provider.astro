@@ -1,0 +1,266 @@
+---
+import Layout from '@layouts/Layout.astro';
+---
+
+<Layout 
+  title="For Independent Travel Providers — TravellerAI Marketplace" 
+  description="Take direct bookings, manage hotel rooms with automated PMS, and dispatch fleet operations with 0% commission lock-ins."
+>
+  <div class="provider-landing-page">
+    <!-- Hero Section -->
+    <section class="provider-hero">
+      <div class="container narrow">
+        <span class="badge badge-accent">Provider Infrastructure</span>
+        <h1 class="hero-h1">Sell your travel experiences on your own terms.</h1>
+        <p class="hero-lead">
+          Stop paying 25–35% commissions to legacy aggregator platforms. TravellerAI gives guides, boutique hoteliers, and fleet owners full financial control and direct traveler relationships.
+        </p>
+
+        <div class="hero-actions">
+          <a href="http://localhost:4200" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
+            Launch Provider Portal
+          </a>
+          <a href="/contact" class="btn btn-secondary btn-lg">
+            Schedule Verification Call
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Comparison Matrix: Extractive Aggregators vs TravellerAI -->
+    <section class="comparison-section">
+      <div class="container">
+        <div class="section-title-wrap">
+          <span class="editorial-tag">Financial Architecture</span>
+          <h2>The TravellerAI Advantage</h2>
+        </div>
+
+        <div class="comparison-grid">
+          <div class="comparison-col legacy">
+            <h3 class="col-title">Traditional Aggregators (Viator, Booking)</h3>
+            <ul class="comp-list">
+              <li><span>✕</span> 25% – 35% commission extracted from every sale</li>
+              <li><span>✕</span> Obscured customer contact & hidden traveler data</li>
+              <li><span>✕</span> Slow 30–60 day delayed payout settlements</li>
+              <li><span>✕</span> Algorithmic ranking biased toward ad spend</li>
+            </ul>
+          </div>
+
+          <div class="comparison-col modern">
+            <h3 class="col-title">TravellerAI Direct Marketplace</h3>
+            <ul class="comp-list">
+              <li><span>✓</span> <strong>0% Commission</strong> on direct bookings</li>
+              <li><span>✓</span> Direct traveler messaging & client relationship ownership</li>
+              <li><span>✓</span> Automated instant payouts & multi-currency escrow</li>
+              <li><span>✓</span> Ranking based purely on verified guide credentials & reviews</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 Core Module Capabilities -->
+    <section class="modules-suite-section">
+      <div class="container">
+        <div class="section-title-wrap">
+          <span class="editorial-tag">Built-in Software Engine</span>
+          <h2>A Complete Travel Commerce Stack</h2>
+        </div>
+
+        <div class="suite-cards">
+          <div class="suite-card">
+            <div class="suite-num">01</div>
+            <h3>Tours & Activity Management</h3>
+            <p>Custom multi-day itinerary builder, departure inventory calendars, guide assignment, and automated participant safety waivers.</p>
+          </div>
+
+          <div class="suite-card">
+            <div class="suite-num">02</div>
+            <h3>Property Management (PMS)</h3>
+            <p>Room unit inventory matrix, rate plan rules, pre-arrival upsell offers, digital check-in QR generation, and guest folios.</p>
+          </div>
+
+          <div class="suite-card">
+            <div class="suite-num">03</div>
+            <h3>Fleet & Dispatch Engine</h3>
+            <p>ACRISS vehicle categorization, live GPS driver tracking, automated digital condition inspection scans, and extra charge reconciliation.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</Layout>
+
+<style>
+  .provider-landing-page {
+    padding-bottom: var(--space-24);
+  }
+
+  .provider-hero {
+    padding-top: var(--space-20);
+    padding-bottom: var(--space-20);
+    background-color: var(--color-pure-white);
+    border-bottom: 1px solid var(--color-stone);
+    text-align: center;
+  }
+
+  .narrow {
+    max-width: 780px;
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .hero-h1 {
+    font-size: var(--text-hero);
+    line-height: 1.1;
+  }
+
+  .hero-lead {
+    font-size: var(--text-lg);
+    color: var(--color-mist);
+    line-height: 1.6;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+    justify-content: center;
+  }
+
+  .btn-lg {
+    padding: 14px 28px;
+    font-size: var(--text-base);
+  }
+
+  .comparison-section {
+    padding-top: var(--space-16);
+    padding-bottom: var(--space-16);
+  }
+
+  .section-title-wrap {
+    margin-bottom: var(--space-10);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  @media (min-width: 768px) {
+    .comparison-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .comparison-col {
+    padding: var(--space-8);
+    border-radius: var(--radius-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .comparison-col.legacy {
+    background-color: var(--color-fog);
+    border: 1px solid var(--color-stone);
+  }
+
+  .comparison-col.modern {
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  .col-title {
+    font-size: var(--text-lg);
+  }
+
+  .modern .col-title {
+    color: var(--color-canvas);
+  }
+
+  .comp-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    font-size: var(--text-sm);
+  }
+
+  .legacy .comp-list li {
+    color: var(--color-mist);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .legacy .comp-list span {
+    color: var(--color-error);
+    font-weight: 800;
+  }
+
+  .modern .comp-list li {
+    color: #d4d4d8;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .modern .comp-list span {
+    color: var(--color-success);
+    font-weight: 800;
+  }
+
+  .modules-suite-section {
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-16);
+  }
+
+  .suite-cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  @media (min-width: 768px) {
+    .suite-cards {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .suite-card {
+    background-color: var(--color-pure-white);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .suite-num {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xl);
+    font-weight: 800;
+    color: var(--color-swiss-accent);
+  }
+
+  .suite-card h3 {
+    font-size: var(--text-lg);
+  }
+
+  .suite-card p {
+    font-size: var(--text-xs);
+    color: var(--color-graphite);
+    line-height: 1.6;
+  }
+</style>

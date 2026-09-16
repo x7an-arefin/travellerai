@@ -1,0 +1,163 @@
+---
+import Layout from '@layouts/Layout.astro';
+import { getDestinations } from '@modules/destinations/destinations.model';
+
+const destinations = await getDestinations();
+---
+
+<Layout 
+  title="Global Destinations Directory" 
+  description="Explore vetted travel regions worldwide. High-altitude alpine regions, historic East Asian cultural sanctuaries, and tropical rainforest tea valleys."
+>
+  <div class="destinations-page">
+    <div class="container">
+      <div class="page-header">
+        <span class="editorial-tag">Regional Portfolios</span>
+        <h1 class="page-title">Global Travel Destinations</h1>
+        <p class="page-lead">
+          Curated destination portfolios with verified climate guides, local operator networks, and seasonal travel advice.
+        </p>
+      </div>
+
+      <div class="dest-grid">
+        {destinations.map((d) => (
+          <article class="dest-item">
+            <div class="img-box">
+              <img src={d.featuredImage} alt={d.name} loading="lazy" />
+            </div>
+            <div class="info-box">
+              <span class="region-lbl">{d.region}</span>
+              <h2 class="name">{d.name}, {d.country}</h2>
+              <p class="desc">{d.description}</p>
+              <div class="season-box">
+                <span class="season-lbl">Optimal Travel Window:</span>
+                <span class="season-val">{d.bestTimeToVisit}</span>
+              </div>
+              <div class="actions-row">
+                <a href={`/tours?destination=${d.slug}`} class="btn btn-primary btn-sm">
+                  View {d.toursCount} Tours
+                </a>
+                <a href={`/hotels?destination=${d.slug}`} class="btn btn-secondary btn-sm">
+                  View {d.hotelsCount} Hotels
+                </a>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .destinations-page {
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-20);
+  }
+
+  .page-header {
+    margin-bottom: var(--space-10);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .page-title {
+    font-size: var(--text-4xl);
+  }
+
+  .page-lead {
+    font-size: var(--text-base);
+    color: var(--color-mist);
+    max-width: 620px;
+  }
+
+  .dest-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  .dest-item {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+    background-color: var(--color-pure-white);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    padding: var(--space-6);
+  }
+
+  @media (min-width: 768px) {
+    .dest-item {
+      grid-template-columns: 360px 1fr;
+      align-items: center;
+    }
+  }
+
+  .img-box {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+  }
+
+  .img-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .info-box {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .region-lbl {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--color-mist);
+  }
+
+  .name {
+    font-size: var(--text-2xl);
+  }
+
+  .desc {
+    font-size: var(--text-sm);
+    color: var(--color-graphite);
+    line-height: 1.6;
+  }
+
+  .season-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-xs);
+    background-color: var(--color-fog);
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
+    width: fit-content;
+  }
+
+  .season-lbl {
+    font-weight: 600;
+  }
+
+  .season-val {
+    color: var(--color-graphite);
+  }
+
+  .actions-row {
+    display: flex;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+  }
+
+  .btn-sm {
+    padding: 8px 14px;
+    font-size: var(--text-xs);
+  }
+</style>

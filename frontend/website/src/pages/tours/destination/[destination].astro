@@ -1,0 +1,78 @@
+---
+import Layout from '@layouts/Layout.astro';
+import { getTours } from '@modules/tours/tours.controller';
+import { getDestinations } from '@modules/destinations/destinations.model';
+import TourSearch from '@modules/tours/components/islands/TourSearch';
+
+export async function getStaticPaths() {
+  const destinations = await getDestinations();
+  const allTours = await getTours();
+  
+  return destinations.map((dest) => ({
+    params: { destination: dest.slug },
+    props: { 
+      dest,
+      tours: allTours
+    }
+  }));
+}
+
+const { dest, tours } = Astro.props;
+---
+
+<Layout 
+  title={`${dest.name} Tours & Expeditions`}
+  description={`Explore verified itineraries and expeditions in ${dest.name}, ${dest.country}.`}
+>
+  <div class="catalog-page">
+    <div class="container">
+      <nav class="breadcrumb-nav">
+        <a href="/">Home</a> / <a href="/tours">Tours</a> / <a href="/destinations">Destinations</a> / <span>{dest.name}</span>
+      </nav>
+
+      <div class="catalog-header">
+        <span class="editorial-tag">Regional Dispatch</span>
+        <h1 class="page-title">{dest.name} Expeditions</h1>
+        <p class="page-lead">
+          {dest.description} Handcrafted departures with certified local operators.
+        </p>
+      </div>
+
+      <TourSearch client:load initialTours={tours} currentDestination={dest.slug} />
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .catalog-page {
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-20);
+  }
+
+  .breadcrumb-nav {
+    font-size: var(--text-xs);
+    color: var(--color-mist);
+    margin-bottom: var(--space-4);
+  }
+
+  .breadcrumb-nav a {
+    color: var(--color-mist);
+  }
+
+  .catalog-header {
+    margin-bottom: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .page-title {
+    font-size: var(--text-4xl);
+  }
+
+  .page-lead {
+    font-size: var(--text-base);
+    color: var(--color-mist);
+    max-width: 600px;
+  }
+</style>
