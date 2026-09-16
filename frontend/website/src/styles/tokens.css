@@ -90,3 +90,20 @@
   --transition-fast: 150ms var(--ease-standard);
   --transition-normal: 250ms var(--ease-standard);
 }
+
+/* ==========================================================================
+   Dark Mode Surface Elevation Overrides
+   ========================================================================== */
+[data-theme="dark"] {
+  --color-canvas: #0a0a0a;
+  --color-fog: #141415;
+  --color-stone: #27272a;
+  --color-mist: #a1a1aa;
+  --color-graphite: #d4d4d8;
+  --color-charcoal: #e4e4e7;
+  --color-ink: #fafafa;
+  --color-pure-white: #111111;
+  --color-pure-black: #ffffff;
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-hover: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+}

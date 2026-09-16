@@ -1,10 +1,42 @@
 ---
 import Layout from '@layouts/Layout.astro';
+
+const faqs = [
+  {
+    q: 'How does direct booking with operators work?',
+    a: 'TravellerAI provides the verified technological platform connecting travelers directly with licensed local mountain guides, boutique hoteliers, and fleet operators. When you book, your payment is held securely in escrow until departure or check-in.'
+  },
+  {
+    q: 'What is the Free Cancellation Policy?',
+    a: 'Tours marked with Free Cancellation allow full refunds up to 30 days before the scheduled departure date. Hotel reservations can be cancelled up to 48 hours prior to check-in with zero penalty.'
+  },
+  {
+    q: 'How are independent travel operators vetted?',
+    a: 'All providers must submit government business licenses, guide certifications (e.g. IFMGA/UIAGM for alpine guides), and comprehensive commercial liability insurance before publishing listings.'
+  },
+  {
+    q: 'What happens in the event of extreme weather?',
+    a: 'If a mountain guide cancels a high-altitude expedition due to safety conditions, travelers are offered an immediate complimentary reschedule or 100% full refund from escrow.'
+  }
+];
+
+const faqJsonLd = {
+  '@type': 'FAQPage',
+  'mainEntity': faqs.map(f => ({
+    '@type': 'Question',
+    'name': f.q,
+    'acceptedAnswer': {
+      '@type': 'Answer',
+      'text': f.a
+    }
+  }))
+};
 ---
 
 <Layout 
   title="Help Center & Knowledge Base — TravellerAI" 
   description="Find answers regarding booking guarantees, operator vetting, escrow payments, and cancellations."
+  jsonLd={faqJsonLd}
 >
   <div class="help-page">
     <div class="container narrow">
@@ -17,33 +49,12 @@ import Layout from '@layouts/Layout.astro';
       </div>
 
       <div class="faq-accordion-stack">
-        <div class="faq-item">
-          <h3>How does direct booking with operators work?</h3>
-          <p>
-            TravellerAI provides the verified technological platform connecting travelers directly with licensed local mountain guides, boutique hoteliers, and fleet operators. When you book, your payment is held securely in escrow until departure or check-in.
-          </p>
-        </div>
-
-        <div class="faq-item">
-          <h3>What is the Free Cancellation Policy?</h3>
-          <p>
-            Tours marked with Free Cancellation allow full refunds up to 30 days before the scheduled departure date. Hotel reservations can be cancelled up to 48 hours prior to check-in with zero penalty.
-          </p>
-        </div>
-
-        <div class="faq-item">
-          <h3>How are independent travel operators vetted?</h3>
-          <p>
-            All providers must submit government business licenses, guide certifications (e.g. IFMGA/UIAGM for alpine guides), and comprehensive commercial liability insurance before publishing listings.
-          </p>
-        </div>
-
-        <div class="faq-item">
-          <h3>What happens in the event of extreme weather?</h3>
-          <p>
-            If a mountain guide cancels a high-altitude expedition due to safety conditions, travelers are offered an immediate complimentary reschedule or 100% full refund from escrow.
-          </p>
-        </div>
+        {faqs.map((faq) => (
+          <div class="faq-item">
+            <h3>{faq.q}</h3>
+            <p>{faq.a}</p>
+          </div>
+        ))}
       </div>
 
       <div class="need-more-box">
