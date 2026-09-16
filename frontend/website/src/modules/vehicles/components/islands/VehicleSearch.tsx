@@ -10,6 +10,7 @@ export default function VehicleSearch(props: VehicleSearchProps) {
   const [query, setQuery] = createSignal('');
   const [selectedCategory, setSelectedCategory] = createSignal(props.currentCategory || 'all');
   const [transmission, setTransmission] = createSignal('all');
+  const [sortBy, setSortBy] = createSignal('recommended');
   const [onlyChauffeur, setOnlyChauffeur] = createSignal(false);
   const [maxRate, setMaxRate] = createSignal(600);
 
@@ -21,7 +22,7 @@ export default function VehicleSearch(props: VehicleSearchProps) {
   ];
 
   const filteredVehicles = createMemo(() => {
-    return props.initialVehicles.filter((vehicle) => {
+    const list = props.initialVehicles.filter((vehicle) => {
       const q = query().toLowerCase().trim();
       const matchesQuery = !q ||
         vehicle.make.toLowerCase().includes(q) ||
@@ -37,12 +38,21 @@ export default function VehicleSearch(props: VehicleSearchProps) {
 
       return matchesQuery && matchesCat && matchesTrans && matchesChauffeur && matchesRate;
     });
+
+    // Apply Sorting
+    return list.sort((a, b) => {
+      if (sortBy() === 'price-asc') return a.dailyRate - b.dailyRate;
+      if (sortBy() === 'price-desc') return b.dailyRate - a.dailyRate;
+      if (sortBy() === 'rating') return (b.rating || 0) - (a.rating || 0);
+      return 0; // 'recommended' preserves original order
+    });
   });
 
   return (
     <div class="vehicle-interactive-container">
-      {/* Category Pills */}
+      {/* Search & Filter Matrix */}
       <div class="filter-matrix-box">
+        {/* Category Segmented Pills */}
         <div class="category-pills-row">
           <For each={categories}>
             {(c) => (
@@ -62,22 +72,69 @@ export default function VehicleSearch(props: VehicleSearchProps) {
           </For>
         </div>
 
+        {/* Inputs & Dropdowns Grid */}
         <div class="filter-inputs-grid">
+          {/* Keyword Search */}
           <div class="input-wrap">
             <label for="veh-query-input">Search Make, Model, Hub</label>
-            <input
-              id="veh-query-input"
-              type="search"
-              placeholder="e.g. Range Rover, Taycan, Zurich..."
-              value={query()}
-              onInput={(e) => setQuery(e.currentTarget.value)}
-            />
+            <div class="shadcn-input-wrap">
+              <span class="input-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </span>
+              <input
+                id="veh-query-input"
+                class="shadcn-input"
+                type="search"
+                placeholder="e.g. Range Rover, Taycan, Zurich..."
+                value={query()}
+                onInput={(e) => setQuery(e.currentTarget.value)}
+              />
+            </div>
           </div>
 
+          {/* Transmission Dropdown (Shadcn Style) */}
           <div class="input-wrap">
-            <label for="veh-max-rate">Max Daily Rate: ${maxRate()}</label>
+            <label for="veh-trans-select">Transmission</label>
+            <select
+              id="veh-trans-select"
+              class="shadcn-select"
+              value={transmission()}
+              onChange={(e) => setTransmission(e.currentTarget.value)}
+            >
+              <option value="all">All Transmissions</option>
+              <option value="Automatic">Automatic Only</option>
+              <option value="Manual">Manual Only</option>
+            </select>
+          </div>
+
+          {/* Sort By Dropdown (Shadcn Style) */}
+          <div class="input-wrap">
+            <label for="veh-sort-select">Sort By</label>
+            <select
+              id="veh-sort-select"
+              class="shadcn-select"
+              value={sortBy()}
+              onChange={(e) => setSortBy(e.currentTarget.value)}
+            >
+              <option value="recommended">Recommended</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="rating">Top Customer Rated</option>
+            </select>
+          </div>
+
+          {/* Max Rate Range Slider */}
+          <div class="input-wrap">
+            <label for="veh-max-rate">
+              <span>Max Daily Rate</span>
+              <span class="val-indicator">${maxRate()} / day</span>
+            </label>
             <input
               id="veh-max-rate"
+              class="shadcn-slider"
               type="range"
               min="200"
               max="600"
@@ -87,19 +144,32 @@ export default function VehicleSearch(props: VehicleSearchProps) {
             />
           </div>
 
-          <div class="input-wrap checkbox-wrap">
-            <label class="checkbox-label">
-              <input
-                type="checkbox"
-                checked={onlyChauffeur()}
-                onChange={(e) => setOnlyChauffeur(e.currentTarget.checked)}
-              />
-              <span>Chauffeur Option Only</span>
-            </label>
+          {/* Chauffeur Option Pill Switch (Shadcn Style) */}
+          <div class="input-wrap">
+            <label>Service Tier</label>
+            <div
+              class="shadcn-switch-wrap"
+              onClick={() => setOnlyChauffeur(!onlyChauffeur())}
+              role="switch"
+              aria-checked={onlyChauffeur()}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === ' ' || e.key === 'Enter') {
+                  e.preventDefault();
+                  setOnlyChauffeur(!onlyChauffeur());
+                }
+              }}
+            >
+              <div class={`shadcn-switch-track ${onlyChauffeur() ? 'active' : ''}`}>
+                <div class="shadcn-switch-thumb"></div>
+              </div>
+              <span class="shadcn-switch-label">Chauffeur Only</span>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Results Header Count */}
       <div class="results-header-meta">
         <span class="results-count-text">
           Showing <strong>{filteredVehicles().length}</strong> of {props.initialVehicles.length} executive fleet models
@@ -111,25 +181,32 @@ export default function VehicleSearch(props: VehicleSearchProps) {
         <For each={filteredVehicles()} fallback={
           <div class="empty-state-box">
             <h3>No matching vehicles in fleet</h3>
-            <p>Try clearing filters or adjusting max daily price.</p>
+            <p>Try clearing your keyword filters or adjusting your daily rate range.</p>
             <button
               class="btn btn-secondary btn-sm"
               onClick={() => {
                 setQuery('');
                 setSelectedCategory('all');
                 setTransmission('all');
+                setSortBy('recommended');
                 setOnlyChauffeur(false);
                 setMaxRate(600);
               }}
             >
-              Reset Filters
+              Reset All Filters
             </button>
           </div>
         }>
           {(vehicle) => (
             <article class="vehicle-card">
               <div class="card-media">
-                <img src={vehicle.featuredImage} alt={`${vehicle.make} ${vehicle.model}`} loading="lazy" width="600" height="400" />
+                <img
+                  src={vehicle.featuredImage}
+                  alt={`${vehicle.make} ${vehicle.model}`}
+                  loading="lazy"
+                  width="600"
+                  height="400"
+                />
                 <div class="media-overlay">
                   <span class="badge badge-neutral acriss-badge">{vehicle.acrissCode}</span>
                   {vehicle.chauffeurAvailable && (
@@ -141,7 +218,13 @@ export default function VehicleSearch(props: VehicleSearchProps) {
               <div class="card-body">
                 <div class="meta-row">
                   <span class="category-name">{vehicle.category}</span>
-                  <span class="location-tag">{vehicle.cityLocation}</span>
+                  <span class="location-tag">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    {vehicle.cityLocation}
+                  </span>
                 </div>
 
                 <h3 class="card-title">

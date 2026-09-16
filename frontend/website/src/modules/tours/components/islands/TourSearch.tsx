@@ -12,6 +12,7 @@ export default function TourSearch(props: TourSearchProps) {
   const [selectedCategory, setSelectedCategory] = createSignal(props.currentCategory || 'all');
   const [maxPrice, setMaxPrice] = createSignal(5000);
   const [difficulty, setDifficulty] = createSignal('all');
+  const [sortBy, setSortBy] = createSignal('recommended');
 
   const categories = [
     { label: 'All Expeditions', slug: 'all', href: '/tours' },
@@ -21,7 +22,7 @@ export default function TourSearch(props: TourSearchProps) {
   ];
 
   const filteredTours = createMemo(() => {
-    return props.initialTours.filter((tour) => {
+    const list = props.initialTours.filter((tour) => {
       const q = query().toLowerCase().trim();
       const matchesQuery = !q || 
         tour.title.toLowerCase().includes(q) || 
@@ -39,6 +40,13 @@ export default function TourSearch(props: TourSearchProps) {
 
       return matchesQuery && matchesCat && matchesPrice && matchesDiff;
     });
+
+    return list.sort((a, b) => {
+      if (sortBy() === 'price-asc') return a.priceFrom - b.priceFrom;
+      if (sortBy() === 'price-desc') return b.priceFrom - a.priceFrom;
+      if (sortBy() === 'duration') return b.durationDays - a.durationDays;
+      return 0; // 'recommended'
+    });
   });
 
   return (
@@ -52,7 +60,6 @@ export default function TourSearch(props: TourSearchProps) {
                 href={cat.href}
                 class={`filter-pill ${selectedCategory().toLowerCase() === cat.slug ? 'active' : ''}`}
                 onClick={(e) => {
-                  // If on the main tours page, filter live in-memory
                   if (window.location.pathname === '/tours') {
                     e.preventDefault();
                     setSelectedCategory(cat.slug);
@@ -66,21 +73,68 @@ export default function TourSearch(props: TourSearchProps) {
         </div>
 
         <div class="filter-inputs-grid">
+          {/* Keyword Search with Icon */}
           <div class="input-wrap">
             <label for="tour-search-query">Search Keywords</label>
-            <input
-              id="tour-search-query"
-              type="search"
-              placeholder="Search peaks, tea valleys, onsen..."
-              value={query()}
-              onInput={(e) => setQuery(e.currentTarget.value)}
-            />
+            <div class="shadcn-input-wrap">
+              <span class="input-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </span>
+              <input
+                id="tour-search-query"
+                class="shadcn-input"
+                type="search"
+                placeholder="Search peaks, tea valleys, onsen..."
+                value={query()}
+                onInput={(e) => setQuery(e.currentTarget.value)}
+              />
+            </div>
           </div>
 
+          {/* Difficulty Dropdown (Shadcn Style) */}
           <div class="input-wrap">
-            <label for="tour-price-range">Max Price: ${maxPrice()}</label>
+            <label for="tour-diff-select">Difficulty</label>
+            <select
+              id="tour-diff-select"
+              class="shadcn-select"
+              value={difficulty()}
+              onChange={(e) => setDifficulty(e.currentTarget.value)}
+            >
+              <option value="all">Any Terrain</option>
+              <option value="easy">Easy (Cultural / Leisure)</option>
+              <option value="moderate">Moderate (Day Trekking)</option>
+              <option value="challenging">Challenging (Alpine Routes)</option>
+            </select>
+          </div>
+
+          {/* Sort By Dropdown (Shadcn Style) */}
+          <div class="input-wrap">
+            <label for="tour-sort-select">Sort By</label>
+            <select
+              id="tour-sort-select"
+              class="shadcn-select"
+              value={sortBy()}
+              onChange={(e) => setSortBy(e.currentTarget.value)}
+            >
+              <option value="recommended">Recommended</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="duration">Longest Duration</option>
+            </select>
+          </div>
+
+          {/* Max Price Range Slider */}
+          <div class="input-wrap">
+            <label for="tour-price-range">
+              <span>Max Price</span>
+              <span class="val-indicator">${maxPrice().toLocaleString()}</span>
+            </label>
             <input
               id="tour-price-range"
+              class="shadcn-slider"
               type="range"
               min="500"
               max="5000"
@@ -88,20 +142,6 @@ export default function TourSearch(props: TourSearchProps) {
               value={maxPrice()}
               onInput={(e) => setMaxPrice(Number(e.currentTarget.value))}
             />
-          </div>
-
-          <div class="input-wrap">
-            <label for="tour-diff-select">Difficulty</label>
-            <select
-              id="tour-diff-select"
-              value={difficulty()}
-              onChange={(e) => setDifficulty(e.currentTarget.value)}
-            >
-              <option value="all">Any Terrain</option>
-              <option value="easy">Easy (Cultural/Leisure)</option>
-              <option value="moderate">Moderate (Day Trekking)</option>
-              <option value="challenging">Challenging (Alpine Routes)</option>
-            </select>
           </div>
         </div>
       </div>
@@ -123,75 +163,76 @@ export default function TourSearch(props: TourSearchProps) {
               onClick={() => {
                 setQuery('');
                 setSelectedCategory('all');
-                setMaxPrice(5000);
                 setDifficulty('all');
+                setSortBy('recommended');
+                setMaxPrice(5000);
               }}
             >
-              Reset All Filters
+              Reset Filters
             </button>
           </div>
         }>
           {(tour) => (
             <article class="tour-card">
               <div class="card-media">
-                <img src={tour.featuredImage} alt={tour.title} loading="lazy" width="600" height="400" />
+                <img 
+                  src={tour.featuredImage} 
+                  alt={tour.title}
+                  loading="lazy"
+                  width="600"
+                  height="400"
+                />
                 <div class="media-overlay">
-                  {tour.badge && <span class="badge badge-accent card-badge">{tour.badge}</span>}
-                  <span class="badge badge-neutral duration-badge">{tour.durationDays}D / {tour.durationNights}N</span>
+                  <span class="badge badge-neutral">{tour.category}</span>
+                  <span class="badge badge-accent">Verified Guide</span>
                 </div>
               </div>
 
               <div class="card-body">
                 <div class="meta-row">
                   <span class="destination-label">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
                       <circle cx="12" cy="10" r="3"></circle>
                     </svg>
                     {tour.destination}, {tour.country}
                   </span>
-                  <div class="rating-badge">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                    </svg>
-                    <span>{tour.rating.toFixed(2)}</span>
-                    <span class="reviews-count">({tour.reviewsCount})</span>
-                  </div>
+                  <span class="diff-badge">{tour.difficulty}</span>
                 </div>
 
                 <h3 class="card-title">
                   <a href={`/tours/${tour.slug}`}>{tour.title}</a>
                 </h3>
 
-                <p class="card-subtitle">{tour.subtitle}</p>
-
-                <div class="highlights-preview">
-                  <For each={tour.highlights.slice(0, 2)}>
-                    {(h) => (
-                      <div class="highlight-item">
-                        <span class="bullet">▪</span>
-                        <span>{h}</span>
-                      </div>
-                    )}
-                  </For>
+                <div class="specs-grid">
+                  <div class="spec-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>{tour.durationDays} Days</span>
+                  </div>
+                  <div class="spec-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                    </svg>
+                    <span>Max {tour.groupSizeMax} pax</span>
+                  </div>
                 </div>
 
                 <div class="card-footer">
                   <div class="price-block">
-                    <span class="price-from-label">From</span>
-                    <div class="price-amount">
+                    <span class="day-label">Direct Operator</span>
+                    <div class="price-val">
                       <span class="currency">$</span>
-                      <span class="value">{tour.priceFrom.toLocaleString()}</span>
-                      <span class="per-person">/ person</span>
+                      <span class="num">{tour.priceFrom.toLocaleString()}</span>
+                      <span class="per-day">/ pp</span>
                     </div>
                   </div>
 
                   <a href={`/tours/${tour.slug}`} class="btn btn-primary btn-sm">
-                    Explore Itinerary
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                      <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
+                    View Journey
                   </a>
                 </div>
               </div>

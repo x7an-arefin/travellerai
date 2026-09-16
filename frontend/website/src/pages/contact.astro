@@ -36,17 +36,17 @@ import { environment } from '@environments/environment';
         <div class="form-row">
           <div class="form-field">
             <label for="c-name">Your Full Name</label>
-            <input id="c-name" type="text" required placeholder="Sultanul Arefin" />
+            <input id="c-name" class="shadcn-input" type="text" required placeholder="Sultanul Arefin" />
           </div>
           <div class="form-field">
             <label for="c-email">Email Address</label>
-            <input id="c-email" type="email" required placeholder="arefin@example.com" />
+            <input id="c-email" class="shadcn-input" type="email" required placeholder="arefin@example.com" />
           </div>
         </div>
 
         <div class="form-field">
           <label for="c-subject">Subject</label>
-          <select id="c-subject">
+          <select id="c-subject" class="shadcn-select">
             <option>Custom Expedition Inquiry</option>
             <option>Hotel & Chalet Booking Assistance</option>
             <option>Fleet / Airport Transfer Logistics</option>
@@ -56,7 +56,7 @@ import { environment } from '@environments/environment';
 
         <div class="form-field">
           <label for="c-msg">Message</label>
-          <textarea id="c-msg" rows="5" required placeholder="Describe your travel requirements or partnership interest..."></textarea>
+          <textarea id="c-msg" class="shadcn-textarea" rows="5" required placeholder="Describe your travel requirements or partnership interest..."></textarea>
         </div>
 
         <button type="submit" class="btn btn-primary">

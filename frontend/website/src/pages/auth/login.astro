@@ -20,7 +20,7 @@ import Layout from '@layouts/Layout.astro';
         <form class="auth-form" onsubmit="event.preventDefault(); alert('Signed in successfully!'); window.location.href = '/account';">
           <div class="form-field">
             <label for="email">Email Address</label>
-            <input id="email" type="email" required placeholder="arefin@example.com" />
+            <input id="email" type="email" class="shadcn-input" required placeholder="arefin@example.com" />
           </div>
 
           <div class="form-field">
@@ -28,7 +28,7 @@ import Layout from '@layouts/Layout.astro';
               <label for="password">Password</label>
               <a href="/auth/forgot-password" class="forgot-link">Forgot?</a>
             </div>
-            <input id="password" type="password" required placeholder="••••••••••••" />
+            <input id="password" type="password" class="shadcn-input" required placeholder="••••••••••••" />
           </div>
 
           <button type="submit" class="btn btn-primary btn-block">

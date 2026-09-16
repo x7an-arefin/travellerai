@@ -68,7 +68,7 @@ export default function HeaderActionsIsland() {
         <select
           value={currentCurrency()}
           onChange={(e) => handleCurrencyChange(e.currentTarget.value)}
-          class="currency-mini-select"
+          class="shadcn-select-sm"
           aria-label="Display Currency"
         >
           <option value="USD">USD ($)</option>

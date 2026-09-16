@@ -20,17 +20,17 @@ import Layout from '@layouts/Layout.astro';
         <form class="auth-form" onsubmit="event.preventDefault(); alert('Account registered!'); window.location.href = '/account';">
           <div class="form-field">
             <label for="reg-name">Full Name</label>
-            <input id="reg-name" type="text" required placeholder="Sultanul Arefin" />
+            <input id="reg-name" type="text" class="shadcn-input" required placeholder="Sultanul Arefin" />
           </div>
 
           <div class="form-field">
             <label for="reg-email">Email Address</label>
-            <input id="reg-email" type="email" required placeholder="arefin@example.com" />
+            <input id="reg-email" type="email" class="shadcn-input" required placeholder="arefin@example.com" />
           </div>
 
           <div class="form-field">
             <label for="reg-password">Password</label>
-            <input id="reg-password" type="password" required placeholder="Minimum 8 characters" minlength="8" />
+            <input id="reg-password" type="password" class="shadcn-input" required placeholder="Minimum 8 characters" minlength="8" />
           </div>
 
           <div class="terms-row">
