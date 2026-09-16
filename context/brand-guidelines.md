@@ -183,10 +183,9 @@ Dark mode uses the surface-elevation strategy from Monochrome — lighter charco
 2. Use `--color-ink` never `#000000` — prevents harsh contrast fatigue (Monochrome rule)
 3. Never communicate status with gray intensity alone — always pair with label + icon (Monochrome rule)
 4. Maximum four neutral levels within any single component (Monochrome rule)
-5. Red accent (#ff3300 from Swiss Modern) is explicitly EXCLUDED — our system uses no bright accent; the ink IS the accent
-6. Destination photography provides the page's hue — maintain clean monochrome chrome around it (Monochrome rule)
-7. Define dark mode tokens independently — never auto-invert light values (Dark Mode Design Laws)
-8. Document every instance where a semantic color is introduced outside of system feedback contexts
+5. Destination photography provides the page's hue — maintain clean monochrome chrome around it (Monochrome rule)
+6. Define dark mode tokens independently — never auto-invert light values (Dark Mode Design Laws)
+7. Document every instance where a semantic color is introduced outside of system feedback contexts
 
 ### 3.6 WCAG Compliance
 
@@ -599,7 +598,6 @@ In a monochrome system, photography IS the emotional color layer. The chrome sta
 1. All visual changes update the CSS token in `travellerai-design-system.md` first
 2. Token changes require design review before implementation
 3. Dark mode tokens defined independently — never auto-inverted
-4. Red accent (#ff3300 from Swiss Modern) is explicitly excluded from this system — documented exception
 
 ### 11.2 New Component Protocol
 
@@ -629,7 +627,6 @@ In a monochrome system, photography IS the emotional color layer. The chrome sta
 **DO NOT:**
 - No hardcoded hex values — all via CSS tokens
 - No decorative color gradients — flat neutrals + authentic photography
-- No red accent (#ff3300) — the Swiss red is excluded from our system
 - No status communication through gray shade alone
 - No floating form labels
 - No height: 100vh — always min-height: 100dvh
