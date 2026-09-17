@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js';
+import { createSignal, For } from 'solid-js';
 import type { VehicleItem } from '../../vehicles.model';
 import { addToCart } from '../../../cart/cart.store';
 
@@ -11,6 +11,11 @@ export default function VehicleBookingWidget(props: VehicleBookingWidgetProps) {
   const [chauffeur, setChauffeur] = createSignal(false);
   const [protection, setProtection] = createSignal<'included' | 'premium'>('included');
   const [isProcessing, setIsProcessing] = createSignal(false);
+
+  const durationOptions = [1, 2, 3, 5, 7, 10, 14, 30].map(d => ({
+    value: d,
+    label: d === 1 ? '1 Day (Airport Transfer / Day Hire)' : d === 7 ? '7 Days (Full Alpine Tour — Weekly Tier)' : `${d} Days Hire`
+  }));
 
   const chauffeurSurcharge = () => (chauffeur() ? 220 : 0);
   const protectionSurcharge = () => (protection() === 'premium' ? 45 : 0);
@@ -84,10 +89,11 @@ export default function VehicleBookingWidget(props: VehicleBookingWidgetProps) {
             value={days()}
             onChange={(e) => setDays(Number(e.currentTarget.value))}
           >
-            <option value={1} selected={days() === 1}>1 Day (Airport Transfer / Day Hire)</option>
-            <option value={3} selected={days() === 3}>3 Days (Weekend Getaway — Popular)</option>
-            <option value={7} selected={days() === 7}>7 Days (Full Alpine Tour — Weekly Tier)</option>
-            <option value={14} selected={days() === 14}>14 Days (Grand Extended Journey)</option>
+            <For each={durationOptions}>
+              {(opt) => (
+                <option value={opt.value}>{opt.label}</option>
+              )}
+            </For>
           </select>
         </div>
 

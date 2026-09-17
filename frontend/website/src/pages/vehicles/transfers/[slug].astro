@@ -11,6 +11,16 @@ export async function getStaticPaths() {
 }
 
 const { transfer } = Astro.props;
+
+const isVan = transfer.vehicleClass.toLowerCase().includes('van');
+const passengerOptions = isVan ? [
+  { value: '1-2', label: '1–2 Passengers (Spacious)' },
+  { value: '3-4', label: '3–4 Passengers (Standard)' },
+  { value: '5-7', label: '5–7 Passengers (Executive Van Tier)' }
+] : [
+  { value: '1-2', label: '1–2 Passengers (Executive Private)' },
+  { value: '3-4', label: '3–4 Passengers (Full Luxury Capacity)' }
+];
 ---
 
 <Layout 
@@ -86,9 +96,9 @@ const { transfer } = Astro.props;
               <div class="input-grp">
                 <label>Passengers</label>
                 <select>
-                  <option>1-2 Passengers</option>
-                  <option>3-4 Passengers</option>
-                  <option>5-7 Passengers (Van)</option>
+                  {passengerOptions.map((opt) => (
+                    <option value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
 

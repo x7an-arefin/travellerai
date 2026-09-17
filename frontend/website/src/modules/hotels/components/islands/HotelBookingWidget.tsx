@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js';
+import { createSignal, For } from 'solid-js';
 import type { HotelProperty } from '../../hotels.model';
 import { addToCart } from '../../../cart/cart.store';
 
@@ -11,6 +11,16 @@ export default function HotelBookingWidget(props: HotelBookingWidgetProps) {
   const [guests, setGuests] = createSignal(2);
   const [ratePlan, setRatePlan] = createSignal<'flexible' | 'saver'>('flexible');
   const [isProcessing, setIsProcessing] = createSignal(false);
+
+  const nightOptions = [1, 2, 3, 4, 5, 7, 10, 14].map(n => ({
+    value: n,
+    label: n === 1 ? '1 Night (Short Stay)' : n === 7 ? '7 Nights (Full Week Immersion)' : `${n} Nights Stay`
+  }));
+
+  const guestOptions = [1, 2, 3, 4, 6].map(g => ({
+    value: g,
+    label: g === 1 ? '1 Adult, 1 Room (Solo)' : g === 2 ? '2 Adults, 1 Room (Couple / Pair)' : `${g} Guests Accommodation`
+  }));
 
   const discountMultiplier = () => ratePlan() === 'saver' ? 0.9 : 1.0;
   const pricePerNight = () => Math.round(props.hotel.pricePerNight * discountMultiplier());
@@ -63,10 +73,11 @@ export default function HotelBookingWidget(props: HotelBookingWidgetProps) {
             value={nights()}
             onChange={(e) => setNights(Number(e.currentTarget.value))}
           >
-            <option value={2} selected={nights() === 2}>2 Nights (Weekend Sanctuary)</option>
-            <option value={3} selected={nights() === 3}>3 Nights (Extended Rest)</option>
-            <option value={4} selected={nights() === 4}>4 Nights (Midweek Retreat)</option>
-            <option value={7} selected={nights() === 7}>7 Nights (Full Week Immersion)</option>
+            <For each={nightOptions}>
+              {(opt) => (
+                <option value={opt.value}>{opt.label}</option>
+              )}
+            </For>
           </select>
         </div>
 
@@ -79,9 +90,11 @@ export default function HotelBookingWidget(props: HotelBookingWidgetProps) {
             value={guests()}
             onChange={(e) => setGuests(Number(e.currentTarget.value))}
           >
-            <option value={1} selected={guests() === 1}>1 Adult, 1 Room (Solo)</option>
-            <option value={2} selected={guests() === 2}>2 Adults, 1 Room (Couple / Pair)</option>
-            <option value={4} selected={guests() === 4}>4 Adults, 2 Connecting Suites</option>
+            <For each={guestOptions}>
+              {(opt) => (
+                <option value={opt.value}>{opt.label}</option>
+              )}
+            </For>
           </select>
         </div>
 

@@ -1,5 +1,6 @@
 import { createSignal, createMemo, For } from 'solid-js';
 import type { VehicleItem } from '../../vehicles.model';
+import { getDynamicVehicleCategories, getDynamicTransmissions } from '../../../../shared/data/dynamic-options';
 
 interface VehicleSearchProps {
   initialVehicles: VehicleItem[];
@@ -14,12 +15,16 @@ export default function VehicleSearch(props: VehicleSearchProps) {
   const [onlyChauffeur, setOnlyChauffeur] = createSignal(false);
   const [maxRate, setMaxRate] = createSignal(600);
 
-  const categories = [
+  const categories = createMemo(() => [
     { label: 'All Fleet', slug: 'all', href: '/vehicles' },
-    { label: 'Luxury SUVs', slug: 'luxury-suv', href: '/vehicles/category/luxury-suv' },
-    { label: 'Electric Sedans', slug: 'electric-sedan', href: '/vehicles/category/electric-sedan' },
-    { label: 'Executive Vans', slug: 'executive-van', href: '/vehicles/category/executive-van' },
-  ];
+    ...getDynamicVehicleCategories(props.initialVehicles).map(c => ({
+      label: c.label,
+      slug: c.value,
+      href: `/vehicles/category/${c.value}`
+    }))
+  ]);
+
+  const transmissions = createMemo(() => getDynamicTransmissions(props.initialVehicles));
 
   const filteredVehicles = createMemo(() => {
     const list = props.initialVehicles.filter((vehicle) => {
@@ -54,7 +59,7 @@ export default function VehicleSearch(props: VehicleSearchProps) {
       <div class="filter-matrix-box">
         {/* Category Segmented Pills */}
         <div class="category-pills-row">
-          <For each={categories}>
+          <For each={categories()}>
             {(c) => (
               <a
                 href={c.href}
@@ -105,8 +110,9 @@ export default function VehicleSearch(props: VehicleSearchProps) {
               onChange={(e) => setTransmission(e.currentTarget.value)}
             >
               <option value="all">All Transmissions</option>
-              <option value="Automatic">Automatic Only</option>
-              <option value="Manual">Manual Only</option>
+              <For each={transmissions()}>
+                {(t) => <option value={t.value}>{t.label}</option>}
+              </For>
             </select>
           </div>
 

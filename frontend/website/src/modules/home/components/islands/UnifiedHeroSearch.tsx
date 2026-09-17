@@ -1,4 +1,12 @@
-import { createSignal } from 'solid-js';
+import { createSignal, For } from 'solid-js';
+import {
+  getDynamicTourDestinations,
+  getDynamicTourCategories,
+  getDynamicHotelCities,
+  getDynamicHotelTypes,
+  getDynamicVehicleCategories,
+  getDynamicVehicleHubs
+} from '../../../../shared/data/dynamic-options';
 
 export default function UnifiedHeroSearch() {
   const [activeTab, setActiveTab] = createSignal<'tours' | 'hotels' | 'vehicles'>('tours');
@@ -7,6 +15,13 @@ export default function UnifiedHeroSearch() {
   const [hotelType, setHotelType] = createSignal('all');
   const [hotelCity, setHotelCity] = createSignal('all');
   const [vehicleCategory, setVehicleCategory] = createSignal('all');
+
+  const tourDestinations = getDynamicTourDestinations();
+  const tourCategories = getDynamicTourCategories();
+  const hotelCities = getDynamicHotelCities();
+  const hotelTypes = getDynamicHotelTypes();
+  const vehicleCategories = getDynamicVehicleCategories();
+  const vehicleHubs = getDynamicVehicleHubs();
 
   const handleTourSubmit = (e: Event) => {
     e.preventDefault();
@@ -97,10 +112,9 @@ export default function UnifiedHeroSearch() {
               onChange={(e) => setTourDestination(e.currentTarget.value)}
             >
               <option value="all">All Global Regions</option>
-              <option value="swiss-alps">Swiss Alps & Zermatt</option>
-              <option value="kyoto">Kyoto Sanctuaries</option>
-              <option value="sylhet">Sylhet & Tea Valleys</option>
-              <option value="dolomites">Italian Dolomites</option>
+              <For each={tourDestinations}>
+                {(d) => <option value={d.value}>{d.label}</option>}
+              </For>
             </select>
           </div>
 
@@ -113,17 +127,16 @@ export default function UnifiedHeroSearch() {
               onChange={(e) => setTourCategory(e.currentTarget.value)}
             >
               <option value="all">All Categories</option>
-              <option value="adventure">High Altitude & Adventure</option>
-              <option value="cultural">Cultural Heritage</option>
-              <option value="wildlife">Wildlife & Nature</option>
-              <option value="luxury">Private Luxury</option>
+              <For each={tourCategories}>
+                {(c) => <option value={c.value}>{c.label}</option>}
+              </For>
             </select>
           </div>
 
           <div class="search-input-group">
             <label for="tour-guests-select">Travelers</label>
             <select id="tour-guests-select" class="shadcn-select">
-              <option value="2">2 Adults (Private)</option>
+              <option value="2">2 Adults (Private Pair)</option>
               <option value="1">Solo Traveler</option>
               <option value="4">Small Group (Up to 6)</option>
             </select>
@@ -150,9 +163,9 @@ export default function UnifiedHeroSearch() {
               onChange={(e) => setHotelCity(e.currentTarget.value)}
             >
               <option value="all">All Destinations</option>
-              <option value="zermatt">Zermatt, Switzerland</option>
-              <option value="kyoto">Kyoto, Japan</option>
-              <option value="sreemangal">Sreemangal, Bangladesh</option>
+              <For each={hotelCities}>
+                {(c) => <option value={c.value}>{c.label}</option>}
+              </For>
             </select>
           </div>
 
@@ -165,10 +178,9 @@ export default function UnifiedHeroSearch() {
               onChange={(e) => setHotelType(e.currentTarget.value)}
             >
               <option value="all">All Architectural Types</option>
-              <option value="alpine-chalet">Alpine Chalet</option>
-              <option value="heritage-ryokan">Heritage Ryokan</option>
-              <option value="eco-villa">Eco Villa</option>
-              <option value="boutique-hotel">Boutique Hotel</option>
+              <For each={hotelTypes}>
+                {(t) => <option value={t.value}>{t.label}</option>}
+              </For>
             </select>
           </div>
 
@@ -202,9 +214,9 @@ export default function UnifiedHeroSearch() {
               onChange={(e) => setVehicleCategory(e.currentTarget.value)}
             >
               <option value="all">All Fleet Classes</option>
-              <option value="luxury-suv">Luxury SUV</option>
-              <option value="electric-sedan">Electric Sedan</option>
-              <option value="executive-van">Executive Van</option>
+              <For each={vehicleCategories}>
+                {(c) => <option value={c.value}>{c.label}</option>}
+              </For>
             </select>
           </div>
 
@@ -219,9 +231,10 @@ export default function UnifiedHeroSearch() {
           <div class="search-input-group">
             <label for="vehicle-hub-select">Station Hub</label>
             <select id="vehicle-hub-select" class="shadcn-select">
-              <option value="all">Zurich / Geneva / Kyoto</option>
-              <option value="zurich">Zurich Airport (ZRH)</option>
-              <option value="kyoto">Kyoto Station / KIX</option>
+              <option value="all">All Fleet Hubs</option>
+              <For each={vehicleHubs}>
+                {(h) => <option value={h.value}>{h.label}</option>}
+              </For>
             </select>
           </div>
 

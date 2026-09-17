@@ -1,6 +1,7 @@
 import { createSignal, onMount, For, Show } from 'solid-js';
 import { useStore } from '@nanostores/solid';
 import { $cart, $favorites, $currency, removeFromCart } from '../../../modules/cart/cart.store';
+import { CURRENCIES } from '../../../shared/data/dynamic-options';
 
 export default function HeaderActionsIsland() {
   const cartItems = useStore($cart);
@@ -71,11 +72,11 @@ export default function HeaderActionsIsland() {
           class="shadcn-select-sm"
           aria-label="Display Currency"
         >
-          <option value="USD">USD ($)</option>
-          <option value="CHF">CHF (Fr.)</option>
-          <option value="EUR">EUR (€)</option>
-          <option value="GBP">GBP (£)</option>
-          <option value="JPY">JPY (¥)</option>
+          <For each={CURRENCIES}>
+            {(c) => (
+              <option value={c.code}>{c.label}</option>
+            )}
+          </For>
         </select>
       </div>
 

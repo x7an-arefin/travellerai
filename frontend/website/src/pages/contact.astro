@@ -1,6 +1,7 @@
 ---
 import Layout from '@layouts/Layout.astro';
 import { environment } from '@environments/environment';
+import { CONTACT_INQUIRY_SUBJECTS } from '@shared/data/dynamic-options';
 ---
 
 <Layout 
@@ -31,26 +32,25 @@ import { environment } from '@environments/environment';
         </div>
       </div>
 
-      <form class="contact-form" onsubmit="event.preventDefault(); alert('Inquiry received. A concierge specialist will respond within 4 hours.');">
+      <form class="contact-form" onsubmit="event.preventDefault(); alert('Inquiry received. A concierge specialist will respond within 2 hours.');">
         <h2>Send a Direct Message</h2>
         <div class="form-row">
           <div class="form-field">
-            <label for="c-name">Your Full Name</label>
-            <input id="c-name" class="shadcn-input" type="text" required placeholder="Sultanul Arefin" />
+            <label for="c-name">Full Name</label>
+            <input id="c-name" class="shadcn-input" type="text" required placeholder="Full Name" />
           </div>
           <div class="form-field">
             <label for="c-email">Email Address</label>
-            <input id="c-email" class="shadcn-input" type="email" required placeholder="arefin@example.com" />
+            <input id="c-email" class="shadcn-input" type="email" required placeholder="email@domain.com" />
           </div>
         </div>
 
         <div class="form-field">
           <label for="c-subject">Subject</label>
           <select id="c-subject" class="shadcn-select">
-            <option>Custom Expedition Inquiry</option>
-            <option>Hotel & Chalet Booking Assistance</option>
-            <option>Fleet / Airport Transfer Logistics</option>
-            <option>Provider Portal & Verification</option>
+            {CONTACT_INQUIRY_SUBJECTS.map((topic) => (
+              <option value={topic.value}>{topic.label}</option>
+            ))}
           </select>
         </div>
 

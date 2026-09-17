@@ -1,5 +1,6 @@
 ---
 import Layout from '@layouts/Layout.astro';
+import { HOTEL_ARRIVAL_SLOTS } from '@shared/data/dynamic-options';
 ---
 
 <Layout 
@@ -26,25 +27,24 @@ import Layout from '@layouts/Layout.astro';
               <div class="fields-row">
                 <div class="f-group">
                   <label for="g-first">First Name</label>
-                  <input id="g-first" type="text" required value="Sultanul" />
+                  <input id="g-first" type="text" required placeholder="First Name" />
                 </div>
                 <div class="f-group">
                   <label for="g-last">Last Name</label>
-                  <input id="g-last" type="text" required value="Arefin" />
+                  <input id="g-last" type="text" required placeholder="Last Name" />
                 </div>
               </div>
               <div class="fields-row">
                 <div class="f-group">
                   <label for="g-email">Confirmation Email</label>
-                  <input id="g-email" type="email" required value="arefin@travellerai.com" />
+                  <input id="g-email" type="email" required placeholder="email@domain.com" />
                 </div>
                 <div class="f-group">
                   <label for="g-arrival">Estimated Arrival Time</label>
                   <select id="g-arrival">
-                    <option>15:00 – 16:00 (Standard Check-in)</option>
-                    <option>16:00 – 18:00 (Late Afternoon)</option>
-                    <option>18:00 – 21:00 (Evening)</option>
-                    <option>Early Arrival Request (Subject to room availability)</option>
+                    {HOTEL_ARRIVAL_SLOTS.map((slot) => (
+                      <option value={slot.value}>{slot.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>

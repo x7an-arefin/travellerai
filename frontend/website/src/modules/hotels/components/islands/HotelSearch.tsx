@@ -1,5 +1,6 @@
 import { createSignal, createMemo, For } from 'solid-js';
 import type { HotelProperty } from '../../hotels.model';
+import { getDynamicHotelCities, getDynamicHotelTypes } from '../../../../shared/data/dynamic-options';
 
 interface HotelSearchProps {
   initialHotels: HotelProperty[];
@@ -15,12 +16,16 @@ export default function HotelSearch(props: HotelSearchProps) {
   const [sortBy, setSortBy] = createSignal('recommended');
   const [onlyFreeCancel, setOnlyFreeCancel] = createSignal(false);
 
-  const types = [
+  const types = createMemo(() => [
     { label: 'All Stays', slug: 'all', href: '/hotels' },
-    { label: 'Alpine Chalets', slug: 'alpine-chalet', href: '/hotels/type/alpine-chalet' },
-    { label: 'Heritage Ryokans', slug: 'heritage-ryokan', href: '/hotels/type/heritage-ryokan' },
-    { label: 'Eco Villas', slug: 'eco-villa', href: '/hotels/type/eco-villa' },
-  ];
+    ...getDynamicHotelTypes(props.initialHotels).map(t => ({
+      label: t.label,
+      slug: t.value,
+      href: `/hotels/type/${t.value}`
+    }))
+  ]);
+
+  const cities = createMemo(() => getDynamicHotelCities(props.initialHotels));
 
   const filteredHotels = createMemo(() => {
     const list = props.initialHotels.filter((hotel) => {
@@ -56,7 +61,7 @@ export default function HotelSearch(props: HotelSearchProps) {
       {/* Category Types Segmented Bar */}
       <div class="filter-matrix-box">
         <div class="category-pills-row">
-          <For each={types}>
+          <For each={types()}>
             {(t) => (
               <a
                 href={t.href}
@@ -106,9 +111,9 @@ export default function HotelSearch(props: HotelSearchProps) {
               onChange={(e) => setSelectedCity(e.currentTarget.value)}
             >
               <option value="all">All Destinations</option>
-              <option value="zermatt">Zermatt, Switzerland</option>
-              <option value="kyoto">Kyoto, Japan</option>
-              <option value="sreemangal">Sreemangal, Bangladesh</option>
+              <For each={cities()}>
+                {(c) => <option value={c.value}>{c.label}</option>}
+              </For>
             </select>
           </div>
 

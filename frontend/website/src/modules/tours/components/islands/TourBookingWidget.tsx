@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js';
+import { createSignal, createMemo, For } from 'solid-js';
 import type { TourPackage } from '../../tours.model';
 import { addToCart } from '../../../cart/cart.store';
 
@@ -11,6 +11,18 @@ export default function TourBookingWidget(props: TourBookingWidgetProps) {
   const [travelers, setTravelers] = createSignal(2);
   const [isProcessing, setIsProcessing] = createSignal(false);
   const [selectedAddons, setSelectedAddons] = createSignal<string[]>([]);
+
+  const travelerOptions = createMemo(() => {
+    const max = props.tour.groupSizeMax || 8;
+    const opts = [];
+    for (let i = 1; i <= max; i++) {
+      opts.push({
+        value: i,
+        label: i === 1 ? '1 Adult (Solo Expedition)' : i === 2 ? '2 Adults (Standard Pair)' : `${i} Adults (Private Group)`
+      });
+    }
+    return opts;
+  });
 
   const baseTotal = () => props.tour.priceFrom * travelers();
   const addonTotal = () => selectedAddons().length * 150 * travelers();
@@ -85,11 +97,11 @@ export default function TourBookingWidget(props: TourBookingWidgetProps) {
             value={travelers()}
             onChange={(e) => setTravelers(Number(e.currentTarget.value))}
           >
-            <option value={1} selected={travelers() === 1}>1 Adult (Solo Expedition)</option>
-            <option value={2} selected={travelers() === 2}>2 Adults (Standard Double Pair)</option>
-            <option value={3} selected={travelers() === 3}>3 Adults (Triple Room / Alpine Refuges)</option>
-            <option value={4} selected={travelers() === 4}>4 Adults (Private Group Roster)</option>
-            <option value={6} selected={travelers() === 6}>6 Adults (Full Guided Traverse)</option>
+            <For each={travelerOptions()}>
+              {(opt) => (
+                <option value={opt.value}>{opt.label}</option>
+              )}
+            </For>
           </select>
         </div>
 

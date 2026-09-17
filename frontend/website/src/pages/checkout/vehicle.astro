@@ -1,5 +1,6 @@
 ---
 import Layout from '@layouts/Layout.astro';
+import { DRIVER_AGE_TIERS } from '@shared/data/dynamic-options';
 ---
 
 <Layout 
@@ -26,23 +27,24 @@ import Layout from '@layouts/Layout.astro';
               <div class="fields-row">
                 <div class="f-group">
                   <label for="d-first">Driver First Name</label>
-                  <input id="d-first" type="text" required value="Sultanul" />
+                  <input id="d-first" type="text" required placeholder="First Name" />
                 </div>
                 <div class="f-group">
                   <label for="d-last">Driver Last Name</label>
-                  <input id="d-last" type="text" required value="Arefin" />
+                  <input id="d-last" type="text" required placeholder="Last Name" />
                 </div>
               </div>
               <div class="fields-row">
                 <div class="f-group">
                   <label for="d-lic">Driver's License No. & Country</label>
-                  <input id="d-lic" type="text" required placeholder="e.g. DL-88492049 (Switzerland/US)" value="DL-948201-CH" />
+                  <input id="d-lic" type="text" required placeholder="e.g. DL-88492049 (Switzerland/US)" />
                 </div>
                 <div class="f-group">
                   <label for="d-age">Driver Age</label>
                   <select id="d-age">
-                    <option>25+ Years Old (Standard)</option>
-                    <option>21–24 Years Old</option>
+                    {DRIVER_AGE_TIERS.map((tier) => (
+                      <option value={tier.value}>{tier.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>

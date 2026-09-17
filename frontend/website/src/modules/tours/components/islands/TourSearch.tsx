@@ -1,5 +1,6 @@
 import { createSignal, createMemo, For } from 'solid-js';
 import type { TourPackage } from '../../tours.model';
+import { getDynamicTourCategories, getDynamicTourDifficulties } from '../../../../shared/data/dynamic-options';
 
 interface TourSearchProps {
   initialTours: TourPackage[];
@@ -14,12 +15,16 @@ export default function TourSearch(props: TourSearchProps) {
   const [difficulty, setDifficulty] = createSignal('all');
   const [sortBy, setSortBy] = createSignal('recommended');
 
-  const categories = [
+  const categories = createMemo(() => [
     { label: 'All Expeditions', slug: 'all', href: '/tours' },
-    { label: 'High Altitude & Adventure', slug: 'adventure', href: '/tours/category/adventure' },
-    { label: 'Cultural Heritage', slug: 'cultural', href: '/tours/category/cultural' },
-    { label: 'Wildlife & Nature', slug: 'wildlife', href: '/tours/category/wildlife' },
-  ];
+    ...getDynamicTourCategories(props.initialTours).map(c => ({
+      label: c.label,
+      slug: c.value,
+      href: `/tours/category/${c.value}`
+    }))
+  ]);
+
+  const difficulties = createMemo(() => getDynamicTourDifficulties(props.initialTours));
 
   const filteredTours = createMemo(() => {
     const list = props.initialTours.filter((tour) => {
@@ -54,7 +59,7 @@ export default function TourSearch(props: TourSearchProps) {
       {/* Search & Filter Control Bar */}
       <div class="filter-matrix-box">
         <div class="category-pills-row">
-          <For each={categories}>
+          <For each={categories()}>
             {(cat) => (
               <a
                 href={cat.href}
@@ -104,9 +109,9 @@ export default function TourSearch(props: TourSearchProps) {
               onChange={(e) => setDifficulty(e.currentTarget.value)}
             >
               <option value="all">Any Terrain</option>
-              <option value="easy">Easy (Cultural / Leisure)</option>
-              <option value="moderate">Moderate (Day Trekking)</option>
-              <option value="challenging">Challenging (Alpine Routes)</option>
+              <For each={difficulties()}>
+                {(d) => <option value={d.value}>{d.label}</option>}
+              </For>
             </select>
           </div>
 
